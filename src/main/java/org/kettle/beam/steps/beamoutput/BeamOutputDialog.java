@@ -46,6 +46,7 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
   private TextVar wOutputLocation;
   private CCombo wFileDefinition;
   private TextVar wFilePrefix;
+  private TextVar wFileSuffix;
   private Button wWindowed;
 
   public BeamOutputDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
@@ -136,6 +137,23 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     wFilePrefix.setLayoutData( fdFilePrefix );
     lastControl = wFilePrefix;
 
+    Label wlFileSuffix = new Label( shell, SWT.RIGHT );
+    wlFileSuffix.setText( BaseMessages.getString( PKG, "BeamOutputDialog.FileSuffix" ) );
+    props.setLook( wlFileSuffix );
+    FormData fdlFileSuffix = new FormData();
+    fdlFileSuffix.left = new FormAttachment( 0, 0 );
+    fdlFileSuffix.top = new FormAttachment( lastControl, margin );
+    fdlFileSuffix.right = new FormAttachment( middle, -margin );
+    wlFileSuffix.setLayoutData( fdlFileSuffix );
+    wFileSuffix = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFileSuffix );
+    FormData fdFileSuffix = new FormData();
+    fdFileSuffix.left = new FormAttachment( middle, 0 );
+    fdFileSuffix.top = new FormAttachment( wlFileSuffix, 0, SWT.CENTER );
+    fdFileSuffix.right = new FormAttachment( 100, 0 );
+    wFileSuffix.setLayoutData( fdFileSuffix );
+    lastControl = wFileSuffix;
+    
     Label wlWindowed = new Label( shell, SWT.RIGHT );
     wlWindowed.setText( BaseMessages.getString( PKG, "BeamOutputDialog.Windowed" ) );
     props.setLook( wlWindowed );
@@ -203,6 +221,8 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     wStepname.addSelectionListener( lsDef );
     wFileDefinition.addSelectionListener( lsDef );
     wOutputLocation.addSelectionListener( lsDef );
+    wFilePrefix.addSelectionListener( lsDef );
+    wFileSuffix.addSelectionListener( lsDef );
 
     // Get field names...
     //
@@ -241,6 +261,9 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     wStepname.setText( stepname );
     wFileDefinition.setText(Const.NVL(input.getFileDescriptionName(), ""));
     wOutputLocation.setText(Const.NVL(input.getOutputLocation(), ""));
+    wFilePrefix.setText(Const.NVL(input.getFilePrefix(), ""));
+    wFileSuffix.setText(Const.NVL(input.getFileSuffix(), ""));
+    wWindowed.setSelection( input.isWindowed() );
 
     wStepname.selectAll();
     wStepname.setFocus();
@@ -267,6 +290,9 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
 
     in.setFileDescriptionName( wFileDefinition.getText() );
     in.setOutputLocation( wOutputLocation.getText() );
+    in.setFilePrefix( wFilePrefix.getText() );
+    in.setFileSuffix( wFileSuffix.getText() );
+    in.setWindowed( wWindowed.getSelection() );
 
     input.setChanged();
   }

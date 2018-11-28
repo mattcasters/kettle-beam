@@ -34,6 +34,7 @@ public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
   public static final String OUTPUT_LOCATION = "output_location";
   public static final String FILE_DESCRIPTION_NAME = "file_description_name";
   public static final String FILE_PREFIX = "file_prefix";
+  public static final String FILE_SUFFIX = "file_suffix";
   public static final String WINDOWED = "windowed";
 
 
@@ -42,6 +43,8 @@ public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
   private String fileDescriptionName;
 
   private String filePrefix;
+
+  private String fileSuffix;
 
   private boolean windowed;
 
@@ -82,6 +85,7 @@ public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
     xml.append( XMLHandler.addTagValue( OUTPUT_LOCATION, outputLocation ) );
     xml.append( XMLHandler.addTagValue( FILE_DESCRIPTION_NAME, fileDescriptionName) );
     xml.append( XMLHandler.addTagValue( FILE_PREFIX, filePrefix) );
+    xml.append( XMLHandler.addTagValue( FILE_SUFFIX, fileSuffix) );
     xml.append( XMLHandler.addTagValue( WINDOWED, windowed) );
 
     return xml.toString();
@@ -92,6 +96,7 @@ public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
     outputLocation = XMLHandler.getTagValue( stepnode, OUTPUT_LOCATION );
     fileDescriptionName = XMLHandler.getTagValue( stepnode, FILE_DESCRIPTION_NAME );
     filePrefix = XMLHandler.getTagValue( stepnode, FILE_PREFIX );
+    fileSuffix = XMLHandler.getTagValue( stepnode, FILE_SUFFIX );
     windowed = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, WINDOWED) );
 
   }
@@ -142,6 +147,22 @@ public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
    */
   public void setFilePrefix( String filePrefix ) {
     this.filePrefix = filePrefix;
+  }
+
+  /**
+   * Gets fileSuffix
+   *
+   * @return value of fileSuffix
+   */
+  public String getFileSuffix() {
+    return fileSuffix;
+  }
+
+  /**
+   * @param fileSuffix The fileSuffix to set
+   */
+  public void setFileSuffix( String fileSuffix ) {
+    this.fileSuffix = fileSuffix;
   }
 
   /**

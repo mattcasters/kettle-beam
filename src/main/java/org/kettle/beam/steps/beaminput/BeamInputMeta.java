@@ -64,13 +64,15 @@ public class BeamInputMeta extends BaseStepMeta implements StepMetaInterface {
   @Override public void getFields( RowMetaInterface inputRowMeta, String name, RowMetaInterface[] info, StepMeta nextStep, VariableSpace space, Repository repository, IMetaStore metaStore )
     throws KettleStepException {
 
-    FileDefinition fileDefinition = loadFileDefinition(metaStore);
+    if (metaStore!=null) {
+      FileDefinition fileDefinition = loadFileDefinition( metaStore );
 
-    try {
-      inputRowMeta.clear();
-      inputRowMeta.addRowMeta( fileDefinition.getRowMeta() );
-    } catch( KettlePluginException e ) {
-      throw new KettleStepException( "Unable to get row layout of file definition '"+fileDefinition.getName()+"'", e );
+      try {
+        inputRowMeta.clear();
+        inputRowMeta.addRowMeta( fileDefinition.getRowMeta() );
+      } catch ( KettlePluginException e ) {
+        throw new KettleStepException( "Unable to get row layout of file definition '" + fileDefinition.getName() + "'", e );
+      }
     }
   }
 

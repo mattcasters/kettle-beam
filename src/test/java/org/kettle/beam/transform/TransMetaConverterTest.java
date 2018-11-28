@@ -2,6 +2,14 @@ package org.kettle.beam.transform;
 
 import junit.framework.TestCase;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.PipelineResult;
+import org.apache.beam.sdk.metrics.Counter;
+import org.apache.beam.sdk.metrics.MetricNameFilter;
+import org.apache.beam.sdk.metrics.MetricQueryResults;
+import org.apache.beam.sdk.metrics.MetricResult;
+import org.apache.beam.sdk.metrics.MetricResults;
+import org.apache.beam.sdk.metrics.Metrics;
+import org.apache.beam.sdk.metrics.MetricsFilter;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 import org.kettle.beam.core.BeamKettle;
@@ -26,8 +34,10 @@ public class TransMetaConverterTest extends TestCase {
     inputFolder.mkdirs();
     File outputFolder = new File("/tmp/customers/output");
     outputFolder.mkdirs();
+    File tmpFolder = new File("/tmp/customers/tmp");
+    tmpFolder.mkdirs();
 
-    FileUtils.copyFile(new File("src/test/resources/customers/customers-100.txt"), new File("/tmp/customers/output/customers-100.txt"));
+    FileUtils.copyFile(new File("src/test/resources/customers/customers-100.txt"), new File("/tmp/customers/input/customers-100.txt"));
   }
 
   @Test
@@ -43,8 +53,14 @@ public class TransMetaConverterTest extends TestCase {
     TransMetaConverter converter = new TransMetaConverter( transMeta, metaStore );
     Pipeline pipeline = converter.createPipeline();
 
-    pipeline.run().waitUntilFinish();
+    PipelineResult pipelineResult = pipeline.run();
+    pipelineResult.waitUntilFinish();
+
+    MetricResults metricResults = pipelineResult.metrics();
+
+    MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
+    for ( MetricResult<Long> result : allResults.getCounters()) {
+      System.out.println("Name: "+result.getName()+" Attempted: "+result.getAttempted()+ " Committed: "+result.getCommitted());
+    }
   }
-
-
 }

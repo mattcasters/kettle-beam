@@ -3,24 +3,31 @@ package org.kettle.beam.core.fn;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.core.KettleRow;
-import org.kettle.beam.metastore.FileDefinition;
 import org.pentaho.di.core.QueueRowSet;
+import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.logging.LogLevel;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.xml.XMLHandler;
+import org.pentaho.di.trans.RowProducer;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.BaseStep;
+import org.pentaho.di.trans.step.RowAdapter;
+import org.pentaho.di.trans.step.RowListener;
 import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.StepMetaDataCombi;
 import org.pentaho.di.trans.step.StepMetaInterface;
-import org.pentaho.metastore.api.IMetaStore;
-import org.pentaho.metastore.stores.memory.MemoryMetaStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class StepFn extends DoFn<KettleRow, KettleRow> {
 
@@ -33,13 +40,18 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
   private transient StepInterface stepInterface;
   private transient StepMetaInterface stepMetaInterface;
   private transient StepDataInterface stepDataInterface;
-  private transient QueueRowSet inputRowSet;
-  private transient QueueRowSet outputRowSet;
   private transient Trans trans;
+  private transient RowProducer rowProducer;
+  private transient RowListener rowListener;
+  private transient List<Object[]> resultRows;
+
+  private transient Counter initCounter;
+  private transient Counter readCounter;
+  private transient Counter writtenCounter;
 
   // Log and count parse errors.
   private static final Logger LOG = LoggerFactory.getLogger( StepFn.class );
-  private final Counter numErrors = Metrics.counter( "main", "StepErrors" );
+  private final Counter numErrors = Metrics.counter( "main", "StepProcessErrors" );
 
   public StepFn() {
   }
@@ -58,31 +70,50 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
 
       if (transMeta==null) {
 
+        // Just to make sure
+        BeamKettle.init();
+
         // Inflate step metadata from XML
         //
         transMeta = new TransMeta( XMLHandler.getSubNode( XMLHandler.loadXMLString( transMetaXml ), TransMeta.XML_TAG ), null );
-        stepMeta = transMeta.findStep( stepname );
-        inputRowMeta = transMeta.getPrevStepFields( stepMeta );
+
+        // Single threaded...
+        //
+        transMeta.setTransformationType( TransMeta.TransformationType.SingleThreaded );
 
         trans = new Trans( transMeta );
+        trans.setLogLevel( LogLevel.ERROR );
         trans.prepareExecution( null );
 
-        this.stepMetaInterface = stepMeta.getStepMetaInterface();
-        this.stepDataInterface = stepMetaInterface.getStepData();
-        this.stepInterface = trans.findStepInterface( stepname, 0 );
 
-        // Prepare the step...
+        // Find the right combi
         //
-        stepInterface.getInputRowSets().clear();
-        stepInterface.getOutputRowSets().clear();
+        for ( StepMetaDataCombi combi : trans.getSteps()) {
+          if (stepname.equalsIgnoreCase( combi.stepname )) {
+            stepInterface = combi.step;
+            stepMetaInterface = combi.stepMeta.getStepMetaInterface();
+            stepDataInterface = combi.data;
+            stepMeta = combi.stepMeta;
 
-        // Handle the input and output rowsets
-        //
-        inputRowSet = new QueueRowSet();
-        outputRowSet = new QueueRowSet();
+            ((BaseStep)stepInterface).setUsingThreadPriorityManagment( false );
 
-        stepInterface.getInputRowSets().add( inputRowSet );
-        stepInterface.getOutputRowSets().add( outputRowSet );
+            rowProducer = trans.addRowProducer( stepname, 0 );
+            resultRows = new ArrayList<>();
+            rowListener = new RowAdapter() {
+              @Override public void rowWrittenEvent( RowMetaInterface rowMeta, Object[] row ) throws KettleStepException {
+                resultRows.add(row);
+              }
+            };
+            stepInterface.addRowListener( rowListener );
+            break;
+          }
+        }
+
+        if (this.stepInterface==null) {
+          throw new KettleException( "Unable to find step '"+stepname+"' in transformation" );
+        }
+
+        inputRowMeta = transMeta.getPrevStepFields( stepMeta );
 
         // Initialize the step as well...
         //
@@ -90,7 +121,18 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
         if ( !ok ) {
           throw new KettleException( "Unable to initialize step '" + stepname + "'" );
         }
+
+        initCounter = Metrics.counter( "init", stepname);
+        readCounter = Metrics.counter( "read", stepname);
+        writtenCounter = Metrics.counter( "written", stepname);
+
+        // Doesn't really start the threads in single threaded mode
+        // Just sets some flags all over the place
+        //
+        trans.startThreads();;
       }
+
+      resultRows.clear();
 
       // Get one row, pass it through the given stepInterface copy
       // Retrieve the rows and pass them to the processContext
@@ -99,23 +141,25 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
 
       // Pass the row to the input rowset
       //
-      inputRowSet.putRow( inputRowMeta, inputRow.getRow() );
+      rowProducer.putRow( inputRowMeta, inputRow.getRow() );
+      readCounter.inc();
 
       // Process the row
       //
-      stepInterface.processRow( stepMetaInterface, stepDataInterface );
+      boolean ok = stepInterface.processRow( stepMetaInterface, stepDataInterface );
 
       // Pass all rows in the output to the process context
       //
-      Object[] outputRow = outputRowSet.getRow();
-      while (outputRow!=null) {
+      for (Object[] resultRow : resultRows) {
 
         // Pass the row to the process context
         //
-        processContext.output( new KettleRow(outputRow) );
+        processContext.output( new KettleRow(resultRow) );
+        writtenCounter.inc();
       }
 
     } catch ( Exception e ) {
+      e.printStackTrace();
       numErrors.inc();
       LOG.info( "Parse error on " + processContext.element() + ", " + e.getMessage() );
     }

@@ -1,17 +1,22 @@
 package org.kettle.beam.core.transform;
 
+import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.io.WriteFilesResult;
+import org.apache.beam.sdk.io.fs.ResourceId;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
+import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.fn.KettleToStringFn;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.KettleEnvironment;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMeta;
@@ -22,7 +27,11 @@ import org.pentaho.metastore.stores.memory.MemoryMetaStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 
 public class BeamOutputTransform extends PTransform<PCollection<KettleRow>, PDone> {
@@ -58,17 +67,33 @@ public class BeamOutputTransform extends PTransform<PCollection<KettleRow>, PDon
 
       // This is the end of a computing chain, we write out the results
       //
-      return input
 
-        // We read a bunch of Strings, one per line basically
-        //
-        .apply( stepMeta.getName() + " READ FILE", ParDo.of( new KettleToStringFn( fileDefinition, rowMeta ) ) )
 
-        // We need to transform these lines into Kettle fields
-        //
-        .apply( TextIO.write().to( beamOutputMeta.getFilePrefix() ).withSuffix( ".csv" ) )
-        ;
+      // We read a bunch of Strings, one per line basically
+      //
+      PCollection<String> stringCollection = input.apply( stepMeta.getName() + " READ FILE", ParDo.of( new KettleToStringFn( fileDefinition, rowMeta ) ) );
 
+      // We need to transform these lines into a file and then we're PDone
+      //
+      TextIO.Write write = TextIO.write();
+      if ( StringUtils.isNotEmpty(beamOutputMeta.getOutputLocation())) {
+        String outputPrefix = beamOutputMeta.getOutputLocation();
+        if (!outputPrefix.endsWith( File.separator)) {
+          outputPrefix+=File.separator;
+        }
+        if (StringUtils.isNotEmpty( beamOutputMeta.getFilePrefix() )) {
+          outputPrefix+=beamOutputMeta.getFilePrefix();
+        }
+        write = write.to( outputPrefix );
+      }
+      if (StringUtils.isNotEmpty( beamOutputMeta.getFileSuffix() )) {
+        write = write.withSuffix( beamOutputMeta.getFileSuffix() );
+      }
+      stringCollection.apply(write);
+
+      // Get it over with
+      //
+      return PDone.in(input.getPipeline());
 
     } catch ( Exception e ) {
       e.printStackTrace();

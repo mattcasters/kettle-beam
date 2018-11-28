@@ -31,7 +31,7 @@ public class BeamTransMetaUtil {
     // Add the input step
     //
     BeamInputMeta beamInputMeta = new BeamInputMeta();
-    beamInputMeta.setInputLocation( "/tmp/customers/customers-100.txt" );
+    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
     beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
     StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
     beamInputStepMeta.setStepID( "BeamInput" );
@@ -49,9 +49,10 @@ public class BeamTransMetaUtil {
     // Add the output step
     //
     BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
-    beamOutputMeta.setOutputLocation( "/tmp/output/" );
+    beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
     beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
-    beamOutputMeta.setFilePrefix( "customers" ); // Not yet supported
+    beamOutputMeta.setFilePrefix( "customers" );
+    beamOutputMeta.setFileSuffix( ".csv" );
     beamOutputMeta.setWindowed( false ); // Not yet supported
     StepMeta beamOutputStepMeta = new StepMeta(outputStepname, beamOutputMeta);
     beamOutputStepMeta.setStepID( "BeamOutput" );
