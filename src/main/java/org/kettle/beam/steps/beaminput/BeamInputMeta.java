@@ -42,6 +42,10 @@ public class BeamInputMeta extends BaseStepMeta implements StepMetaInterface {
 
   private String fileDescriptionName;
 
+  public BeamInputMeta() {
+    super();
+  }
+
   @Override public void setDefault() {
   }
 

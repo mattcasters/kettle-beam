@@ -7,6 +7,7 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
+import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.fn.KettleToStringFn;
 import org.kettle.beam.metastore.FileDefinition;
@@ -47,11 +48,7 @@ public class BeamOutputTransform extends PTransform<PCollection<KettleRow>, PDon
     try {
       // Only initialize once on this node/vm
       //
-      synchronized ( this ) {
-        if ( !KettleEnvironment.isInitialized() ) {
-          KettleEnvironment.init();
-        }
-      }
+      BeamKettle.init();
 
       // Inflate the metadata on the node where this is running...
       //
@@ -69,11 +66,12 @@ public class BeamOutputTransform extends PTransform<PCollection<KettleRow>, PDon
 
         // We need to transform these lines into Kettle fields
         //
-        .apply( TextIO.write().to( beamOutputMeta.getOutputLocation() ) )
+        .apply( TextIO.write().to( beamOutputMeta.getFilePrefix() ).withSuffix( ".csv" ) )
         ;
 
 
     } catch ( Exception e ) {
+      e.printStackTrace();
       numErrors.inc();
       LOG.error( "Error in beam input transform", e );
       return null;

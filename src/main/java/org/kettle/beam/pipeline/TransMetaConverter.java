@@ -32,6 +32,16 @@ public class TransMetaConverter {
 
   public Pipeline createPipeline() throws Exception {
 
+    // Create a new Pipeline
+    //
+    PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
+    pipelineOptions.setJobName( transMeta.getName() );
+    pipelineOptions.setUserAgent( BeamDefaults.STRING_KETTLE_BEAM );
+
+    Pipeline pipeline = Pipeline.create( pipelineOptions );
+
+
+
     // Input handling
     //
     StepMeta beamInputStepMeta = findBeamInput();
@@ -46,11 +56,6 @@ public class TransMetaConverter {
     RowMetaInterface outputStepRowMeta = transMeta.getStepFields(beamOutputStepMeta);
 
 
-    PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
-    pipelineOptions.setJobName( transMeta.getName() );
-    pipelineOptions.setUserAgent( BeamDefaults.STRING_KETTLE_BEAM );
-
-    Pipeline pipeline = Pipeline.create( pipelineOptions );
 
     // Apply the PBegin to KettleRow transform:
     //
@@ -84,7 +89,7 @@ public class TransMetaConverter {
 
         RowMetaInterface rowMeta = transMeta.getPrevStepFields( stepMeta );
 
-        StepTransform stepTransform = new StepTransform( transMeta, stepMeta, rowMeta );
+        StepTransform stepTransform = new StepTransform( transMeta, stepMeta.getName() );
 
         // We read a bunch of Strings, one per line basically
         //

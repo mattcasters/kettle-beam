@@ -6,23 +6,30 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.metastore.FileDefinition;
+import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.metastore.api.IMetaStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 public class KettleToStringFn extends DoFn<KettleRow, String> {
 
   private FileDefinition fileDefinition;
-  private RowMetaInterface rowMeta;
+  private String rowMetaXml;
+
+  private transient RowMetaInterface rowMeta;
 
     // Log and count parse errors.
     private static final Logger LOG = LoggerFactory.getLogger( KettleToStringFn.class );
     private final Counter numParseErrors = Metrics.counter( "main", "ParseErrors" );
 
-    public KettleToStringFn( FileDefinition fileDefinition, RowMetaInterface rowMeta ) {
+    public KettleToStringFn( FileDefinition fileDefinition, RowMetaInterface rowMeta ) throws IOException {
       this.fileDefinition = fileDefinition;
-      this.rowMeta = rowMeta;
+      this.rowMetaXml = rowMeta.getMetaXML();
+      this.rowMeta = null;
     }
 
     @ProcessElement
@@ -30,6 +37,10 @@ public class KettleToStringFn extends DoFn<KettleRow, String> {
       KettleRow inputRow = processContext.element();
 
       try {
+
+        if (rowMeta==null) {
+          rowMeta = new RowMeta( XMLHandler.getSubNode( XMLHandler.loadXMLString( rowMetaXml ), RowMeta.XML_META_TAG ) );
+        }
 
         // Just a quick and dirty output for now...
         // TODO: refine with mulitple output formats, Avro, Parquet, ...

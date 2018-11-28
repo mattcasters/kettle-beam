@@ -11,6 +11,7 @@ import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.metastore.persist.MetaStoreAttribute;
 import org.pentaho.metastore.persist.MetaStoreElementType;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +19,7 @@ import java.util.List;
   name = "File Definition",
   description = "Describes a file layout"
 )
-public class FileDefinition {
+public class FileDefinition implements Serializable {
 
   private String name;
 

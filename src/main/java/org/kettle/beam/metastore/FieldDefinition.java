@@ -5,7 +5,9 @@ import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.metastore.persist.MetaStoreAttribute;
 
-public class FieldDefinition {
+import java.io.Serializable;
+
+public class FieldDefinition implements Serializable {
 
   @MetaStoreAttribute
   private String name;

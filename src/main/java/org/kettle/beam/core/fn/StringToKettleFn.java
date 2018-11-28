@@ -9,7 +9,6 @@ import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaString;
-import org.pentaho.metastore.api.IMetaStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

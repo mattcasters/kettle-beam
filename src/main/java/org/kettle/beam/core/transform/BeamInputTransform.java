@@ -7,6 +7,7 @@ import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
+import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.fn.StringToKettleFn;
 import org.kettle.beam.metastore.FileDefinition;
@@ -42,11 +43,7 @@ public class BeamInputTransform extends PTransform<PBegin, PCollection<KettleRow
     try {
       // Only initialize once on this node/vm
       //
-      synchronized ( this ) {
-        if ( !KettleEnvironment.isInitialized() ) {
-          KettleEnvironment.init();
-        }
-      }
+      BeamKettle.init();
 
       // Inflate the metadata on the node where this is running...
       //
@@ -68,6 +65,7 @@ public class BeamInputTransform extends PTransform<PBegin, PCollection<KettleRow
         ;
 
     } catch ( Exception e ) {
+      e.printStackTrace();
       numErrors.inc();
       LOG.error( "Error in beam input transform", e );
       return null;
