@@ -2,6 +2,7 @@ package org.kettle.beam.transform;
 
 import junit.framework.TestCase;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.pipeline.TransMetaConverter;
@@ -21,9 +22,12 @@ public class TransMetaConverterTest extends TestCase {
 
     metaStore = new MemoryMetaStore();
 
-    new File("/tmp/customers/input").mkdirs();
-    new File("/tmp/customers/output").mkdirs();
+    File inputFolder = new File("/tmp/customers/input");
+    inputFolder.mkdirs();
+    File outputFolder = new File("/tmp/customers/output");
+    outputFolder.mkdirs();
 
+    FileUtils.copyFile(new File("src/test/resources/customers/customers-100.txt"), new File("/tmp/customers/output/customers-100.txt"));
   }
 
   @Test

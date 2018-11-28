@@ -58,7 +58,7 @@ public class BeamInputTransform extends PTransform<PBegin, PCollection<KettleRow
 
         // We need to transform these lines into Kettle fields
         //
-        .apply( ParDo.of( new StringToKettleFn( fileDefinition ) ) )
+        .apply( stepMeta.getName() + " PARSE FILE", ParDo.of( new StringToKettleFn( fileDefinition ) ) )
 
         // From here on out the pipeline contains KettleRow
         //

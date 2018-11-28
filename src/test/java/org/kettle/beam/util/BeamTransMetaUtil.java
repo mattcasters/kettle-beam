@@ -4,22 +4,14 @@ import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.beaminput.BeamInputMeta;
 import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
-import org.pentaho.di.core.annotations.Step;
-import org.pentaho.di.core.plugins.Plugin;
-import org.pentaho.di.core.plugins.PluginInterface;
-import org.pentaho.di.core.plugins.StepPluginType;
 import org.pentaho.di.trans.TransHopMeta;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
-import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.steps.dummytrans.DummyTransMeta;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.persist.MetaStoreFactory;
 import org.pentaho.metastore.util.PentahoDefaults;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class BeamTransMetaUtil {
@@ -57,9 +49,9 @@ public class BeamTransMetaUtil {
     // Add the output step
     //
     BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
-    beamOutputMeta.setOutputLocation( "output/" );
+    beamOutputMeta.setOutputLocation( "/tmp/output/" );
     beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
-    beamOutputMeta.setFilePrefix( "customers-output" ); // Not yet supported
+    beamOutputMeta.setFilePrefix( "customers" ); // Not yet supported
     beamOutputMeta.setWindowed( false ); // Not yet supported
     StepMeta beamOutputStepMeta = new StepMeta(outputStepname, beamOutputMeta);
     beamOutputStepMeta.setStepID( "BeamOutput" );
@@ -80,7 +72,7 @@ public class BeamTransMetaUtil {
     fileDefinition.setEnclosure( null ); // NOT SUPPORTED YET
 
     List<FieldDefinition> fields = fileDefinition.getFieldDefinitions();
-    fields.add( new FieldDefinition( "id", "Integer", 9, 0, "#" ) );
+    fields.add( new FieldDefinition( "id", "Integer", 9, 0, " #" ) );
     fields.add( new FieldDefinition( "name", "String", 50, 0 ) );
     fields.add( new FieldDefinition( "firstname", "String", 50, 0 ) );
     fields.add( new FieldDefinition( "zip", "String", 20, 0 ) );
