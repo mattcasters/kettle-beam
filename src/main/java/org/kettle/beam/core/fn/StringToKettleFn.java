@@ -45,6 +45,8 @@ public class StringToKettleFn extends DoFn<String, KettleRow> {
           index++;
         }
 
+        System.out.println("Read row from file : "+rowMeta.getString(row));
+
         // Pass the row to the process context
         //
         processContext.output( new KettleRow( row ) );

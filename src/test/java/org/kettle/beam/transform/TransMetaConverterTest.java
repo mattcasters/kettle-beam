@@ -5,17 +5,12 @@ import org.apache.beam.sdk.Pipeline;
 import org.junit.Test;
 import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.pipeline.TransMetaConverter;
-import org.kettle.beam.steps.beaminput.BeamInputMeta;
-import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
 import org.kettle.beam.util.BeamTransMetaUtil;
-import org.pentaho.di.core.KettleEnvironment;
-import org.pentaho.di.core.plugins.Plugin;
-import org.pentaho.di.core.plugins.PluginInterface;
-import org.pentaho.di.core.plugins.PluginRegistry;
-import org.pentaho.di.core.plugins.StepPluginType;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.stores.memory.MemoryMetaStore;
+
+import java.io.File;
 
 public class TransMetaConverterTest extends TestCase {
 
@@ -25,6 +20,10 @@ public class TransMetaConverterTest extends TestCase {
     BeamKettle.init();
 
     metaStore = new MemoryMetaStore();
+
+    new File("/tmp/customers/input").mkdirs();
+    new File("/tmp/customers/output").mkdirs();
+
   }
 
   @Test
