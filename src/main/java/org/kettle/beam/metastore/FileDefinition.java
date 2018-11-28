@@ -56,17 +56,6 @@ public class FileDefinition {
     return rowMeta;
   }
 
-  public PTransform<PBegin, PCollection<KettleRow>> createInput() {
-    // TODO
-    return null;
-  }
-
-  public PTransform<PCollection<KettleRow>, PDone> createOutput() {
-    return null;
-  }
-
-
-
   /**
    * Gets name
    *

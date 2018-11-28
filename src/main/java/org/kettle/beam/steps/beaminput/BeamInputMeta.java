@@ -1,14 +1,16 @@
 package org.kettle.beam.steps.beaminput;
 
 import org.apache.commons.lang.StringUtils;
-import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.pentaho.di.core.annotations.Step;
+import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettlePluginException;
 import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
+import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
@@ -18,18 +20,23 @@ import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.metastore.api.IMetaStore;
-import org.pentaho.metastore.persist.MetaStoreAttribute;
 import org.pentaho.metastore.persist.MetaStoreFactory;
 import org.pentaho.metastore.util.PentahoDefaults;
+import org.w3c.dom.Node;
+
+import java.util.List;
 
 @Step(
-  id = "BeamOutput",
+  id = "BeamInput",
   name = "Beam Input",
   description = "Describes a Beam Input",
   image = "beam-input.svg",
   categoryDescription = "Beam"
 )
 public class BeamInputMeta extends BaseStepMeta implements StepMetaInterface {
+
+  public static final String INPUT_LOCATION = "input_location";
+  public static final String FILE_DESCRIPTION_NAME = "file_description_name";
 
   private String inputLocation;
 
@@ -78,7 +85,22 @@ public class BeamInputMeta extends BaseStepMeta implements StepMetaInterface {
     return fileDefinition;
   }
 
-  // TODO: READ/WRITE XML
+  @Override public String getXML() throws KettleException {
+    StringBuffer xml = new StringBuffer(  );
+
+    xml.append( XMLHandler.addTagValue( INPUT_LOCATION, inputLocation ) );
+    xml.append( XMLHandler.addTagValue( FILE_DESCRIPTION_NAME, fileDescriptionName) );
+
+    return xml.toString();
+  }
+
+  @Override public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
+
+    inputLocation = XMLHandler.getTagValue( stepnode, INPUT_LOCATION );
+    fileDescriptionName = XMLHandler.getTagValue( stepnode, FILE_DESCRIPTION_NAME );
+
+  }
+
 
   /**
    * Gets inputLocation

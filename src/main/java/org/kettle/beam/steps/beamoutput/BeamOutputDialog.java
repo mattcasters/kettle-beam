@@ -45,6 +45,8 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
 
   private TextVar wOutputLocation;
   private CCombo wFileDefinition;
+  private TextVar wFilePrefix;
+  private Button wWindowed;
 
   public BeamOutputDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
     super( parent, (BaseStepMeta) in, transMeta, sname );
@@ -116,6 +118,40 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     fdOutputLocation.right = new FormAttachment( 100, 0 );
     wOutputLocation.setLayoutData( fdOutputLocation );
     lastControl = wOutputLocation;
+
+    Label wlFilePrefix = new Label( shell, SWT.RIGHT );
+    wlFilePrefix.setText( BaseMessages.getString( PKG, "BeamOutputDialog.FilePrefix" ) );
+    props.setLook( wlFilePrefix );
+    FormData fdlFilePrefix = new FormData();
+    fdlFilePrefix.left = new FormAttachment( 0, 0 );
+    fdlFilePrefix.top = new FormAttachment( lastControl, margin );
+    fdlFilePrefix.right = new FormAttachment( middle, -margin );
+    wlFilePrefix.setLayoutData( fdlFilePrefix );
+    wFilePrefix = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFilePrefix );
+    FormData fdFilePrefix = new FormData();
+    fdFilePrefix.left = new FormAttachment( middle, 0 );
+    fdFilePrefix.top = new FormAttachment( wlFilePrefix, 0, SWT.CENTER );
+    fdFilePrefix.right = new FormAttachment( 100, 0 );
+    wFilePrefix.setLayoutData( fdFilePrefix );
+    lastControl = wFilePrefix;
+
+    Label wlWindowed = new Label( shell, SWT.RIGHT );
+    wlWindowed.setText( BaseMessages.getString( PKG, "BeamOutputDialog.Windowed" ) );
+    props.setLook( wlWindowed );
+    FormData fdlWindowed = new FormData();
+    fdlWindowed.left = new FormAttachment( 0, 0 );
+    fdlWindowed.top = new FormAttachment( lastControl, margin );
+    fdlWindowed.right = new FormAttachment( middle, -margin );
+    wlWindowed.setLayoutData( fdlWindowed );
+    wWindowed = new Button( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wWindowed );
+    FormData fdWindowed = new FormData();
+    fdWindowed.left = new FormAttachment( middle, 0 );
+    fdWindowed.top = new FormAttachment( wlWindowed, 0, SWT.CENTER );
+    fdWindowed.right = new FormAttachment( 100, 0 );
+    wWindowed.setLayoutData( fdWindowed );
+    lastControl = wWindowed;
 
     Label wlFileDefinition = new Label( shell, SWT.RIGHT );
     wlFileDefinition.setText( BaseMessages.getString( PKG, "BeamOutputDialog.FileDefinition" ) );

@@ -15,15 +15,13 @@ import org.slf4j.LoggerFactory;
 
 public class StringToKettleFn extends DoFn<String, KettleRow> {
 
-    private IMetaStore metaStore;
     private FileDefinition fileDefinition;
 
     // Log and count parse errors.
     private static final Logger LOG = LoggerFactory.getLogger( StringToKettleFn.class );
     private final Counter numParseErrors = Metrics.counter( "main", "ParseErrors" );
 
-    public StringToKettleFn( IMetaStore metaStore, FileDefinition fileDefinition ) {
-      this.metaStore = metaStore;
+    public StringToKettleFn( FileDefinition fileDefinition ) {
       this.fileDefinition = fileDefinition;
     }
 
@@ -56,15 +54,6 @@ public class StringToKettleFn extends DoFn<String, KettleRow> {
         numParseErrors.inc();
         LOG.info( "Parse error on " + processContext.element() + ", " + e.getMessage() );
       }
-    }
-
-    /**
-     * Gets metaStore
-     *
-     * @return value of metaStore
-     */
-    public IMetaStore getMetaStore() {
-      return metaStore;
     }
 
     /**

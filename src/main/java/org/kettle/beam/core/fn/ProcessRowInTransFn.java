@@ -4,7 +4,6 @@ import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.kettle.beam.core.KettleRow;
-import org.kettle.beam.core.TransMetaTransform;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.trans.RowProducer;
 import org.pentaho.di.trans.SingleThreadedTransExecutor;
@@ -21,7 +20,7 @@ public class ProcessRowInTransFn extends DoFn<KettleRow, KettleRow> {
     private List<Object[]> outputRows;
 
   // Log and count parse errors.
-  private static final Logger LOG = LoggerFactory.getLogger( TransMetaTransform.class );
+  private static final Logger LOG = LoggerFactory.getLogger( ProcessRowInTransFn.class );
   private static final Counter numErrors = Metrics.counter( "main", "ParseErrors" );
 
 

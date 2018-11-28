@@ -3,7 +3,11 @@ package org.kettle.beam.steps.beamoutput;
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.metastore.FileDefinition;
 import org.pentaho.di.core.annotations.Step;
+import org.pentaho.di.core.database.DatabaseMeta;
+import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStepMeta;
@@ -14,6 +18,9 @@ import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.persist.MetaStoreFactory;
 import org.pentaho.metastore.util.PentahoDefaults;
+import org.w3c.dom.Node;
+
+import java.util.List;
 
 @Step(
   id = "BeamOutput",
@@ -23,6 +30,12 @@ import org.pentaho.metastore.util.PentahoDefaults;
   categoryDescription = "Beam"
 )
 public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
+
+  public static final String OUTPUT_LOCATION = "output_location";
+  public static final String FILE_DESCRIPTION_NAME = "file_description_name";
+  public static final String FILE_PREFIX = "file_prefix";
+  public static final String WINDOWED = "windowed";
+
 
   private String outputLocation;
 
@@ -63,7 +76,25 @@ public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
     return fileDefinition;
   }
 
-  // TODO: READ/WRITE XML
+  @Override public String getXML() throws KettleException {
+    StringBuffer xml = new StringBuffer(  );
+
+    xml.append( XMLHandler.addTagValue( OUTPUT_LOCATION, outputLocation ) );
+    xml.append( XMLHandler.addTagValue( FILE_DESCRIPTION_NAME, fileDescriptionName) );
+    xml.append( XMLHandler.addTagValue( FILE_PREFIX, filePrefix) );
+    xml.append( XMLHandler.addTagValue( WINDOWED, windowed) );
+
+    return xml.toString();
+  }
+
+  @Override public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
+
+    outputLocation = XMLHandler.getTagValue( stepnode, OUTPUT_LOCATION );
+    fileDescriptionName = XMLHandler.getTagValue( stepnode, FILE_DESCRIPTION_NAME );
+    filePrefix = XMLHandler.getTagValue( stepnode, FILE_PREFIX );
+    windowed = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, WINDOWED) );
+
+  }
 
   /**
    * Gets outputLocation
