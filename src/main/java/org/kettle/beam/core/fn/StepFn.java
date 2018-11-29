@@ -68,9 +68,13 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
   private final Counter numErrors = Metrics.counter( "main", "StepProcessErrors" );
 
   public StepFn() {
+    // Don't expect this to be called.
+    //
+    resultRows = new ArrayList<>();
   }
 
   public StepFn( String stepname, String stepPluginId, String stepMetaInterfaceXml, String inputRowMetaXml) throws KettleException, IOException {
+    this();
     this.stepname = stepname;
     this.stepPluginId = stepPluginId;
     this.stepMetaInterfaceXml = stepMetaInterfaceXml;
@@ -131,8 +135,6 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
 
         rowProducer = trans.addRowProducer( INJECTOR_STEP_NAME, 0 );
 
-        resultRows = new ArrayList<>();
-
         // Find the right combi
         //
         for ( StepMetaDataCombi combi : trans.getSteps()) {
@@ -188,6 +190,7 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
         trans.startThreads();
 
         initCounter.inc();
+        resultRows = new ArrayList<>(  );
       }
 
       resultRows.clear();

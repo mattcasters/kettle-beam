@@ -162,7 +162,7 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     fdlWindowed.top = new FormAttachment( lastControl, margin );
     fdlWindowed.right = new FormAttachment( middle, -margin );
     wlWindowed.setLayoutData( fdlWindowed );
-    wWindowed = new Button( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    wWindowed = new Button( shell, SWT.CHECK );
     props.setLook( wWindowed );
     FormData fdWindowed = new FormData();
     fdWindowed.left = new FormAttachment( middle, 0 );
@@ -223,14 +223,6 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     wOutputLocation.addSelectionListener( lsDef );
     wFilePrefix.addSelectionListener( lsDef );
     wFileSuffix.addSelectionListener( lsDef );
-
-    // Get field names...
-    //
-    try {
-      wFileDefinition.setItems( transMeta.getPrevStepFields( stepname ).getFieldNames() );
-    } catch(Exception e) {
-      log.logError("Error getting field names", e);
-    }
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {

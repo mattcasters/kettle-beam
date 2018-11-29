@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<overlay id="label-test" title="Flow Test"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+         xmlns:HTML="http://www.w3.org/Profiles/XHTML-transitional" height="600" width="800" onload="modeler.init()"
+         xmlns:pen="http://www.pentaho.org/2008/xul" >
+
+
+  <!--
+  Add an entry to the spoon menu bar
+-->
+  <menubar id="spoon-menubar">
+
+    <menu id="beam" label="Beam" accesskey="alt-5">
+      <menupopup id="beam-popup">
+        <menuitem id="beam-run-local" label="Run on Local Beam engine" command="beamHelper.runLocal()"/>
+        <menuitem id="beam-run-gcp" label="Run on GCP Dataflow" command="beamHelper.runDataflow()"/>
+        <menuseparator/>
+        <menuitem id="beam-create-filedefinition" label="Create a file definition" command="beamHelper.createFileDefinition()"/>
+        <menuitem id="beam-edit-filedefinition" label="Edit a file definition" command="beamHelper.editFileDefinition()"/>
+        <menuitem id="beam-delete-filedefinition" label="Delete a file definition" command="beamHelper.deleteFileDefinition()"/>
+
+      </menupopup>
+    </menu>
+
+  </menubar>
+
+</overlay>

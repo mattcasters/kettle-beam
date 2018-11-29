@@ -78,6 +78,7 @@ public class BeamInputDialog extends BaseStepDialog implements StepDialogInterfa
 
       fileDefinitionNames = fileDefinitionNameList.toArray(new String[0]);
     } catch(Exception e) {
+      log.logError("Error getting file definitions list", e);
       fileDefinitionNames = new String[] {};
     }
 
@@ -167,14 +168,6 @@ public class BeamInputDialog extends BaseStepDialog implements StepDialogInterfa
     wStepname.addSelectionListener( lsDef );
     wFileDefinition.addSelectionListener( lsDef );
     wInputLocation.addSelectionListener( lsDef );
-
-    // Get field names...
-    //
-    try {
-      wFileDefinition.setItems( transMeta.getPrevStepFields( stepname ).getFieldNames() );
-    } catch(Exception e) {
-      log.logError("Error getting field names", e);
-    }
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {

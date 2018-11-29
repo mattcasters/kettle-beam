@@ -3,17 +3,14 @@ package org.kettle.beam.transform;
 import junit.framework.TestCase;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
-import org.apache.beam.sdk.metrics.Counter;
-import org.apache.beam.sdk.metrics.MetricNameFilter;
 import org.apache.beam.sdk.metrics.MetricQueryResults;
 import org.apache.beam.sdk.metrics.MetricResult;
 import org.apache.beam.sdk.metrics.MetricResults;
-import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.metrics.MetricsFilter;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 import org.kettle.beam.core.BeamKettle;
-import org.kettle.beam.pipeline.TransMetaConverter;
+import org.kettle.beam.pipeline.TransMetaPipelineConverter;
 import org.kettle.beam.util.BeamTransMetaUtil;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.metastore.api.IMetaStore;
@@ -50,7 +47,7 @@ public class TransMetaConverterTest extends TestCase {
       metaStore
     );
 
-    TransMetaConverter converter = new TransMetaConverter( transMeta, metaStore );
+    TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, metaStore );
     Pipeline pipeline = converter.createPipeline();
 
     PipelineResult pipelineResult = pipeline.run();
