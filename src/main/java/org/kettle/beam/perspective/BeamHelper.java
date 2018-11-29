@@ -141,12 +141,13 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
         }
       } );
       for (File file : files) {
-        libraries.add(file.getName());
-        System.out.println("Adding library : "+file);
+        libraries.add(file.getAbsolutePath());
+        System.out.println("Adding library : "+file.getAbsolutePath());
       }
       options.setFilesToStage( libraries );
 
       options.setProject( "kettledataflow" );
+      options.setAppName( "Kettle" );
       options.setStagingLocation( "gs://kettledataflow/binaries" );
       options.setTempLocation( "gs://kettledataflow/tmp/" );
       Pipeline pipeline = converter.createPipeline( DataflowRunner.class, options );
