@@ -18,6 +18,8 @@
         <menuitem id="beam-create-filedefinition" label="Create a file definition" command="beamHelper.createFileDefinition()"/>
         <menuitem id="beam-edit-filedefinition" label="Edit a file definition" command="beamHelper.editFileDefinition()"/>
         <menuitem id="beam-delete-filedefinition" label="Delete a file definition" command="beamHelper.deleteFileDefinition()"/>
+        <menuseparator/>
+        <menuitem id="beam-test-dataflow-access" label="Test dataflow" command="beamHelper.testDataflow()"/>
 
       </menupopup>
     </menu>

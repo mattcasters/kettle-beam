@@ -22,14 +22,21 @@
 
 package org.kettle.beam.perspective;
 
+import com.google.api.gax.paging.Page;
+import com.google.cloud.storage.Bucket;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
+import org.apache.beam.sdk.io.FileSystems;
+import org.apache.beam.sdk.io.fs.MatchResult;
 import org.apache.beam.sdk.metrics.MetricQueryResults;
 import org.apache.beam.sdk.metrics.MetricResult;
 import org.apache.beam.sdk.metrics.MetricResults;
 import org.apache.beam.sdk.metrics.MetricsFilter;
+import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
@@ -49,6 +56,10 @@ import org.pentaho.metastore.util.PentahoDefaults;
 import org.pentaho.ui.xul.dom.Document;
 import org.pentaho.ui.xul.impl.AbstractXulEventHandler;
 
+import java.io.File;
+import java.io.FilenameFilter;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -88,14 +99,16 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
     }
     try {
 
+      PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
+
       TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, spoon.getMetaStore() );
 
       Pipeline pipeline = converter.createPipeline();
       PipelineResult pipelineResult = pipeline.run();
       pipelineResult.waitUntilFinish();
 
-
       logMetrics( pipelineResult );
+
     } catch ( Exception e ) {
       new ErrorDialog( spoon.getShell(), "Error", "Error running local Beam Engine", e );
     }
@@ -117,6 +130,22 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
       TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, spoon.getMetaStore() );
       DataflowPipelineOptions options = PipelineOptionsFactory.as( DataflowPipelineOptions.class );
 
+      // Add all the jar files in lib/ to the classpath.
+      // Later we'll add the plugins as well...
+      //
+      List<String> libraries = new ArrayList<>(  );
+      File libFolder = new File("lib");
+      File[] files = libFolder.listFiles( new FilenameFilter() {
+        @Override public boolean accept( File dir, String name ) {
+          return name.endsWith( ".jar" );
+        }
+      } );
+      for (File file : files) {
+        libraries.add(file.getName());
+        System.out.println("Adding library : "+file);
+      }
+      options.setFilesToStage( libraries );
+
       options.setProject( "kettledataflow" );
       options.setStagingLocation( "gs://kettledataflow/binaries" );
       options.setTempLocation( "gs://kettledataflow/tmp/" );
@@ -125,6 +154,7 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
       PipelineResult pipelineResult = pipeline.run();
 
       logMetrics( pipelineResult );
+
     } catch ( Exception e ) {
       new ErrorDialog( spoon.getShell(), "Error", "Error running GCP Dataflow Beam Engine", e );
     }
@@ -261,10 +291,21 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
     }
   }
 
-  public void testGoogleCloudAccess() {
+  public void testDataflow() {
     try {
 
+      Storage storage = StorageOptions.getDefaultInstance().getService();
 
+      System.out.println("Buckets:");
+      Page<Bucket> buckets = storage.list();
+      for (Bucket bucket : buckets.iterateAll()) {
+        System.out.println(bucket.toString());
+      }
+
+      MatchResult.Metadata metadata = FileSystems.matchSingleFileSpec( "/tmp/" );
+      System.out.println("Scheme for /tmp: "+metadata.resourceId().getScheme());
+      metadata = FileSystems.matchSingleFileSpec( "gs://kettledataflow" );
+      System.out.println("Scheme for gs://kettledataflow: "+metadata.resourceId().getScheme());
 
     } catch(Exception e) {
       new ErrorDialog(spoon.getShell(), "Error", "Error", e);

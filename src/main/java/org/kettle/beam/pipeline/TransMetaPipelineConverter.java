@@ -1,19 +1,13 @@
 package org.kettle.beam.pipeline;
 
-import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.runners.direct.DirectRunner;
-import org.apache.beam.runners.spark.SparkRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
-import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.runners.PipelineRunnerRegistrar;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
-import org.kettle.beam.core.fn.KettleToStringFn;
 import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
 import org.kettle.beam.core.transform.StepTransform;
@@ -65,6 +59,7 @@ public class TransMetaPipelineConverter {
     StepMeta beamInputStepMeta = findBeamInput();
     BeamInputMeta beamInputMeta = (BeamInputMeta) beamInputStepMeta.getStepMetaInterface();
     FileDefinition inputFileDefinition = beamInputMeta.loadFileDefinition( metaStore );
+    RowMetaInterface fileRowMeta = inputFileDefinition.getRowMeta();
 
     // Apply the PBegin to KettleRow transform:
     //
@@ -72,7 +67,13 @@ public class TransMetaPipelineConverter {
       throw new KettleException( "We couldn't find or load the Beam Input step file definition" );
     }
     log.logBasic( "Input file definition found : '"+inputFileDefinition.getName()+"'" );
-    BeamInputTransform beamInputTransform = new BeamInputTransform( beamInputStepMeta, inputFileDefinition );
+    BeamInputTransform beamInputTransform = new BeamInputTransform(
+      beamInputStepMeta.getName(),
+      beamInputStepMeta.getXML(),
+      beamInputMeta.getInputLocation(),
+      inputFileDefinition.getSeparator(),
+      fileRowMeta.getMetaXML()
+    );
     PCollection<KettleRow> afterInput = pipeline.apply( beamInputTransform );
 
     // Transform all the other steps...
@@ -97,7 +98,15 @@ public class TransMetaPipelineConverter {
       throw new KettleException( "No output fields found in the file definition" );
     }
 
-    BeamOutputTransform beamOutputTransform = new BeamOutputTransform( beamOutputStepMeta, outputFileDefinition, outputStepRowMeta );
+    BeamOutputTransform beamOutputTransform = new BeamOutputTransform(
+      beamInputStepMeta.getName(),
+      beamOutputMeta.getOutputLocation(),
+      beamOutputMeta.getFilePrefix(),
+      beamOutputMeta.getFileSuffix(),
+      outputFileDefinition.getSeparator(),
+      outputFileDefinition.getEnclosure(),
+      outputStepRowMeta.getMetaXML()
+    );
     afterTransform.apply( beamOutputTransform );
 
     return pipeline;

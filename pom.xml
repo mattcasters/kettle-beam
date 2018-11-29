@@ -88,6 +88,16 @@
       <artifactId>guava</artifactId>
       <version>27.0-jre</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.auto.service</groupId>
+      <artifactId>auto-service</artifactId>
+      <version>1.0-rc4</version>
+    </dependency>
+    <dependency>
+      <groupId>kettle-beam</groupId>
+      <artifactId>kettle-beam-core</artifactId>
+      <version>0.0.4-SNAPSHOT</version>
+    </dependency>
 
     <dependency>
       <groupId>junit</groupId>
@@ -203,6 +213,16 @@
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>27.0-jre</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.auto.service</groupId>
+        <artifactId>auto-service</artifactId>
+        <version>1.0-rc4</version>
+      </dependency>
+      <dependency>
+        <groupId>kettle-beam</groupId>
+        <artifactId>kettle-beam-core</artifactId>
+        <version>0.0.4-SNAPSHOT</version>
       </dependency>
 
       <dependency>

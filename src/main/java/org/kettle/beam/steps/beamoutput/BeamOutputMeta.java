@@ -27,7 +27,7 @@ import java.util.List;
   name = "Beam Output",
   description = "Describes a Beam Output",
   image = "beam-output.svg",
-  categoryDescription = "Beam"
+  categoryDescription = "Big Data"
 )
 public class BeamOutputMeta extends BaseStepMeta implements StepMetaInterface {
 
