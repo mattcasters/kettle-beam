@@ -1,8 +1,13 @@
 package org.kettle.beam.pipeline;
 
+import org.apache.beam.runners.dataflow.DataflowRunner;
+import org.apache.beam.runners.direct.DirectRunner;
+import org.apache.beam.runners.spark.SparkRunner;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.runners.PipelineRunnerRegistrar;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.kettle.beam.core.BeamDefaults;
@@ -16,9 +21,12 @@ import org.kettle.beam.steps.beaminput.BeamInputMeta;
 import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.metastore.api.IMetaStore;
+
+import java.io.IOException;
 
 public class TransMetaConverter {
 
@@ -31,11 +39,15 @@ public class TransMetaConverter {
   }
 
   public Pipeline createPipeline() throws Exception {
+    return createPipeline( DirectRunner.class, PipelineOptionsFactory.create() );
+  }
+
+  public Pipeline createPipeline( Class<? extends PipelineRunner<?>> runnerClass, PipelineOptions pipelineOptions ) throws Exception {
 
     // Create a new Pipeline
     //
-    PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
-    pipelineOptions.setJobName( transMeta.getName() );
+    pipelineOptions.setRunner( runnerClass );
+    pipelineOptions.setJobName( "KettleTestJob" );
     pipelineOptions.setUserAgent( BeamDefaults.STRING_KETTLE_BEAM );
 
     Pipeline pipeline = Pipeline.create( pipelineOptions );
@@ -48,15 +60,6 @@ public class TransMetaConverter {
     BeamInputMeta beamInputMeta = (BeamInputMeta) beamInputStepMeta.getStepMetaInterface();
     FileDefinition inputFileDefinition = beamInputMeta.loadFileDefinition( metaStore );
 
-    // Output handling
-    //
-    StepMeta beamOutputStepMeta = findBeamOutput();
-    BeamOutputMeta beamOutputMeta = (BeamOutputMeta) beamOutputStepMeta.getStepMetaInterface();
-    FileDefinition outputFileDefinition = beamOutputMeta.loadFileDefinition( metaStore );
-    RowMetaInterface outputStepRowMeta = transMeta.getStepFields(beamOutputStepMeta);
-
-
-
     // Apply the PBegin to KettleRow transform:
     //
     BeamInputTransform beamInputTransform = new BeamInputTransform( beamInputStepMeta, inputFileDefinition );
@@ -65,7 +68,15 @@ public class TransMetaConverter {
     // Transform all the other steps...
     //
     PCollection<KettleRow> afterTransform = afterInput;
-    addTransforms( afterTransform );
+    afterTransform = addTransforms( afterTransform );
+
+
+    // Output handling
+    //
+    StepMeta beamOutputStepMeta = findBeamOutput();
+    BeamOutputMeta beamOutputMeta = (BeamOutputMeta) beamOutputStepMeta.getStepMetaInterface();
+    FileDefinition outputFileDefinition = beamOutputMeta.loadFileDefinition( metaStore );
+    RowMetaInterface outputStepRowMeta = transMeta.getStepFields(beamOutputStepMeta);
 
     // Apply the output transform from KettleRow to PDone
     //
@@ -75,7 +86,7 @@ public class TransMetaConverter {
     return pipeline;
   }
 
-  private PCollection<KettleRow> addTransforms( PCollection<KettleRow> collection ) throws KettleException {
+  private PCollection<KettleRow> addTransforms( PCollection<KettleRow> collection ) throws KettleException, IOException {
 
     // Perform topological sort
     //
@@ -89,7 +100,11 @@ public class TransMetaConverter {
 
         RowMetaInterface rowMeta = transMeta.getPrevStepFields( stepMeta );
 
-        StepTransform stepTransform = new StepTransform( transMeta, stepMeta.getName() );
+        // Wrap it in a tag, otherwise the XML is not valid...
+        //
+        String stepMetaInterfaceXml = XMLHandler.openTag(StepMeta.XML_TAG)+stepMeta.getStepMetaInterface().getXML()+XMLHandler.closeTag(StepMeta.XML_TAG);
+
+        StepTransform stepTransform = new StepTransform( stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML() );
 
         // We read a bunch of Strings, one per line basically
         //

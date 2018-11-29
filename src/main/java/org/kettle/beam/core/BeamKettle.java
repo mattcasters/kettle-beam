@@ -10,6 +10,7 @@ import org.pentaho.di.core.plugins.PluginInterface;
 import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.plugins.PluginTypeInterface;
 import org.pentaho.di.core.plugins.StepPluginType;
+import org.pentaho.di.core.xml.XMLHandlerCache;
 import org.pentaho.di.trans.step.StepMetaInterface;
 
 import java.util.ArrayList;
@@ -29,6 +30,8 @@ public class BeamKettle {
         pluginType.handlePluginAnnotation( BeamInputMeta.class, BeamInputMeta.class.getAnnotation( Step.class ), new ArrayList<>( ), false, null );
         pluginType.handlePluginAnnotation( BeamOutputMeta.class, BeamOutputMeta.class.getAnnotation( Step.class ), new ArrayList<>( ), false, null );
       }
+
+      XMLHandlerCache.getInstance();
     }
   }
 

@@ -3,17 +3,21 @@ package org.kettle.beam.core.fn;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.core.KettleRow;
-import org.pentaho.di.core.QueueRowSet;
-import org.pentaho.di.core.RowSet;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.logging.LogLevel;
+import org.pentaho.di.core.plugins.PluginRegistry;
+import org.pentaho.di.core.plugins.StepPluginType;
+import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.RowProducer;
 import org.pentaho.di.trans.Trans;
+import org.pentaho.di.trans.TransHopMeta;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStep;
 import org.pentaho.di.trans.step.RowAdapter;
@@ -23,16 +27,22 @@ import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaDataCombi;
 import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.steps.injector.InjectorMeta;
+import org.pentaho.metastore.stores.memory.MemoryMetaStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class StepFn extends DoFn<KettleRow, KettleRow> {
 
-  private String transMetaXml;
+  public static final String INJECTOR_STEP_NAME = "_INJECTOR_";
   private String stepname;
+  private String stepPluginId;
+  private String stepMetaInterfaceXml;
+  private String rowMetaXml;
 
   private transient TransMeta transMeta = null;
   private transient StepMeta stepMeta = null;
@@ -45,6 +55,10 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
   private transient RowListener rowListener;
   private transient List<Object[]> resultRows;
 
+  private transient StepInterface injectorStepInterface;
+  private transient StepMetaInterface injectorMetaInterface;
+  private transient StepDataInterface injectorDataInterface;
+
   private transient Counter initCounter;
   private transient Counter readCounter;
   private transient Counter writtenCounter;
@@ -56,11 +70,11 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
   public StepFn() {
   }
 
-  public StepFn( TransMeta transMeta, String stepname) throws KettleException {
-    this.transMetaXml = transMeta.getXML();
+  public StepFn( String stepname, String stepPluginId, String stepMetaInterfaceXml, String inputRowMetaXml) throws KettleException, IOException {
     this.stepname = stepname;
-
-    transMeta = null;
+    this.stepPluginId = stepPluginId;
+    this.stepMetaInterfaceXml = stepMetaInterfaceXml;
+    this.rowMetaXml = inputRowMetaXml;
   }
 
   @ProcessElement
@@ -68,37 +82,69 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
 
     try {
 
-      if (transMeta==null) {
+      if ( transMeta ==null) {
 
         // Just to make sure
         BeamKettle.init();
 
-        // Inflate step metadata from XML
-        //
-        transMeta = new TransMeta( XMLHandler.getSubNode( XMLHandler.loadXMLString( transMetaXml ), TransMeta.XML_TAG ), null );
-
+        // Create a very simple new transformation to run single threaded...
         // Single threaded...
         //
+        transMeta = new TransMeta();
         transMeta.setTransformationType( TransMeta.TransformationType.SingleThreaded );
 
+        // Input row metadata...
+        //
+        inputRowMeta = new RowMeta(XMLHandler.getSubNode( XMLHandler.loadXMLString( rowMetaXml), RowMeta.XML_META_TAG ));
+
+
+        // Create an Injector step with the right row layout...
+        // This will help all steps see the row layout statically...
+        //
+        InjectorMeta injectorMeta = new InjectorMeta();
+        injectorMeta.allocate( inputRowMeta.size() );
+        for (int i=0;i<inputRowMeta.size();i++) {
+          ValueMetaInterface valueMeta = inputRowMeta.getValueMeta( i );
+          injectorMeta.getFieldname()[i] = valueMeta.getName();
+          injectorMeta.getType()[i] = valueMeta.getType();
+          injectorMeta.getLength()[i] = valueMeta.getLength();
+          injectorMeta.getPrecision()[i] = valueMeta.getPrecision();
+        }
+        StepMeta injectorStepMeta = new StepMeta( INJECTOR_STEP_NAME, injectorMeta);
+        transMeta.addStep(injectorStepMeta);
+
+        // The step metadata without the wrappers...
+        //
+        PluginRegistry registry = PluginRegistry.getInstance();
+        stepMetaInterface = registry.loadClass( StepPluginType.class, stepPluginId, StepMetaInterface.class );
+        stepMetaInterface.loadXML( XMLHandler.getSubNode(XMLHandler.loadXMLString( stepMetaInterfaceXml ), StepMeta.XML_TAG), new ArrayList<>(), new MemoryMetaStore() ) ;
+        stepMeta = new StepMeta(stepname, stepMetaInterface);
+        stepMeta.setStepID( stepPluginId );
+        transMeta.addStep( stepMeta );
+        transMeta.addTransHop(new TransHopMeta( injectorStepMeta, stepMeta ) );
+
+        // Create the transformation...
+        //
         trans = new Trans( transMeta );
         trans.setLogLevel( LogLevel.ERROR );
         trans.prepareExecution( null );
 
+        rowProducer = trans.addRowProducer( INJECTOR_STEP_NAME, 0 );
+
+        resultRows = new ArrayList<>();
 
         // Find the right combi
         //
         for ( StepMetaDataCombi combi : trans.getSteps()) {
           if (stepname.equalsIgnoreCase( combi.stepname )) {
+            if (stepname.equalsIgnoreCase( "Only CA" )) {
+              System.out.print( "...." );
+            }
             stepInterface = combi.step;
-            stepMetaInterface = combi.stepMeta.getStepMetaInterface();
             stepDataInterface = combi.data;
-            stepMeta = combi.stepMeta;
 
             ((BaseStep)stepInterface).setUsingThreadPriorityManagment( false );
 
-            rowProducer = trans.addRowProducer( stepname, 0 );
-            resultRows = new ArrayList<>();
             rowListener = new RowAdapter() {
               @Override public void rowWrittenEvent( RowMetaInterface rowMeta, Object[] row ) throws KettleStepException {
                 resultRows.add(row);
@@ -107,17 +153,27 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
             stepInterface.addRowListener( rowListener );
             break;
           }
+          if (combi.stepname.equals(INJECTOR_STEP_NAME)) {
+            injectorStepInterface = combi.step;
+            injectorMetaInterface = combi.meta;
+            injectorDataInterface = combi.data;
+          }
         }
 
+        if (this.injectorStepInterface==null) {
+          throw new KettleException( "Unable to find injector step '"+INJECTOR_STEP_NAME+"' in transformation" );
+        }
         if (this.stepInterface==null) {
           throw new KettleException( "Unable to find step '"+stepname+"' in transformation" );
         }
 
-        inputRowMeta = transMeta.getPrevStepFields( stepMeta );
-
         // Initialize the step as well...
         //
-        boolean ok = stepInterface.init( stepMetaInterface, stepDataInterface );
+        boolean ok = injectorStepInterface.init( injectorMetaInterface, injectorDataInterface);
+        if ( !ok ) {
+          throw new KettleException( "Unable to initialize step '" + INJECTOR_STEP_NAME + "'" );
+        }
+        ok = stepInterface.init( this.stepMetaInterface, stepDataInterface );
         if ( !ok ) {
           throw new KettleException( "Unable to initialize step '" + stepname + "'" );
         }
@@ -129,7 +185,9 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
         // Doesn't really start the threads in single threaded mode
         // Just sets some flags all over the place
         //
-        trans.startThreads();;
+        trans.startThreads();
+
+        initCounter.inc();
       }
 
       resultRows.clear();
@@ -146,7 +204,8 @@ public class StepFn extends DoFn<KettleRow, KettleRow> {
 
       // Process the row
       //
-      boolean ok = stepInterface.processRow( stepMetaInterface, stepDataInterface );
+      injectorStepInterface.processRow( injectorMetaInterface, injectorDataInterface );
+      stepInterface.processRow( stepMetaInterface, stepDataInterface );
 
       // Pass all rows in the output to the process context
       //

@@ -9,41 +9,28 @@ import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.fn.StepFn;
 import org.pentaho.di.core.exception.KettleException;
-import org.pentaho.di.core.row.RowMeta;
-import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.xml.XMLHandler;
-import org.pentaho.di.trans.Trans;
-import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.step.BaseStep;
-import org.pentaho.di.trans.step.StepDataInterface;
-import org.pentaho.di.trans.step.StepInterface;
-import org.pentaho.di.trans.step.StepMeta;
-import org.pentaho.di.trans.step.StepMetaInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 public class StepTransform  extends PTransform<PCollection<KettleRow>, PCollection<KettleRow>> {
 
   protected String stepname;
-  protected String transMetaXml;
-
-
-  private transient TransMeta transMeta;
-  private transient StepMeta stepMeta;
-  private transient RowMetaInterface rowMeta;
+  protected String stepPluginId;
+  protected String inputRowMetaXml;
+  protected String stepMetaInterfaceXml;
 
   // Log and count errors.
   private static final Logger LOG = LoggerFactory.getLogger( StepTransform.class );
   private static final Counter numErrors = Metrics.counter( "main", "StepErrors" );
 
 
-  public StepTransform( TransMeta transMeta, String stepname ) throws KettleException {
-    try {
-      this.transMetaXml = transMeta.getXML();
-      this.stepname = stepname;
-    } catch(Exception e) {
-      throw new KettleException( "Error serializing step transform metadata to XML", e );
-    }
+  public StepTransform( String stepname, String stepPluginId, String stepMetaInterfaceXml, String inputRowMetaXml) throws KettleException, IOException {
+    this.stepname = stepname;
+    this.stepPluginId = stepPluginId;
+    this.stepMetaInterfaceXml = stepMetaInterfaceXml;
+    this.inputRowMetaXml = inputRowMetaXml;
   }
 
   @Override public PCollection<KettleRow> expand( PCollection<KettleRow> input ) {
@@ -54,13 +41,9 @@ public class StepTransform  extends PTransform<PCollection<KettleRow>, PCollecti
       //
       BeamKettle.init();
 
-      // Inflate the metadata on the node where this is running...
-      //
-      transMeta = new TransMeta( XMLHandler.getSubNode( XMLHandler.loadXMLString( transMetaXml ), TransMeta.XML_TAG), null );
-
       // Create a new step function, initializes the step
       //
-      StepFn stepFn = new StepFn( transMeta, stepname );
+      StepFn stepFn = new StepFn( stepname, stepPluginId, stepMetaInterfaceXml, inputRowMetaXml);
 
       PCollection<KettleRow> output = input.apply( ParDo.of( stepFn ) );
 
