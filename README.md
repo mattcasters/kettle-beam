@@ -3,7 +3,10 @@ Kettle plugins for Apache Beam
 
 ## First
 
-build/install project kettle-beam-core (repository next door)
+build/install project kettle-beam-core
+
+    https://github.com/mattcasters/kettle-beam-core
+
 
 ## Build
 
