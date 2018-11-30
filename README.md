@@ -32,6 +32,7 @@ Specify this file layout in your "Beam Input" and "Beam Output" steps.
 
 * Only straight line between Beam Input and Output is supported.  
 * Sort and Group by are not yet supported.
+* Group By step : experimental, SUM (Integer, Number), COUNT
 * External plugins are not yet supported.
 
 
