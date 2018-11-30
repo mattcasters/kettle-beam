@@ -16,9 +16,9 @@ Note you need the Pentaho settings.xml in your ~/.m2 : https://github.com/pentah
 
 ## Install
 
-* Create a new directory called kettle-beam in <PDI>plugins/ 
-* Copy target/kettle-beam-<version>.jar to <PDI>/plugins/kettle-beam/
-* Copy the other jar files in target/lib to <PDI>/lib
+* Create a new directory called kettle-beam in \<PDI-DIR\>plugins/ 
+* Copy target/kettle-beam-<version>.jar to \<PDI-DIR\>/plugins/kettle-beam/
+* Copy the other jar files in target/lib to \<PDI-DIR\>/lib
   
   I know it's dirty, fixing it later
   
