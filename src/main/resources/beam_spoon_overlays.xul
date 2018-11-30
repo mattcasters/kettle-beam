@@ -12,14 +12,15 @@
 
     <menu id="beam" label="Beam" accesskey="alt-5">
       <menupopup id="beam-popup">
-        <menuitem id="beam-run-local" label="Run on Local Beam engine" command="beamHelper.runLocal()"/>
-        <menuitem id="beam-run-gcp" label="Run on GCP Dataflow" command="beamHelper.runDataflow()"/>
+        <menuitem id="beam-run-config" label="Run this transformation on Beam" command="beamHelper.runBeam()"/>
         <menuseparator/>
         <menuitem id="beam-create-filedefinition" label="Create a file definition" command="beamHelper.createFileDefinition()"/>
         <menuitem id="beam-edit-filedefinition" label="Edit a file definition" command="beamHelper.editFileDefinition()"/>
         <menuitem id="beam-delete-filedefinition" label="Delete a file definition" command="beamHelper.deleteFileDefinition()"/>
         <menuseparator/>
-        <menuitem id="beam-test-dataflow-access" label="Test dataflow" command="beamHelper.testDataflow()"/>
+        <menuitem id="beam-create-beamjob" label="Create a Beam job conf" command="beamHelper.createBeamJobConfig()"/>
+        <menuitem id="beam-edit-beamjob" label="Edit a Beam job config" command="beamHelper.editBeamJobConfig()"/>
+        <menuitem id="beam-delete-beamjob" label="Delete a Beam job config" command="beamHelper.deleteBeamJobConfig()"/>
 
       </menupopup>
     </menu>
