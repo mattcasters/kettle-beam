@@ -12,6 +12,8 @@ build/install project kettle-beam-core
 
 mvn clean install
 
+Note you need the Pentaho settings.xml in your ~/.m2 : https://github.com/pentaho/maven-parent-poms/blob/master/maven-support-files/settings.xml
+
 ## Install
 
 * Create a new directory called kettle-beam in <PDI>plugins/ 
