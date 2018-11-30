@@ -5,11 +5,13 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
+import org.kettle.beam.core.transform.GroupByTransform;
 import org.kettle.beam.core.transform.StepTransform;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.beaminput.BeamInputMeta;
@@ -21,6 +23,7 @@ import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.steps.groupby.GroupByMeta;
 import org.pentaho.metastore.api.IMetaStore;
 
 import java.io.IOException;
@@ -138,11 +141,28 @@ public class TransMetaPipelineConverter {
         //
         String stepMetaInterfaceXml = XMLHandler.openTag(StepMeta.XML_TAG)+stepMeta.getStepMetaInterface().getXML()+XMLHandler.closeTag(StepMeta.XML_TAG);
 
-        StepTransform stepTransform = new StepTransform( stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML() );
+        PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform;
+
+        if (stepMeta.getStepMetaInterface() instanceof GroupByMeta ) {
+
+          GroupByMeta meta = (GroupByMeta) stepMeta.getStepMetaInterface();
+
+          stepTransform = new GroupByTransform(
+              rowMeta.getMetaXML(),  // The input row
+              meta.getGroupField(),
+              meta.getSubjectField(),
+              meta.getAggregateField(),
+              meta.getValueField()
+            );
+
+        } else {
+
+          stepTransform = new StepTransform( stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML() );
+        }
 
         // We read a bunch of Strings, one per line basically
         //
-        currentCollection = currentCollection.apply( stepMeta.getName() + " TRANSFORM", stepTransform );
+        currentCollection = currentCollection.apply( stepMeta.getName(), stepTransform );
       }
     }
 
