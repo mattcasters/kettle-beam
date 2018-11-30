@@ -39,7 +39,7 @@ A Beam Job configuration is needed to run your transformation on Apache Beam.
 Specify which Runner to use (Direct and Dataflow are supported).  
 You can use the variables to make your transformations completely generic.  For example you can set an INPUT_LOCATION location variable
 * /some/folder/* for a Direct execution during testing
-* gs://mybucket/input/*
+* gs://mybucket/input/* for an execution on GCP Dataflow
 
 
 ## Supported
