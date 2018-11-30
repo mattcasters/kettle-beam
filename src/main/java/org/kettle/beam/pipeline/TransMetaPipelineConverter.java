@@ -2,12 +2,14 @@ package org.kettle.beam.pipeline;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
+import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
+import org.kettle.beam.core.coder.KettleRowCoder;
 import org.kettle.beam.core.shared.VariableValue;
 import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
@@ -27,7 +29,13 @@ import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.steps.groupby.GroupByMeta;
+import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
+import org.pentaho.di.trans.steps.sort.SortRowsMeta;
+import org.pentaho.di.trans.steps.streamlookup.StreamLookupMeta;
+import org.pentaho.di.trans.steps.switchcase.SwitchCaseMeta;
+import org.pentaho.di.trans.steps.uniquerows.UniqueRowsMeta;
 import org.pentaho.metastore.api.IMetaStore;
 
 import java.io.IOException;
@@ -51,11 +59,9 @@ public class TransMetaPipelineConverter {
     // Create a new Pipeline
     //
     pipelineOptions.setRunner( runnerClass );
-    pipelineOptions.setJobName( buildDataFlowJobName( transMeta.getName() ) );
-    pipelineOptions.setUserAgent( BeamDefaults.STRING_KETTLE_BEAM );
-
     Pipeline pipeline = Pipeline.create( pipelineOptions );
 
+    pipeline.getCoderRegistry().registerCoderForClass( KettleRow.class, new KettleRowCoder());
 
     log.logBasic( "Created pipeline job with name '" + pipelineOptions.getJobName() + "'" );
 
@@ -176,6 +182,8 @@ public class TransMetaPipelineConverter {
       if ( !stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID ) &&
         !stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID ) ) {
 
+        validateStepBeamUsage(stepMeta.getStepMetaInterface());
+
         RowMetaInterface rowMeta = transMeta.getPrevStepFields( stepMeta );
 
         log.logBasic( "Adding step '" + stepMeta.getName() + "' to the pipeline, row metadata: " + rowMeta.toString() );
@@ -186,17 +194,22 @@ public class TransMetaPipelineConverter {
 
         PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform;
 
-        if ( stepMeta.getStepMetaInterface() instanceof GroupByMeta ) {
+        if ( stepMeta.getStepMetaInterface() instanceof MemoryGroupByMeta) {
 
-          GroupByMeta meta = (GroupByMeta) stepMeta.getStepMetaInterface();
+          MemoryGroupByMeta meta = (MemoryGroupByMeta) stepMeta.getStepMetaInterface();
+
+          String[] aggregates = new String[meta.getAggregateType().length];
+          for (int i=0;i<aggregates.length;i++) {
+            aggregates[i] = MemoryGroupByMeta.getTypeDesc( meta.getAggregateType()[i] );
+          }
 
           stepTransform = new GroupByTransform(
             rowMeta.getMetaXML(),  // The input row
             meta.getGroupField(),
             meta.getSubjectField(),
-            meta.getAggregateField(),
-            meta.getValueField()
-          );
+            aggregates,
+            meta.getAggregateField()
+            );
 
         } else {
 
@@ -216,6 +229,24 @@ public class TransMetaPipelineConverter {
     }
 
     return currentCollection;
+  }
+
+  private void validateStepBeamUsage( StepMetaInterface meta ) throws KettleException {
+    if (meta instanceof GroupByMeta) {
+      throw new KettleException( "Group By is not supported.  Use the Memory Group By step instead.  It comes closest to Beam functionality." );
+    }
+    if (meta instanceof SortRowsMeta ) {
+      throw new KettleException( "Sort rows is not yet supported on Beam." );
+    }
+    if (meta instanceof UniqueRowsMeta ) {
+      throw new KettleException( "Unique rows is not yet supported on Beam" );
+    }
+    if (meta instanceof StreamLookupMeta ) {
+      throw new KettleException( "Stream Lookup is not yet supported on Beam" );
+    }
+    if (meta instanceof SwitchCaseMeta ) {
+      throw new KettleException( "Switch/Case is not yet supported on Beam" );
+    }
   }
 
   private List<VariableValue> getVariableValues( VariableSpace space) {

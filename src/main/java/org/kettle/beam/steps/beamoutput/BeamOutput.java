@@ -1,11 +1,13 @@
 package org.kettle.beam.steps.beamoutput;
 
+import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStep;
 import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.StepMetaInterface;
 
 public class BeamOutput extends BaseStep implements StepInterface {
 
@@ -23,5 +25,15 @@ public class BeamOutput extends BaseStep implements StepInterface {
   public BeamOutput( StepMeta stepMeta, StepDataInterface stepDataInterface, int copyNr, TransMeta transMeta,
                      Trans trans ) {
     super( stepMeta, stepDataInterface, copyNr, transMeta, trans );
+  }
+
+  @Override public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
+    Object[] row = getRow();
+    if (row==null) {
+      setOutputDone();
+      return false;
+    }
+    putRow(getInputRowMeta(), row);
+    return true;
   }
 }
