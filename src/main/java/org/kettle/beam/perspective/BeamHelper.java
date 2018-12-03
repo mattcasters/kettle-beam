@@ -40,6 +40,7 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.widgets.MessageBox;
 import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.metastore.BeamJobConfigDialog;
@@ -58,6 +59,7 @@ import org.pentaho.di.ui.core.dialog.EnterSelectionDialog;
 import org.pentaho.di.ui.core.dialog.ErrorDialog;
 import org.pentaho.di.ui.spoon.ISpoonMenuController;
 import org.pentaho.di.ui.spoon.Spoon;
+import org.pentaho.di.ui.spoon.trans.TransGraph;
 import org.pentaho.metastore.persist.MetaStoreFactory;
 import org.pentaho.metastore.util.PentahoDefaults;
 import org.pentaho.ui.xul.dom.Document;
@@ -65,10 +67,16 @@ import org.pentaho.ui.xul.impl.AbstractXulEventHandler;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static akka.actor.Nobody.getParent;
 
 public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuController {
   protected static Class<?> PKG = BeamHelper.class; // for i18n
@@ -124,16 +132,34 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
         final BeamJobConfig config = factory.loadElement( choice );
         final Pipeline pipeline = getPipeline( transMeta, config );
 
-        spoon.getDisplay().asyncExec( new Runnable() {
+        PipelineResult pipelineResult = pipeline.run();
+
+
+        new Thread( new Runnable() {
           @Override public void run() {
 
-            PipelineResult pipelineResult = pipeline.run();
+            Timer timer = new Timer();
+            TimerTask timerTask = new TimerTask() {
+              @Override public void run() {
+                logMetrics( pipelineResult );
+              }
+            };
+            // Every 10 seconds
+            timer.schedule( timerTask, 10000, 10000 );
+
+            // Wait until we're done
             pipelineResult.waitUntilFinish();
 
+            timer.cancel();
+            timer.purge();
+
+            // Log the metrics at the end.
             logMetrics( pipelineResult );
 
+            spoon.getLog().logBasic( "  ----------------- End of Beam job "+pipeline.getOptions().getJobName()+" -----------------------");
+
           }
-        } );
+        }).start();
 
         showMessage( "Transformation started",
           "Your transformation was started with the selected Beam Runner."+Const.CR+
@@ -141,6 +167,15 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
           "Not all steps are supported, check the project READ.me and Wiki for up-to-date information"+Const.CR+Const.CR+
             "Enjoy Kettle!"
         );
+
+        TransGraph transGraph = spoon.getActiveTransGraph();
+        if (!transGraph.isExecutionResultsPaneVisible()) {
+          transGraph.showExecutionResults();
+          CTabItem transLogTab = transGraph.transLogDelegate.getTransLogTab();
+          transLogTab.getParent().setSelection( transLogTab );
+        }
+
+
 
       }
     } catch ( Exception e ) {
@@ -153,9 +188,10 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
 
   }
 
-  private void configureStandardOptions( BeamJobConfig config, PipelineOptions pipelineOptions ) {
-    if ( StringUtils.isNotEmpty( config.getName() ) ) {
-      pipelineOptions.setJobName( config.getName() );
+  private void configureStandardOptions( BeamJobConfig config, String transformationName, PipelineOptions pipelineOptions ) {
+    if ( StringUtils.isNotEmpty( transformationName ) ) {
+      String sanitizedName = transformationName.replace(" ", "_");
+      pipelineOptions.setJobName( sanitizedName );
     }
     if ( StringUtils.isNotEmpty( config.getUserAgent() ) ) {
       pipelineOptions.setUserAgent( config.getUserAgent() );
@@ -206,7 +242,7 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
           throw new KettleException( "Sorry, this isn't implemented yet" );
       }
 
-      configureStandardOptions( config, pipelineOptions );
+      configureStandardOptions( config, transMeta.getName(), pipelineOptions );
 
 
       setVariablesInTransformation(config, transMeta);
@@ -284,6 +320,8 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
   private void logMetrics( PipelineResult pipelineResult ) {
     LogChannelInterface log = spoon.getLog();
     MetricResults metricResults = pipelineResult.metrics();
+
+    log.logBasic( "  ----------------- Metrics refresh @ "+new SimpleDateFormat( "yyyy/MM/dd HH:mm:ss").format( new Date() ) +" -----------------------");
 
     MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
     for ( MetricResult<Long> result : allResults.getCounters() ) {

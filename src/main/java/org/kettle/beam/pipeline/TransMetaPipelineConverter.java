@@ -137,6 +137,10 @@ public class TransMetaPipelineConverter {
       }
       RowMetaInterface outputStepRowMeta = transMeta.getStepFields( beamOutputStepMeta );
 
+      // Empty file definition? Add all fields in the output
+      //
+      addAllFieldsToEmptyFileDefinition(outputStepRowMeta, outputFileDefinition);
+
       // Apply the output transform from KettleRow to PDone
       //
       if ( outputFileDefinition == null ) {
@@ -188,19 +192,22 @@ public class TransMetaPipelineConverter {
     fileDefinition.setEnclosure( "\"" );
     fileDefinition.setSeparator( "," );
 
-    RowMetaInterface rowMeta = transMeta.getPrevStepFields( beamOutputStepMeta );
-    for ( ValueMetaInterface valueMeta : rowMeta.getValueMetaList()) {
-      fileDefinition.getFieldDefinitions().add(new FieldDefinition(
-        valueMeta.getName(),
-        valueMeta.getTypeDesc(),
-        valueMeta.getLength(),
-        valueMeta.getPrecision(),
-        valueMeta.getConversionMask()
-        )
-      );
-    }
-
     return fileDefinition;
+  }
+
+  private void addAllFieldsToEmptyFileDefinition(RowMetaInterface rowMeta, FileDefinition fileDefinition) throws KettleStepException {
+    if (fileDefinition.getFieldDefinitions().isEmpty()) {
+      for ( ValueMetaInterface valueMeta : rowMeta.getValueMetaList()) {
+        fileDefinition.getFieldDefinitions().add(new FieldDefinition(
+            valueMeta.getName(),
+            valueMeta.getTypeDesc(),
+            valueMeta.getLength(),
+            valueMeta.getPrecision(),
+            valueMeta.getConversionMask()
+          )
+        );
+      }
+    }
   }
 
   private String buildDataFlowJobName( String name ) {
