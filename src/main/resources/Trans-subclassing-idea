@@ -1,0 +1,25 @@
+
+
+TransGraph : trans Usage
+
+isPaused()
+isInitializing()
+isRunning()
+isStopped()
+getErrors()
+
+killAll()
+stopAll()
+
+
+
+// Stub
+//
+addTransListener()
+trans.findRunThread() 
+getLogChannelId() 
+trans.setRepository()
+trans.setMetaStore()
+pauseRunning();
+resumeRunning();
+
