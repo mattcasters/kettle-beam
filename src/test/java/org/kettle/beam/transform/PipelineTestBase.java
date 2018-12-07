@@ -11,6 +11,7 @@ import org.apache.beam.sdk.metrics.MetricsFilter;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.commons.io.FileUtils;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.kettle.beam.core.BeamDefaults;
@@ -23,11 +24,12 @@ import org.pentaho.metastore.stores.memory.MemoryMetaStore;
 
 import java.io.File;
 
-public class TransMetaConverterTest extends TestCase {
+public class PipelineTestBase {
 
-  private IMetaStore metaStore;
+  protected IMetaStore metaStore;
 
-  @Override protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     BeamKettle.init();
 
     metaStore = new MemoryMetaStore();
@@ -42,36 +44,9 @@ public class TransMetaConverterTest extends TestCase {
     FileUtils.copyFile(new File("src/test/resources/customers/customers-100.txt"), new File("/tmp/customers/input/customers-100.txt"));
   }
 
-  @Test
-  public void testBasicPipeline() throws Exception {
-
-    TransMeta transMeta = BeamTransMetaUtil.generateBeamInputOutputTransMeta(
-      "input-dummy-output",
-      "INPUT",
-      "OUTPUT",
-      metaStore
-    );
-
-    createRunPipeline( transMeta );
-  }
-
-  @Test
-  public void testGroupByPipeline() throws Exception {
-
-    TransMeta transMeta = BeamTransMetaUtil.generateBeamGroupByTransMeta(
-      "input-group-output",
-      "INPUT",
-      "OUTPUT",
-      metaStore
-    );
-
-    createRunPipeline( transMeta );
-  }
-
-
 
   @Ignore
-  private void createRunPipeline( TransMeta transMeta ) throws Exception {
+  public void createRunPipeline( TransMeta transMeta ) throws Exception {
     PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
 
     pipelineOptions.setJobName( transMeta.getName() );

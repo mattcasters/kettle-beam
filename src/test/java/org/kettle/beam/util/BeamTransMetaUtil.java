@@ -4,10 +4,15 @@ import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.beaminput.BeamInputMeta;
 import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
+import org.pentaho.di.core.Condition;
+import org.pentaho.di.core.Const;
+import org.pentaho.di.core.row.ValueMetaAndData;
 import org.pentaho.di.trans.TransHopMeta;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.steps.constant.ConstantMeta;
 import org.pentaho.di.trans.steps.dummytrans.DummyTransMeta;
+import org.pentaho.di.trans.steps.filterrows.FilterRowsMeta;
 import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.persist.MetaStoreFactory;
@@ -111,6 +116,85 @@ public class BeamTransMetaUtil {
     beamOutputStepMeta.setStepID( "BeamOutput" );
     transMeta.addStep( beamOutputStepMeta );
     transMeta.addTransHop(new TransHopMeta( memoryGroupByStepMeta, beamOutputStepMeta ) );
+
+    return transMeta;
+  }
+
+
+  public static final TransMeta generateFilterRowsTransMeta( String transname, String inputStepname, String outputStepname, IMetaStore metaStore ) throws Exception {
+
+    MetaStoreFactory<FileDefinition> factory = new MetaStoreFactory<>( FileDefinition.class, metaStore, PentahoDefaults.NAMESPACE );
+    FileDefinition customerFileDefinition = createCustomersInputFileDefinition();
+    factory.saveElement( customerFileDefinition );
+
+    TransMeta transMeta = new TransMeta(  );
+    transMeta.setName( transname );
+    transMeta.setMetaStore( metaStore );
+
+    // Add the input step
+    //
+    BeamInputMeta beamInputMeta = new BeamInputMeta();
+    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
+    beamInputStepMeta.setStepID( "BeamInput" );
+    transMeta.addStep( beamInputStepMeta );
+
+
+    // Add 2 add constants steps A and B
+    //
+    ConstantMeta constantA = new ConstantMeta();
+    constantA.allocate( 1 );
+    constantA.getFieldName()[0]="label";
+    constantA.getFieldType()[0]="String";
+    constantA.getValue()[0]="< 'k'";
+    StepMeta constantAMeta = new StepMeta("A", constantA);
+    transMeta.addStep(constantAMeta);
+
+    ConstantMeta constantB = new ConstantMeta();
+    constantB.allocate( 1 );
+    constantB.getFieldName()[0]="label";
+    constantB.getFieldType()[0]="String";
+    constantB.getValue()[0]=">= 'k'";
+    StepMeta constantBMeta = new StepMeta("B", constantB);
+    transMeta.addStep(constantBMeta);
+
+
+    // Add Filter rows step looking for customers name > "k"
+    // Send rows to A (true) and B (false)
+    //
+    FilterRowsMeta filter = new FilterRowsMeta();
+    filter.getCondition().setLeftValuename( "name" );
+    filter.getCondition().setFunction( Condition.FUNC_SMALLER );
+    filter.getCondition().setRightExact( new ValueMetaAndData( "value", "k" ) );
+    filter.setTrueStepname( "A" );
+    filter.setFalseStepname( "B" );
+    StepMeta filterMeta = new StepMeta("Filter", filter);
+    transMeta.addStep( filterMeta );
+    transMeta.addTransHop( new TransHopMeta( beamInputStepMeta, filterMeta ) );
+    transMeta.addTransHop( new TransHopMeta( filterMeta, constantAMeta ) );
+    transMeta.addTransHop( new TransHopMeta( filterMeta, constantBMeta ) );
+
+    // Add a dummy behind it all to flatten/merge the data again...
+    //
+    DummyTransMeta dummyTransMeta = new DummyTransMeta();
+    StepMeta dummyStepMeta = new StepMeta("Flatten", dummyTransMeta);
+    transMeta.addStep( dummyStepMeta );
+    transMeta.addTransHop(new TransHopMeta( constantAMeta, dummyStepMeta ) );
+    transMeta.addTransHop(new TransHopMeta( constantBMeta, dummyStepMeta ) );
+
+    // Add the output step
+    //
+    BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
+    beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
+    beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    beamOutputMeta.setFilePrefix( "filter-test" );
+    beamOutputMeta.setFileSuffix( ".csv" );
+    beamOutputMeta.setWindowed( false ); // Not yet supported
+    StepMeta beamOutputStepMeta = new StepMeta(outputStepname, beamOutputMeta);
+    beamOutputStepMeta.setStepID( "BeamOutput" );
+    transMeta.addStep( beamOutputStepMeta );
+    transMeta.addTransHop(new TransHopMeta( dummyStepMeta, beamOutputStepMeta ) );
 
     return transMeta;
   }

@@ -3,9 +3,14 @@ package org.kettle.beam.pipeline;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
+import org.apache.beam.sdk.values.PCollectionList;
+import org.apache.beam.sdk.values.PCollectionTuple;
+import org.apache.beam.sdk.values.TupleTag;
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
@@ -15,6 +20,7 @@ import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
 import org.kettle.beam.core.transform.GroupByTransform;
 import org.kettle.beam.core.transform.StepTransform;
+import org.kettle.beam.core.util.KettleBeamUtil;
 import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.beaminput.BeamInputMeta;
@@ -28,9 +34,10 @@ import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.StepIOMetaInterface;
 import org.pentaho.di.trans.step.StepMeta;
-import org.pentaho.di.trans.step.StepMetaDataCombi;
 import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.di.trans.steps.groupby.GroupByMeta;
 import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
 import org.pentaho.di.trans.steps.sort.SortRowsMeta;
@@ -41,6 +48,7 @@ import org.pentaho.metastore.api.IMetaStore;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +72,7 @@ public class TransMetaPipelineConverter {
     pipelineOptions.setRunner( runnerClass );
     Pipeline pipeline = Pipeline.create( pipelineOptions );
 
-    pipeline.getCoderRegistry().registerCoderForClass( KettleRow.class, new KettleRowCoder());
+    pipeline.getCoderRegistry().registerCoderForClass( KettleRow.class, new KettleRowCoder() );
 
     log.logBasic( "Created pipeline job with name '" + pipelineOptions.getJobName() + "'" );
 
@@ -74,7 +82,7 @@ public class TransMetaPipelineConverter {
 
     // Handle input
     //
-    handleBeamInputSteps(log, stepCollectionMap, pipeline);
+    handleBeamInputSteps( log, stepCollectionMap, pipeline );
 
     // Transform all the other steps...
     //
@@ -82,7 +90,7 @@ public class TransMetaPipelineConverter {
 
     // Output handling
     //
-    handleBeamOutputSteps(log, stepCollectionMap );
+    handleBeamOutputSteps( log, stepCollectionMap );
 
     return pipeline;
   }
@@ -90,12 +98,13 @@ public class TransMetaPipelineConverter {
   private void handleBeamInputSteps( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, Pipeline pipeline ) throws KettleException, IOException {
 
     List<StepMeta> beamInputStepMetas = findBeamInputs();
-    for (StepMeta stepMeta : beamInputStepMetas) {
-      handlePipelineInput( log, stepCollectionMap, pipeline, stepMeta);
+    for ( StepMeta stepMeta : beamInputStepMetas ) {
+      handlePipelineInput( log, stepCollectionMap, pipeline, stepMeta );
     }
   }
 
-  private void handlePipelineInput( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, Pipeline pipeline, StepMeta beamInputStepMeta ) throws KettleException, IOException {
+  private void handlePipelineInput( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, Pipeline pipeline, StepMeta beamInputStepMeta )
+    throws KettleException, IOException {
     // Input handling
     //
     BeamInputMeta beamInputMeta = (BeamInputMeta) beamInputStepMeta.getStepMetaInterface();
@@ -117,15 +126,15 @@ public class TransMetaPipelineConverter {
       fileRowMeta.getMetaXML()
     );
     PCollection<KettleRow> afterInput = pipeline.apply( beamInputTransform );
-    stepCollectionMap.put(beamInputStepMeta.getName(), afterInput);
-    log.logBasic( "Handled step (INPUT) : "+beamInputStepMeta.getName() );
+    stepCollectionMap.put( beamInputStepMeta.getName(), afterInput );
+    log.logBasic( "Handled step (INPUT) : " + beamInputStepMeta.getName() );
 
   }
 
   private void handleBeamOutputSteps( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap ) throws KettleException, IOException {
 
     List<StepMeta> beamOutputStepMetas = findBeamOutputs();
-    for (StepMeta beamOutputStepMeta : beamOutputStepMetas) {
+    for ( StepMeta beamOutputStepMeta : beamOutputStepMetas ) {
       BeamOutputMeta beamOutputMeta = (BeamOutputMeta) beamOutputStepMeta.getStepMetaInterface();
       FileDefinition outputFileDefinition;
       if ( StringUtils.isEmpty( beamOutputMeta.getFileDescriptionName() ) ) {
@@ -139,7 +148,7 @@ public class TransMetaPipelineConverter {
 
       // Empty file definition? Add all fields in the output
       //
-      addAllFieldsToEmptyFileDefinition(outputStepRowMeta, outputFileDefinition);
+      addAllFieldsToEmptyFileDefinition( outputStepRowMeta, outputFileDefinition );
 
       // Apply the output transform from KettleRow to PDone
       //
@@ -164,7 +173,7 @@ public class TransMetaPipelineConverter {
       // Ignore info hops until we figure that out.
       //
       List<StepMeta> previousSteps = transMeta.findPreviousSteps( beamOutputStepMeta, false );
-      if (previousSteps.size()>1) {
+      if ( previousSteps.size() > 1 ) {
         throw new KettleException( "Combining data from multiple steps is not supported yet!" );
       }
       StepMeta previousStep = previousSteps.get( 0 );
@@ -172,21 +181,21 @@ public class TransMetaPipelineConverter {
       // Where does the output step read from?
       //
       PCollection<KettleRow> previousPCollection = stepCollectionMap.get( previousStep.getName() );
-      if (previousPCollection==null) {
-        throw new KettleException( "Previous PCollection for step "+previousStep.getName()+" could not be found" );
+      if ( previousPCollection == null ) {
+        throw new KettleException( "Previous PCollection for step " + previousStep.getName() + " could not be found" );
       }
 
       // No need to store this, it's PDone.
       //
       previousPCollection.apply( beamOutputTransform );
-      log.logBasic( "Handled step (OUTPUT) : "+beamOutputStepMeta.getName()+", gets data from "+previousStep.getName() );
+      log.logBasic( "Handled step (OUTPUT) : " + beamOutputStepMeta.getName() + ", gets data from " + previousStep.getName() );
 
     }
   }
 
 
   private FileDefinition getDefaultFileDefition( StepMeta beamOutputStepMeta ) throws KettleStepException {
-    FileDefinition fileDefinition = new FileDefinition(  );
+    FileDefinition fileDefinition = new FileDefinition();
 
     fileDefinition.setName( "Default" );
     fileDefinition.setEnclosure( "\"" );
@@ -195,10 +204,10 @@ public class TransMetaPipelineConverter {
     return fileDefinition;
   }
 
-  private void addAllFieldsToEmptyFileDefinition(RowMetaInterface rowMeta, FileDefinition fileDefinition) throws KettleStepException {
-    if (fileDefinition.getFieldDefinitions().isEmpty()) {
-      for ( ValueMetaInterface valueMeta : rowMeta.getValueMetaList()) {
-        fileDefinition.getFieldDefinitions().add(new FieldDefinition(
+  private void addAllFieldsToEmptyFileDefinition( RowMetaInterface rowMeta, FileDefinition fileDefinition ) throws KettleStepException {
+    if ( fileDefinition.getFieldDefinitions().isEmpty() ) {
+      for ( ValueMetaInterface valueMeta : rowMeta.getValueMetaList() ) {
+        fileDefinition.getFieldDefinitions().add( new FieldDefinition(
             valueMeta.getName(),
             valueMeta.getTypeDesc(),
             valueMeta.getLength(),
@@ -226,40 +235,76 @@ public class TransMetaPipelineConverter {
       if ( !stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID ) &&
         !stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID ) ) {
 
-        validateStepBeamUsage(stepMeta.getStepMetaInterface());
+        validateStepBeamUsage( stepMeta.getStepMetaInterface() );
 
         RowMetaInterface rowMeta = transMeta.getPrevStepFields( stepMeta );
 
         // Lookup all the previous steps for this one, excluding info steps like StreamLookup...
         // So the usecase is : we read from multiple input steps and join to one location...
         //
-        List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false);
-        if (previousSteps.size()>1) {
-          throw new KettleException( "Combining data from multiple steps is not supported yet!" );
+        List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
+
+        if ( previousSteps.isEmpty() ) {
+          throw new KettleException( "Steps without input aren't supported yet" );
+        }
+
+        // Lookup the previous collection to apply this steps transform to.
+        // We can take any of the inputs so the first one will do.
+        //
+        StepMeta firstPreviousStep = previousSteps.get( 0 );
+
+        // Check in the map to see if previousStep isn't targeting this one
+        //
+        PCollection<KettleRow> input;
+        String targetName = KettleBeamUtil.createTargetTupleId( firstPreviousStep.getName(), stepMeta.getName() );
+        input = stepCollectionMap.get( targetName );
+        if (input==null) {
+          input = stepCollectionMap.get( firstPreviousStep.getName() );
+        } else {
+          log.logBasic("Step "+stepMeta.getName()+" reading from previous step targetting this one using : "+targetName);
+        }
+
+        // If there are multiple input streams into this step, flatten all the data sources by default
+        // This means to simply merge the data.
+        //
+        if ( previousSteps.size() > 1 ) {
+          List<PCollection<KettleRow>> extraInputs = new ArrayList<>();
+          for ( int i = 1; i < previousSteps.size(); i++ ) {
+            StepMeta previousStep = previousSteps.get( i );
+            PCollection<KettleRow> previousPCollection;
+            targetName = KettleBeamUtil.createTargetTupleId( previousStep.getName(), stepMeta.getName() );
+            previousPCollection = stepCollectionMap.get(targetName);
+            if (previousPCollection==null) {
+              previousPCollection = stepCollectionMap.get( previousStep.getName() );
+            } else {
+              log.logBasic("Step "+stepMeta.getName()+" reading from previous step targetting this one using : "+targetName);
+            }
+            if ( previousPCollection == null ) {
+              throw new KettleException( "Previous collection was not found for step " + previousStep.getName() + ", a previous step to " + stepMeta.getName() );
+            }
+            extraInputs.add( previousPCollection );
+          }
+
+          // Flatten the extra inputs...
+          //
+          PCollectionList<KettleRow> inputList = PCollectionList.of( input );
+
+          for ( PCollection<KettleRow> extraInput : extraInputs ) {
+            inputList = inputList.and( extraInput );
+          }
+
+          // Flatten all the collections.  It's business as usual behind this.
+          //
+          input = inputList.apply( stepMeta.getName()+" Flatten", Flatten.<KettleRow>pCollections() );
         }
 
         // Wrap current step metadata in a tag, otherwise the XML is not valid...
         //
         String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
 
-        PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform;
-
         if ( stepMeta.getStepMetaInterface() instanceof MemoryGroupByMeta ) {
 
-          MemoryGroupByMeta meta = (MemoryGroupByMeta) stepMeta.getStepMetaInterface();
-
-          String[] aggregates = new String[ meta.getAggregateType().length ];
-          for ( int i = 0; i < aggregates.length; i++ ) {
-            aggregates[ i ] = MemoryGroupByMeta.getTypeDesc( meta.getAggregateType()[ i ] );
-          }
-
-          stepTransform = new GroupByTransform(
-            rowMeta.getMetaXML(),  // The input row
-            meta.getGroupField(),
-            meta.getSubjectField(),
-            aggregates,
-            meta.getAggregateField()
-          );
+          handleGroupByStep( stepCollectionMap, log, stepMeta, rowMeta, previousSteps, input );
 
         } else {
 
@@ -267,60 +312,102 @@ public class TransMetaPipelineConverter {
           //
           List<VariableValue> variableValues = getVariableValues( transMeta );
 
+          // Find out all the target steps for this step...
+          //
+          StepIOMetaInterface ioMeta = stepMeta.getStepMetaInterface().getStepIOMeta();
+          List<String> targetSteps = new ArrayList<String>(  );
+          for ( StreamInterface targetStream : ioMeta.getTargetStreams()) {
+            if (targetStream.getSubject()!=null) {
+              targetSteps.add( targetStream.getSubject().toString() );
+            }
+          }
+
           // Send all the information on their way to the right nodes
           //
-          stepTransform = new StepTransform( variableValues, stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML() );
+          StepTransform stepTransform = new StepTransform( variableValues, stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML(), targetSteps );
+
+          // Apply the step transform to the previous input step PCollection(s)
+          //
+          PCollectionTuple tuple = input.apply( stepMeta.getName(), stepTransform );
+
+          // The main collection
+          //
+          PCollection<KettleRow> mainPCollection = tuple.get( new TupleTag<KettleRow>( stepMeta.getName() ) );
+
+          // Save this in the map
+          //
+          stepCollectionMap.put( stepMeta.getName(), mainPCollection );
+
+          // Were there any targeted steps in this step?
+          //
+          for (String targetStep: targetSteps) {
+            String tupleId = KettleBeamUtil.createTargetTupleId( stepMeta.getName(), targetStep );
+            PCollection<KettleRow> targetPCollection = tuple.get(new TupleTag<KettleRow>( tupleId ));
+
+            // Store this in the map as well
+            //
+            stepCollectionMap.put( tupleId, targetPCollection );
+          }
+
+          log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size()+" previous step(s)" );
         }
 
-        // The previous step to connect to ...
-        //
-        StepMeta previousStep = previousSteps.get(0);
-
-        // Lookup the previous collection to apply this step to.
-        //
-        PCollection<KettleRow> previousPCollection = stepCollectionMap.get( previousStep.getName() );
-        if (previousPCollection==null) {
-          throw new KettleException( "Previous PCollection for step "+previousStep.getName()+" could not be found" );
-        }
-
-        // We read a bunch of Strings, one per line basically
-        //
-        PCollection<KettleRow> stepPCollection = previousPCollection.apply( stepMeta.getName(), stepTransform );
-
-        // Save this in the map
-        //
-        stepCollectionMap.put(stepMeta.getName(), stepPCollection);
-        log.logBasic( "Handled step (STEP) : "+stepMeta.getName()+", gets data from "+previousStep.getName() );
 
       }
     }
+  }
 
+  private void handleGroupByStep( Map<String, PCollection<KettleRow>> stepCollectionMap, LogChannelInterface log, StepMeta stepMeta, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
+                                  PCollection<KettleRow> input ) throws IOException {
+    MemoryGroupByMeta meta = (MemoryGroupByMeta) stepMeta.getStepMetaInterface();
+
+    String[] aggregates = new String[ meta.getAggregateType().length ];
+    for ( int i = 0; i < aggregates.length; i++ ) {
+      aggregates[ i ] = MemoryGroupByMeta.getTypeDesc( meta.getAggregateType()[ i ] );
+    }
+
+    PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform = new GroupByTransform(
+      rowMeta.getMetaXML(),  // The input row
+      meta.getGroupField(),
+      meta.getSubjectField(),
+      aggregates,
+      meta.getAggregateField()
+    );
+
+    // Apply the step transform to the previous input step PCollection(s)
+    //
+    PCollection<KettleRow> stepPCollection = input.apply( stepMeta.getName(), stepTransform );
+
+    // Save this in the map
+    //
+    stepCollectionMap.put( stepMeta.getName(), stepPCollection );
+    log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size()+" previous step(s)" );
   }
 
   private void validateStepBeamUsage( StepMetaInterface meta ) throws KettleException {
-    if (meta instanceof GroupByMeta) {
+    if ( meta instanceof GroupByMeta ) {
       throw new KettleException( "Group By is not supported.  Use the Memory Group By step instead.  It comes closest to Beam functionality." );
     }
-    if (meta instanceof SortRowsMeta ) {
+    if ( meta instanceof SortRowsMeta ) {
       throw new KettleException( "Sort rows is not yet supported on Beam." );
     }
-    if (meta instanceof UniqueRowsMeta ) {
+    if ( meta instanceof UniqueRowsMeta ) {
       throw new KettleException( "Unique rows is not yet supported on Beam" );
     }
-    if (meta instanceof StreamLookupMeta ) {
+    if ( meta instanceof StreamLookupMeta ) {
       throw new KettleException( "Stream Lookup is not yet supported on Beam" );
     }
-    if (meta instanceof SwitchCaseMeta ) {
+    if ( meta instanceof SwitchCaseMeta ) {
       throw new KettleException( "Switch/Case is not yet supported on Beam" );
     }
   }
 
-  private List<VariableValue> getVariableValues( VariableSpace space) {
+  private List<VariableValue> getVariableValues( VariableSpace space ) {
 
-    List<VariableValue> variableValues = new ArrayList<>(  );
-    for (String variable : space.listVariables()) {
+    List<VariableValue> variableValues = new ArrayList<>();
+    for ( String variable : space.listVariables() ) {
       String value = space.getVariable( variable );
-      variableValues.add(new VariableValue( variable, value ));
+      variableValues.add( new VariableValue( variable, value ) );
     }
     return variableValues;
   }
@@ -331,20 +418,20 @@ public class TransMetaPipelineConverter {
    * @throws KettleException
    */
   private List<StepMeta> findBeamInputs() throws KettleException {
-    List<StepMeta> steps = new ArrayList<>(  );
+    List<StepMeta> steps = new ArrayList<>();
     for ( StepMeta stepMeta : transMeta.getSteps() ) {
       if ( stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID ) ) {
-        steps.add(stepMeta);
+        steps.add( stepMeta );
       }
     }
     return steps;
   }
 
   private List<StepMeta> findBeamOutputs() throws KettleException {
-    List<StepMeta> steps = new ArrayList<>(  );
+    List<StepMeta> steps = new ArrayList<>();
     for ( StepMeta stepMeta : transMeta.getSteps() ) {
       if ( stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID ) ) {
-        steps.add(stepMeta);
+        steps.add( stepMeta );
       }
     }
     return steps;
