@@ -23,6 +23,7 @@ import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.stores.memory.MemoryMetaStore;
 
 import java.io.File;
+import java.io.FileOutputStream;
 
 public class PipelineTestBase {
 
@@ -47,6 +48,11 @@ public class PipelineTestBase {
 
   @Ignore
   public void createRunPipeline( TransMeta transMeta ) throws Exception {
+
+    FileOutputStream fos = new FileOutputStream( "/tmp/"+transMeta.getName()+".ktr" );
+    fos.write( transMeta.getXML().getBytes() );
+    fos.close();
+
     PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
 
     pipelineOptions.setJobName( transMeta.getName() );

@@ -245,7 +245,7 @@ public class TransMetaPipelineConverter {
         List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
 
         if ( previousSteps.isEmpty() ) {
-          throw new KettleException( "Steps without input aren't supported yet" );
+          throw new KettleException( "Steps without input aren't supported yet: "+stepMeta.getName());
         }
 
         // Lookup the previous collection to apply this steps transform to.
@@ -317,8 +317,8 @@ public class TransMetaPipelineConverter {
           StepIOMetaInterface ioMeta = stepMeta.getStepMetaInterface().getStepIOMeta();
           List<String> targetSteps = new ArrayList<String>(  );
           for ( StreamInterface targetStream : ioMeta.getTargetStreams()) {
-            if (targetStream.getSubject()!=null) {
-              targetSteps.add( targetStream.getSubject().toString() );
+            if (targetStream.getStepMeta()!=null) {
+              targetSteps.add( targetStream.getStepMeta().getName() );
             }
           }
 

@@ -1,0 +1,22 @@
+package org.kettle.beam.transform;
+
+import org.junit.Test;
+import org.kettle.beam.util.BeamTransMetaUtil;
+import org.pentaho.di.trans.TransMeta;
+
+public class SwitchCasePipelineTest extends PipelineTestBase {
+
+  @Test
+  public void testSwitchCasePipeline() throws Exception {
+
+    TransMeta transMeta = BeamTransMetaUtil.generateSwitchCaseTransMeta(
+      "input-switch-case-output",
+      "INPUT",
+      "OUTPUT",
+      metaStore
+    );
+
+    createRunPipeline( transMeta );
+  }
+
+}

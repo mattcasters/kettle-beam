@@ -7,6 +7,7 @@ import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
 import org.pentaho.di.core.Condition;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.row.ValueMetaAndData;
+import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.trans.TransHopMeta;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
@@ -14,6 +15,8 @@ import org.pentaho.di.trans.steps.constant.ConstantMeta;
 import org.pentaho.di.trans.steps.dummytrans.DummyTransMeta;
 import org.pentaho.di.trans.steps.filterrows.FilterRowsMeta;
 import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
+import org.pentaho.di.trans.steps.switchcase.SwitchCaseMeta;
+import org.pentaho.di.trans.steps.switchcase.SwitchCaseTarget;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.persist.MetaStoreFactory;
 import org.pentaho.metastore.util.PentahoDefaults;
@@ -193,6 +196,98 @@ public class BeamTransMetaUtil {
     beamOutputMeta.setWindowed( false ); // Not yet supported
     StepMeta beamOutputStepMeta = new StepMeta(outputStepname, beamOutputMeta);
     beamOutputStepMeta.setStepID( "BeamOutput" );
+    transMeta.addStep( beamOutputStepMeta );
+    transMeta.addTransHop(new TransHopMeta( dummyStepMeta, beamOutputStepMeta ) );
+
+    return transMeta;
+  }
+
+  public static final TransMeta generateSwitchCaseTransMeta( String transname, String inputStepname, String outputStepname, IMetaStore metaStore ) throws Exception {
+
+    MetaStoreFactory<FileDefinition> factory = new MetaStoreFactory<>( FileDefinition.class, metaStore, PentahoDefaults.NAMESPACE );
+    FileDefinition customerFileDefinition = createCustomersInputFileDefinition();
+    factory.saveElement( customerFileDefinition );
+
+    TransMeta transMeta = new TransMeta(  );
+    transMeta.setName( transname );
+    transMeta.setMetaStore( metaStore );
+
+    // Add the input step
+    //
+    BeamInputMeta beamInputMeta = new BeamInputMeta();
+    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
+    beamInputStepMeta.setStepID( "BeamInput" );
+    beamInputStepMeta.setDraw( true );
+    transMeta.addStep( beamInputStepMeta );
+
+
+
+    // Add 4 add constants steps CA and FL, NY, Default
+    //
+    String[] stateCodes = new String[] { "CA", "FL", "NY", "AR", "Default" };
+    for (String stateCode : stateCodes) {
+      ConstantMeta constant = new ConstantMeta();
+      constant.allocate( 1 );
+      constant.getFieldName()[0]="Comment";
+      constant.getFieldType()[0]="String";
+      constant.getValue()[0]=stateCode+" : some comment";
+      StepMeta constantMeta = new StepMeta(stateCode, constant);
+      constantMeta.setDraw( true );
+      transMeta.addStep(constantMeta);
+    }
+
+    // Add Switch / Case step looking switching on stateCode field
+    // Send rows to A (true) and B (false)
+    //
+    SwitchCaseMeta switchCaseMeta = new SwitchCaseMeta();
+    switchCaseMeta.allocate();
+    switchCaseMeta.setFieldname( "stateCode" );
+    switchCaseMeta.setCaseValueType( ValueMetaInterface.TYPE_STRING );
+    // Last one in the array is the Default target
+    //
+    for (int i=0;i<stateCodes.length-1;i++) {
+      String stateCode = stateCodes[i];
+      List<SwitchCaseTarget> caseTargets = switchCaseMeta.getCaseTargets();
+      SwitchCaseTarget target = new SwitchCaseTarget();
+      target.caseValue = stateCode;
+      target.caseTargetStepname = stateCode;
+      caseTargets.add(target);
+    }
+    switchCaseMeta.setDefaultTargetStepname( stateCodes[stateCodes.length-1]  );
+    switchCaseMeta.searchInfoAndTargetSteps( transMeta.getSteps() );
+    StepMeta switchCaseStepMeta = new StepMeta("Switch/Case", switchCaseMeta);
+    switchCaseStepMeta.setDraw( true );
+    transMeta.addStep( switchCaseStepMeta );
+    transMeta.addTransHop( new TransHopMeta( beamInputStepMeta, switchCaseStepMeta ) );
+
+    for (String stateCode : stateCodes) {
+      transMeta.addTransHop( new TransHopMeta( switchCaseStepMeta, transMeta.findStep( stateCode ) ) );
+    }
+
+    // Add a dummy behind it all to flatten/merge the data again...
+    //
+    DummyTransMeta dummyTransMeta = new DummyTransMeta();
+    StepMeta dummyStepMeta = new StepMeta("Flatten", dummyTransMeta);
+    dummyStepMeta.setDraw( true );
+    transMeta.addStep( dummyStepMeta );
+
+    for (String stateCode : stateCodes) {
+      transMeta.addTransHop( new TransHopMeta( transMeta.findStep( stateCode ), dummyStepMeta ) );
+    }
+
+    // Add the output step
+    //
+    BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
+    beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
+    beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    beamOutputMeta.setFilePrefix( "switch-case-test" );
+    beamOutputMeta.setFileSuffix( ".csv" );
+    beamOutputMeta.setWindowed( false ); // Not yet supported
+    StepMeta beamOutputStepMeta = new StepMeta(outputStepname, beamOutputMeta);
+    beamOutputStepMeta.setStepID( "BeamOutput" );
+    beamOutputStepMeta.setDraw( true );
     transMeta.addStep( beamOutputStepMeta );
     transMeta.addTransHop(new TransHopMeta( dummyStepMeta, beamOutputStepMeta ) );
 
