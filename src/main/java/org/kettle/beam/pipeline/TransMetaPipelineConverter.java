@@ -397,9 +397,6 @@ public class TransMetaPipelineConverter {
     if ( meta instanceof StreamLookupMeta ) {
       throw new KettleException( "Stream Lookup is not yet supported on Beam" );
     }
-    if ( meta instanceof SwitchCaseMeta ) {
-      throw new KettleException( "Switch/Case is not yet supported on Beam" );
-    }
   }
 
   private List<VariableValue> getVariableValues( VariableSpace space ) {
