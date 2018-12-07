@@ -3,18 +3,19 @@ package org.kettle.beam.pipeline;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.TupleTag;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.vfs2.FileObject;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.coder.KettleRowCoder;
+import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.core.shared.VariableValue;
 import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
@@ -25,10 +26,21 @@ import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.beaminput.BeamInputMeta;
 import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
+import org.pentaho.di.core.Const;
+import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.extension.ExtensionPoint;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.logging.LogChannelInterface;
+import org.pentaho.di.core.plugins.JarFileAnnotationPlugin;
+import org.pentaho.di.core.plugins.JarFileCache;
+import org.pentaho.di.core.plugins.PluginFolder;
+import org.pentaho.di.core.plugins.PluginInterface;
+import org.pentaho.di.core.plugins.PluginMainClassType;
+import org.pentaho.di.core.plugins.PluginRegistry;
+import org.pentaho.di.core.plugins.PluginTypeInterface;
+import org.pentaho.di.core.plugins.StepPluginType;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
@@ -42,25 +54,102 @@ import org.pentaho.di.trans.steps.groupby.GroupByMeta;
 import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
 import org.pentaho.di.trans.steps.sort.SortRowsMeta;
 import org.pentaho.di.trans.steps.streamlookup.StreamLookupMeta;
-import org.pentaho.di.trans.steps.switchcase.SwitchCaseMeta;
 import org.pentaho.di.trans.steps.uniquerows.UniqueRowsMeta;
 import org.pentaho.metastore.api.IMetaStore;
+import org.pentaho.metastore.api.exceptions.MetaStoreException;
+import org.scannotation.AnnotationDB;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class TransMetaPipelineConverter {
 
   private TransMeta transMeta;
-  private IMetaStore metaStore;
+  private SerializableMetaStore metaStore;
+  private String metaStoreJson;
+  private List<String> stepPluginClasses;
+  private List<String> xpPluginClasses;
+  private String pluginsToStage;
 
-  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore ) {
+  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, String pluginsToStage ) throws MetaStoreException {
     this.transMeta = transMeta;
-    this.metaStore = metaStore;
+    this.metaStore = new SerializableMetaStore( metaStore );
+    this.metaStoreJson = this.metaStore.toJson();
+    this.pluginsToStage = pluginsToStage;
+
+    this.stepPluginClasses = new ArrayList<>();
+    this.xpPluginClasses = new ArrayList<>();
+
+    PluginRegistry registry = PluginRegistry.getInstance();
+
+    // Find the plugins in the jar files in the plugin folders to stage...
+    //
+    if ( StringUtils.isEmpty( pluginsToStage ) ) {
+      System.out.println("No plugins to stage");
+      return;
+    }
+
+    System.out.println("Plugin folders to stage: "+pluginsToStage);
+
+    String[] pluginFolders = pluginsToStage.split( "," );
+
+    for ( String pluginFolder : pluginFolders ) {
+      System.out.println("Scanning plugin folder: "+pluginFolder);
+      List<String> stepClasses = findAnnotatedClasses( pluginFolder, Step.class.getName() );
+      stepPluginClasses.addAll(stepClasses);
+      List<String> xpClasses = findAnnotatedClasses( pluginFolder, ExtensionPoint.class.getName() );
+      xpPluginClasses.addAll(xpClasses);
+    }
+    System.out.println("Found "+stepPluginClasses.size()+" step plugin classes");
+    System.out.println("Found "+xpPluginClasses.size()+" XP plugin classes");
+  }
+
+  private List<String> findAnnotatedClasses( String folder, String annotationClassName ) {
+    JarFileCache jarFileCache = JarFileCache.getInstance();
+    List<String> classnames = new ArrayList<>();
+
+    // Scan only jar files with @Step and @ExtensionPointPlugin annotations
+    // No plugin.xml format supported for the moment
+    //
+    PluginFolder pluginFolder = new PluginFolder( "plugins/"+folder, false, true, false );
+
+    try {
+      // Get all the jar files in the plugin folder...
+      //
+      FileObject[] fileObjects = jarFileCache.getFileObjects( pluginFolder );
+      if ( fileObjects != null ) {
+        System.out.println("Found "+fileObjects.length+" jar files in folder "+pluginFolder.getFolder());
+
+        for ( FileObject fileObject : fileObjects ) {
+
+          // These are the jar files : find annotations in it...
+          //
+          AnnotationDB annotationDB = jarFileCache.getAnnotationDB( fileObject );
+
+          // These are the jar files : find annotations in it...
+          //
+          Set<String> impls = annotationDB.getAnnotationIndex().get( annotationClassName );
+          if ( impls != null ) {
+
+            for ( String fil : impls ) {
+              classnames.add( fil );
+            }
+          }
+        }
+      } else {
+        System.out.println("No jar files found in folder "+pluginFolder.getFolder());
+      }
+    } catch ( Exception e ) {
+      e.printStackTrace();
+    }
+
+    return classnames;
   }
 
   public Pipeline createPipeline( Class<? extends PipelineRunner<?>> runnerClass, PipelineOptions pipelineOptions ) throws Exception {
@@ -123,7 +212,9 @@ public class TransMetaPipelineConverter {
       beamInputStepMeta.getName(),
       fileInputLocation,
       transMeta.environmentSubstitute( inputFileDefinition.getSeparator() ),
-      fileRowMeta.getMetaXML()
+      fileRowMeta.getMetaXML(),
+      stepPluginClasses,
+      xpPluginClasses
     );
     PCollection<KettleRow> afterInput = pipeline.apply( beamInputTransform );
     stepCollectionMap.put( beamInputStepMeta.getName(), afterInput );
@@ -166,7 +257,9 @@ public class TransMetaPipelineConverter {
         transMeta.environmentSubstitute( beamOutputMeta.getFileSuffix() ),
         transMeta.environmentSubstitute( outputFileDefinition.getSeparator() ),
         transMeta.environmentSubstitute( outputFileDefinition.getEnclosure() ),
-        outputStepRowMeta.getMetaXML()
+        outputStepRowMeta.getMetaXML(),
+        stepPluginClasses,
+        xpPluginClasses
       );
 
       // Which step do we apply this transform to?
@@ -245,7 +338,7 @@ public class TransMetaPipelineConverter {
         List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
 
         if ( previousSteps.isEmpty() ) {
-          throw new KettleException( "Steps without input aren't supported yet: "+stepMeta.getName());
+          throw new KettleException( "Steps without input aren't supported yet: " + stepMeta.getName() );
         }
 
         // Lookup the previous collection to apply this steps transform to.
@@ -258,10 +351,10 @@ public class TransMetaPipelineConverter {
         PCollection<KettleRow> input;
         String targetName = KettleBeamUtil.createTargetTupleId( firstPreviousStep.getName(), stepMeta.getName() );
         input = stepCollectionMap.get( targetName );
-        if (input==null) {
+        if ( input == null ) {
           input = stepCollectionMap.get( firstPreviousStep.getName() );
         } else {
-          log.logBasic("Step "+stepMeta.getName()+" reading from previous step targetting this one using : "+targetName);
+          log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
         }
 
         // If there are multiple input streams into this step, flatten all the data sources by default
@@ -273,11 +366,11 @@ public class TransMetaPipelineConverter {
             StepMeta previousStep = previousSteps.get( i );
             PCollection<KettleRow> previousPCollection;
             targetName = KettleBeamUtil.createTargetTupleId( previousStep.getName(), stepMeta.getName() );
-            previousPCollection = stepCollectionMap.get(targetName);
-            if (previousPCollection==null) {
+            previousPCollection = stepCollectionMap.get( targetName );
+            if ( previousPCollection == null ) {
               previousPCollection = stepCollectionMap.get( previousStep.getName() );
             } else {
-              log.logBasic("Step "+stepMeta.getName()+" reading from previous step targetting this one using : "+targetName);
+              log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
             }
             if ( previousPCollection == null ) {
               throw new KettleException( "Previous collection was not found for step " + previousStep.getName() + ", a previous step to " + stepMeta.getName() );
@@ -295,7 +388,7 @@ public class TransMetaPipelineConverter {
 
           // Flatten all the collections.  It's business as usual behind this.
           //
-          input = inputList.apply( stepMeta.getName()+" Flatten", Flatten.<KettleRow>pCollections() );
+          input = inputList.apply( stepMeta.getName() + " Flatten", Flatten.<KettleRow>pCollections() );
         }
 
         // Wrap current step metadata in a tag, otherwise the XML is not valid...
@@ -315,16 +408,17 @@ public class TransMetaPipelineConverter {
           // Find out all the target steps for this step...
           //
           StepIOMetaInterface ioMeta = stepMeta.getStepMetaInterface().getStepIOMeta();
-          List<String> targetSteps = new ArrayList<String>(  );
-          for ( StreamInterface targetStream : ioMeta.getTargetStreams()) {
-            if (targetStream.getStepMeta()!=null) {
+          List<String> targetSteps = new ArrayList<String>();
+          for ( StreamInterface targetStream : ioMeta.getTargetStreams() ) {
+            if ( targetStream.getStepMeta() != null ) {
               targetSteps.add( targetStream.getStepMeta().getName() );
             }
           }
 
           // Send all the information on their way to the right nodes
           //
-          StepTransform stepTransform = new StepTransform( variableValues, stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML(), targetSteps );
+          StepTransform stepTransform =
+            new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses, stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML(), targetSteps );
 
           // Apply the step transform to the previous input step PCollection(s)
           //
@@ -340,16 +434,16 @@ public class TransMetaPipelineConverter {
 
           // Were there any targeted steps in this step?
           //
-          for (String targetStep: targetSteps) {
+          for ( String targetStep : targetSteps ) {
             String tupleId = KettleBeamUtil.createTargetTupleId( stepMeta.getName(), targetStep );
-            PCollection<KettleRow> targetPCollection = tuple.get(new TupleTag<KettleRow>( tupleId ));
+            PCollection<KettleRow> targetPCollection = tuple.get( new TupleTag<KettleRow>( tupleId ) );
 
             // Store this in the map as well
             //
             stepCollectionMap.put( tupleId, targetPCollection );
           }
 
-          log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size()+" previous step(s)" );
+          log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s)" );
         }
 
 
@@ -368,6 +462,8 @@ public class TransMetaPipelineConverter {
 
     PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform = new GroupByTransform(
       rowMeta.getMetaXML(),  // The input row
+      stepPluginClasses,
+      xpPluginClasses,
       meta.getGroupField(),
       meta.getSubjectField(),
       aggregates,
@@ -381,7 +477,7 @@ public class TransMetaPipelineConverter {
     // Save this in the map
     //
     stepCollectionMap.put( stepMeta.getName(), stepPCollection );
-    log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size()+" previous step(s)" );
+    log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s)" );
   }
 
   private void validateStepBeamUsage( StepMetaInterface meta ) throws KettleException {

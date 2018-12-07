@@ -38,6 +38,7 @@ import org.apache.beam.sdk.metrics.MetricResults;
 import org.apache.beam.sdk.metrics.MetricsFilter;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabItem;
@@ -66,17 +67,16 @@ import org.pentaho.ui.xul.dom.Document;
 import org.pentaho.ui.xul.impl.AbstractXulEventHandler;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import static akka.actor.Nobody.getParent;
 
 public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuController {
   protected static Class<?> PKG = BeamHelper.class; // for i18n
@@ -156,25 +156,24 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
             // Log the metrics at the end.
             logMetrics( pipelineResult );
 
-            spoon.getLog().logBasic( "  ----------------- End of Beam job "+pipeline.getOptions().getJobName()+" -----------------------");
+            spoon.getLog().logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
 
           }
-        }).start();
+        } ).start();
 
         showMessage( "Transformation started",
-          "Your transformation was started with the selected Beam Runner."+Const.CR+
-            "Now check the spoon console logging for execution feedback and metrics on the various steps."+Const.CR+
-          "Not all steps are supported, check the project READ.me and Wiki for up-to-date information"+Const.CR+Const.CR+
+          "Your transformation was started with the selected Beam Runner." + Const.CR +
+            "Now check the spoon console logging for execution feedback and metrics on the various steps." + Const.CR +
+            "Not all steps are supported, check the project READ.me and Wiki for up-to-date information" + Const.CR + Const.CR +
             "Enjoy Kettle!"
         );
 
         TransGraph transGraph = spoon.getActiveTransGraph();
-        if (!transGraph.isExecutionResultsPaneVisible()) {
+        if ( !transGraph.isExecutionResultsPaneVisible() ) {
           transGraph.showExecutionResults();
           CTabItem transLogTab = transGraph.transLogDelegate.getTransLogTab();
           transLogTab.getParent().setSelection( transLogTab );
         }
-
 
 
       }
@@ -190,7 +189,7 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
 
   private void configureStandardOptions( BeamJobConfig config, String transformationName, PipelineOptions pipelineOptions ) {
     if ( StringUtils.isNotEmpty( transformationName ) ) {
-      String sanitizedName = transformationName.replace(" ", "_");
+      String sanitizedName = transformationName.replace( " ", "_" );
       pipelineOptions.setJobName( sanitizedName );
     }
     if ( StringUtils.isNotEmpty( config.getUserAgent() ) ) {
@@ -245,9 +244,9 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
       configureStandardOptions( config, transMeta.getName(), pipelineOptions );
 
 
-      setVariablesInTransformation(config, transMeta);
+      setVariablesInTransformation( config, transMeta );
 
-      TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, spoon.getMetaStore() );
+      TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, spoon.getMetaStore(), config.getPluginsToStage() );
       Pipeline pipeline = converter.createPipeline( pipelineRunnerClass, pipelineOptions );
 
       return pipeline;
@@ -260,8 +259,8 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
   private void setVariablesInTransformation( BeamJobConfig config, TransMeta transMeta ) {
     String[] parameters = transMeta.listParameters();
     for ( JobParameter parameter : config.getParameters() ) {
-      if (StringUtils.isNotEmpty( parameter.getVariable() )) {
-        if ( Const.indexOfString(parameter.getVariable(), parameters)>=0) {
+      if ( StringUtils.isNotEmpty( parameter.getVariable() ) ) {
+        if ( Const.indexOfString( parameter.getVariable(), parameters ) >= 0 ) {
           try {
             transMeta.setParameterValue( parameter.getVariable(), parameter.getValue() );
           } catch ( UnknownParamException e ) {
@@ -277,7 +276,7 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
 
   private void configureDataFlowOptions( BeamJobConfig config, DataflowPipelineOptions options ) {
 
-    options.setFilesToStage( findLibraryFilesToStage() );
+    options.setFilesToStage( findLibraryFilesToStage(config.getPluginsToStage()) );
     options.setProject( config.getGcpProjectId() );
     options.setAppName( config.getGcpAppName() );
     options.setStagingLocation( config.getGcpStagingLocation() );
@@ -297,22 +296,67 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
 
   }
 
+  public static List<String> findLibraryFilesToStage() {
+    return findLibraryFilesToStage( null, null );
+  }
 
-  private List<String> findLibraryFilesToStage() {
+  public static List<String> findLibraryFilesToStage(String pluginFolders) {
+    return findLibraryFilesToStage( null, pluginFolders );
+  }
+
+
+  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders ) {
+
+    File base;
+    if ( baseFolder == null ) {
+      base = new File( "." );
+    } else {
+      base = new File( baseFolder );
+    }
+
     // Add all the jar files in lib/ to the classpath.
     // Later we'll add the plugins as well...
     //
+    Set<String> uniqueNames = new HashSet<>();
     List<String> libraries = new ArrayList<>();
-    File libFolder = new File( "lib" );
-    File[] files = libFolder.listFiles( new FilenameFilter() {
-      @Override public boolean accept( File dir, String name ) {
-        return name.endsWith( ".jar" );
+    File libFolder = new File( base.toString() + "/lib" );
+
+    Collection<File> files = FileUtils.listFiles( libFolder, new String[] { "jar" }, true );
+    if ( files != null ) {
+      for ( File file : files ) {
+        String shortName = file.getName();
+        if ( !uniqueNames.contains( shortName ) ) {
+          uniqueNames.add( shortName );
+          libraries.add( file.getAbsolutePath() );
+          // System.out.println( "Adding library : " + file.getAbsolutePath() );
+        }
       }
-    } );
-    for ( File file : files ) {
-      libraries.add( file.getAbsolutePath() );
-      // System.out.println( "Adding library : " + file.getAbsolutePath() );
     }
+
+    List<String> pluginFoldersList = new ArrayList<>(  );
+    if (StringUtils.isNotEmpty( pluginFolders )) {
+      String[] folders = pluginFolders.split( "," );
+      for (String folder : folders) {
+        pluginFoldersList.add(folder);
+      }
+    }
+
+    // Now the selected plugins libs...
+    //
+    for (String pluginFolder : pluginFoldersList) {
+      File pluginsFolder = new File( base.toString() + "/plugins/"+pluginFolder );
+      Collection<File> pluginFiles = FileUtils.listFiles( pluginsFolder, new String[] { "jar" }, true );
+      if ( pluginFiles != null ) {
+        for ( File file : pluginFiles ) {
+          String shortName = file.getName();
+          if ( !uniqueNames.contains( shortName ) ) {
+            uniqueNames.add( shortName );
+            libraries.add( file.getAbsolutePath() );
+          }
+        }
+      }
+    }
+
     return libraries;
   }
 
@@ -321,7 +365,7 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
     LogChannelInterface log = spoon.getLog();
     MetricResults metricResults = pipelineResult.metrics();
 
-    log.logBasic( "  ----------------- Metrics refresh @ "+new SimpleDateFormat( "yyyy/MM/dd HH:mm:ss").format( new Date() ) +" -----------------------");
+    log.logBasic( "  ----------------- Metrics refresh @ " + new SimpleDateFormat( "yyyy/MM/dd HH:mm:ss" ).format( new Date() ) + " -----------------------" );
 
     MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
     for ( MetricResult<Long> result : allResults.getCounters() ) {

@@ -30,6 +30,10 @@ public class BeamJobConfig {
   @MetaStoreAttribute
   private String tempLocation;
 
+  @MetaStoreAttribute
+  private String pluginsToStage;
+
+
   //
   // Dataflow specific options
   //
@@ -193,5 +197,21 @@ public class BeamJobConfig {
    */
   public void setParameters( List<JobParameter> parameters ) {
     this.parameters = parameters;
+  }
+
+  /**
+   * Gets pluginsToStage
+   *
+   * @return value of pluginsToStage
+   */
+  public String getPluginsToStage() {
+    return pluginsToStage;
+  }
+
+  /**
+   * @param pluginsToStage The pluginsToStage to set
+   */
+  public void setPluginsToStage( String pluginsToStage ) {
+    this.pluginsToStage = pluginsToStage;
   }
 }

@@ -16,6 +16,11 @@ public class GroupByPipelineTest extends PipelineTestBase {
       metaStore
     );
 
-    createRunPipeline( transMeta );
+    try {
+      createRunPipeline( transMeta );
+    } catch(Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
   }
 }

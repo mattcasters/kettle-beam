@@ -1,6 +1,5 @@
 package org.kettle.beam.transform;
 
-import junit.framework.TestCase;
 import org.apache.beam.runners.direct.DirectRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -13,17 +12,15 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.Test;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.pipeline.TransMetaPipelineConverter;
-import org.kettle.beam.util.BeamTransMetaUtil;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.stores.memory.MemoryMetaStore;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.util.ArrayList;
 
 public class PipelineTestBase {
 
@@ -31,34 +28,37 @@ public class PipelineTestBase {
 
   @Before
   public void setUp() throws Exception {
-    BeamKettle.init();
+    BeamKettle.init( new ArrayList<>(), new ArrayList<>() );
 
     metaStore = new MemoryMetaStore();
 
-    File inputFolder = new File("/tmp/customers/input");
+    File inputFolder = new File( "/tmp/customers/input" );
     inputFolder.mkdirs();
-    File outputFolder = new File("/tmp/customers/output");
+    File outputFolder = new File( "/tmp/customers/output" );
     outputFolder.mkdirs();
-    File tmpFolder = new File("/tmp/customers/tmp");
+    File tmpFolder = new File( "/tmp/customers/tmp" );
     tmpFolder.mkdirs();
 
-    FileUtils.copyFile(new File("src/test/resources/customers/customers-100.txt"), new File("/tmp/customers/input/customers-100.txt"));
+    FileUtils.copyFile( new File( "src/test/resources/customers/customers-100.txt" ), new File( "/tmp/customers/input/customers-100.txt" ) );
   }
 
 
   @Ignore
   public void createRunPipeline( TransMeta transMeta ) throws Exception {
 
+    /*
     FileOutputStream fos = new FileOutputStream( "/tmp/"+transMeta.getName()+".ktr" );
     fos.write( transMeta.getXML().getBytes() );
     fos.close();
+    */
 
     PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
 
     pipelineOptions.setJobName( transMeta.getName() );
     pipelineOptions.setUserAgent( BeamDefaults.STRING_KETTLE_BEAM );
 
-    TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, metaStore );
+    // No extra plugins to load : null option
+    TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, metaStore, (String) null );
     Pipeline pipeline = converter.createPipeline( DirectRunner.class, pipelineOptions );
 
     PipelineResult pipelineResult = pipeline.run();

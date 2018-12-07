@@ -52,6 +52,7 @@ public class BeamJobConfigDialog {
   private TextVar wGcpProjectId;
   private TextVar wGcpAppName;
   private TextVar wGcpStagingLocation;
+  private TextVar wPluginsToStage;
 
   private TableView wParameters;
 
@@ -124,6 +125,7 @@ public class BeamJobConfigDialog {
     wRunner.addSelectionListener( selAdapter );
     wUserAgent.addSelectionListener( selAdapter );
     wTempLocation.addSelectionListener( selAdapter );
+    wPluginsToStage.addSelectionListener( selAdapter );
     wGcpProjectId.addSelectionListener( selAdapter );
     wGcpAppName.addSelectionListener( selAdapter );
     wGcpStagingLocation.addSelectionListener( selAdapter );
@@ -247,6 +249,24 @@ public class BeamJobConfigDialog {
     wTempLocation.setLayoutData( fdTempLocation );
     lastControl = wTempLocation;
 
+    // PluginsToStage
+    //
+    Label wlPluginsToStage = new Label( shell, SWT.RIGHT );
+    props.setLook( wlPluginsToStage );
+    wlPluginsToStage.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.PluginsToStage.Label" ) );
+    FormData fdlPluginsToStage = new FormData();
+    fdlPluginsToStage.top = new FormAttachment( lastControl, margin );
+    fdlPluginsToStage.left = new FormAttachment( 0, 0 ); // First one in the left top corner
+    fdlPluginsToStage.right = new FormAttachment( middle, -margin );
+    wlPluginsToStage.setLayoutData( fdlPluginsToStage );
+    wPluginsToStage = new TextVar( space, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wPluginsToStage );
+    FormData fdPluginsToStage = new FormData();
+    fdPluginsToStage.top = new FormAttachment( wlPluginsToStage, 0, SWT.CENTER );
+    fdPluginsToStage.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdPluginsToStage.right = new FormAttachment( 95, 0 );
+    wPluginsToStage.setLayoutData( fdPluginsToStage );
+    lastControl=wPluginsToStage;
 
     // Google Cloud Platform Group
 
@@ -311,7 +331,7 @@ public class BeamJobConfigDialog {
     fdGcpStagingLocation.left = new FormAttachment( middle, 0 ); // To the right of the label
     fdGcpStagingLocation.right = new FormAttachment( 95, 0 );
     wGcpStagingLocation.setLayoutData( fdGcpStagingLocation );
-
+    
 
     FormData fdGcpGroup = new FormData();
     fdGcpGroup.top = new FormAttachment( lastControl, margin*2);
@@ -367,6 +387,7 @@ public class BeamJobConfigDialog {
     wGcpProjectId.setText( Const.NVL(config.getGcpProjectId(), "") );
     wGcpAppName.setText( Const.NVL(config.getGcpAppName(), "") );
     wGcpStagingLocation.setText( Const.NVL(config.getGcpStagingLocation(), "") );
+    wPluginsToStage.setText( Const.NVL(config.getPluginsToStage(), "") );
 
     // Parameters
     //
@@ -411,6 +432,7 @@ public class BeamJobConfigDialog {
     cfg.setGcpProjectId( wGcpProjectId.getText() );
     cfg.setGcpAppName( wGcpAppName.getText() );
     cfg.setGcpStagingLocation( wGcpStagingLocation.getText() );
+    cfg.setPluginsToStage( wPluginsToStage.getText() );
 
     cfg.getParameters().clear();
     for (int i=0;i<wParameters.nrNonEmpty();i++) {
