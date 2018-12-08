@@ -7,7 +7,7 @@ import org.pentaho.di.trans.TransMeta;
 public class StreamLookupPipelineTest extends PipelineTestBase {
 
   @Test
-  public void testSwitchCasePipeline() throws Exception {
+  public void testStreamLookupPipeline() throws Exception {
 
     TransMeta transMeta = BeamTransMetaUtil.generateStreamLookupTransMeta(
       "input-stream-lookup-output",

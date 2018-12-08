@@ -85,7 +85,7 @@ public class TransMetaPipelineConverter {
     // Find the plugins in the jar files in the plugin folders to stage...
     //
     if ( StringUtils.isEmpty( pluginsToStage ) ) {
-      System.out.println( "No plugins to stage" );
+      // System.out.println( "No plugins to stage" );
       return;
     }
 
@@ -94,7 +94,7 @@ public class TransMetaPipelineConverter {
     String[] pluginFolders = pluginsToStage.split( "," );
 
     for ( String pluginFolder : pluginFolders ) {
-      System.out.println( "Scanning plugin folder: " + pluginFolder );
+      // System.out.println( "Scanning plugin folder: " + pluginFolder );
       List<String> stepClasses = findAnnotatedClasses( pluginFolder, Step.class.getName() );
       stepPluginClasses.addAll( stepClasses );
       List<String> xpClasses = findAnnotatedClasses( pluginFolder, ExtensionPoint.class.getName() );
@@ -118,7 +118,7 @@ public class TransMetaPipelineConverter {
       //
       FileObject[] fileObjects = jarFileCache.getFileObjects( pluginFolder );
       if ( fileObjects != null ) {
-        System.out.println( "Found " + fileObjects.length + " jar files in folder " + pluginFolder.getFolder() );
+        // System.out.println( "Found " + fileObjects.length + " jar files in folder " + pluginFolder.getFolder() );
 
         for ( FileObject fileObject : fileObjects ) {
 
@@ -137,7 +137,7 @@ public class TransMetaPipelineConverter {
           }
         }
       } else {
-        System.out.println( "No jar files found in folder " + pluginFolder.getFolder() );
+        System.out.println( "No jar files found in plugin folder " + pluginFolder.getFolder() );
       }
     } catch ( Exception e ) {
       e.printStackTrace();
@@ -324,8 +324,6 @@ public class TransMetaPipelineConverter {
 
         validateStepBeamUsage( stepMeta.getStepMetaInterface() );
 
-        RowMetaInterface rowMeta = transMeta.getPrevStepFields( stepMeta );
-
         // Lookup all the previous steps for this one, excluding info steps like StreamLookup...
         // So the usecase is : we read from multiple input steps and join to one location...
         //
@@ -339,6 +337,11 @@ public class TransMetaPipelineConverter {
         // We can take any of the inputs so the first one will do.
         //
         StepMeta firstPreviousStep = previousSteps.get( 0 );
+
+        // No fuss with info fields sneaking in, all previous steps need to emit the same layout anyway
+        //
+        RowMetaInterface rowMeta = transMeta.getStepFields( firstPreviousStep );
+        // System.out.println("STEP FIELDS for '"+firstPreviousStep.getName()+"' : "+rowMeta);
 
         // Check in the map to see if previousStep isn't targeting this one
         //

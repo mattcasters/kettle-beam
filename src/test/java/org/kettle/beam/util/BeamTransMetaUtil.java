@@ -315,19 +315,7 @@ public class BeamTransMetaUtil {
     beamInputStepMeta.setStepID( "BeamInput" );
     transMeta.addStep( beamInputStepMeta );
 
-    // The lookup data input.
-    //
-    /*
-    BeamInputMeta lookupBeamInputMeta = new BeamInputMeta();
-    lookupBeamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
-    lookupBeamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
-    StepMeta lookupBeamInputStepMeta = new StepMeta(inputStepname+" Lookup data", lookupBeamInputMeta);
-    lookupBeamInputStepMeta.setStepID( "BeamInput" );
-    transMeta.addStep( lookupBeamInputStepMeta );
-    */
-
     StepMeta lookupBeamInputStepMeta = beamInputStepMeta;
-
 
     // Add a Memory Group By step which will
     MemoryGroupByMeta memoryGroupByMeta = new MemoryGroupByMeta();
@@ -347,7 +335,7 @@ public class BeamTransMetaUtil {
     streamLookupMeta.getKeystream()[0] = "stateCode";
     streamLookupMeta.getKeylookup()[0] = "stateCode";
     streamLookupMeta.getValue()[0] = "rowsPerState";
-    streamLookupMeta.getValueName()[0] = null;
+    streamLookupMeta.getValueName()[0] = "nrPerState";
     streamLookupMeta.getValueDefault()[0] = null;
     streamLookupMeta.getValueDefaultType()[0] = ValueMetaInterface.TYPE_INTEGER;
     streamLookupMeta.setMemoryPreservationActive( false );
