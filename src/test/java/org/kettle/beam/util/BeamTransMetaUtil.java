@@ -15,6 +15,7 @@ import org.pentaho.di.trans.steps.constant.ConstantMeta;
 import org.pentaho.di.trans.steps.dummytrans.DummyTransMeta;
 import org.pentaho.di.trans.steps.filterrows.FilterRowsMeta;
 import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
+import org.pentaho.di.trans.steps.streamlookup.StreamLookupMeta;
 import org.pentaho.di.trans.steps.switchcase.SwitchCaseMeta;
 import org.pentaho.di.trans.steps.switchcase.SwitchCaseTarget;
 import org.pentaho.metastore.api.IMetaStore;
@@ -290,6 +291,84 @@ public class BeamTransMetaUtil {
     beamOutputStepMeta.setDraw( true );
     transMeta.addStep( beamOutputStepMeta );
     transMeta.addTransHop(new TransHopMeta( dummyStepMeta, beamOutputStepMeta ) );
+
+    return transMeta;
+  }
+
+
+  public static final TransMeta generateStreamLookupTransMeta( String transname, String inputStepname, String outputStepname, IMetaStore metaStore ) throws Exception {
+
+    MetaStoreFactory<FileDefinition> factory = new MetaStoreFactory<>( FileDefinition.class, metaStore, PentahoDefaults.NAMESPACE );
+    FileDefinition customerFileDefinition = createCustomersInputFileDefinition();
+    factory.saveElement( customerFileDefinition );
+
+    TransMeta transMeta = new TransMeta(  );
+    transMeta.setName( transname );
+    transMeta.setMetaStore( metaStore );
+
+    // Add the main input step
+    //
+    BeamInputMeta beamInputMeta = new BeamInputMeta();
+    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
+    beamInputStepMeta.setStepID( "BeamInput" );
+    transMeta.addStep( beamInputStepMeta );
+
+    // The lookup data input.
+    //
+    /*
+    BeamInputMeta lookupBeamInputMeta = new BeamInputMeta();
+    lookupBeamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    lookupBeamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    StepMeta lookupBeamInputStepMeta = new StepMeta(inputStepname+" Lookup data", lookupBeamInputMeta);
+    lookupBeamInputStepMeta.setStepID( "BeamInput" );
+    transMeta.addStep( lookupBeamInputStepMeta );
+    */
+
+    StepMeta lookupBeamInputStepMeta = beamInputStepMeta;
+
+
+    // Add a Memory Group By step which will
+    MemoryGroupByMeta memoryGroupByMeta = new MemoryGroupByMeta();
+    memoryGroupByMeta.allocate( 1, 1 );
+    memoryGroupByMeta.getGroupField()[0] = "stateCode";
+    memoryGroupByMeta.getAggregateType()[0] = MemoryGroupByMeta.TYPE_GROUP_COUNT_ALL;
+    memoryGroupByMeta.getAggregateField()[0] = "rowsPerState";
+    memoryGroupByMeta.getSubjectField()[0] = "id";
+    StepMeta memoryGroupByStepMeta = new StepMeta("rowsPerState", memoryGroupByMeta);
+    transMeta.addStep( memoryGroupByStepMeta );
+    transMeta.addTransHop( new TransHopMeta( lookupBeamInputStepMeta, memoryGroupByStepMeta ) );
+
+    // Add a Stream Lookup step ...
+    //
+    StreamLookupMeta streamLookupMeta = new StreamLookupMeta();
+    streamLookupMeta.allocate( 1, 1 );
+    streamLookupMeta.getKeystream()[0] = "stateCode";
+    streamLookupMeta.getKeylookup()[0] = "stateCode";
+    streamLookupMeta.getValue()[0] = "rowsPerState";
+    streamLookupMeta.getValueName()[0] = null;
+    streamLookupMeta.getValueDefault()[0] = null;
+    streamLookupMeta.getValueDefaultType()[0] = ValueMetaInterface.TYPE_INTEGER;
+    streamLookupMeta.setMemoryPreservationActive( false );
+    streamLookupMeta.getStepIOMeta().getInfoStreams().get(0).setStepMeta( memoryGroupByStepMeta ); // Read from Mem.GroupBy
+    StepMeta streamLookupStepMeta = new StepMeta("Stream Lookup", streamLookupMeta);
+    transMeta.addStep(streamLookupStepMeta);
+    transMeta.addTransHop( new TransHopMeta( beamInputStepMeta, streamLookupStepMeta ) ); // Main input
+    transMeta.addTransHop( new TransHopMeta( memoryGroupByStepMeta, streamLookupStepMeta ) ); // info stream
+
+    // Add the output step to write results
+    //
+    BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
+    beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
+    beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    beamOutputMeta.setFilePrefix( "stream-lookup" );
+    beamOutputMeta.setFileSuffix( ".csv" );
+    beamOutputMeta.setWindowed( false ); // Not yet supported
+    StepMeta beamOutputStepMeta = new StepMeta(outputStepname, beamOutputMeta);
+    beamOutputStepMeta.setStepID( "BeamOutput" );
+    transMeta.addStep( beamOutputStepMeta );
+    transMeta.addTransHop(new TransHopMeta( streamLookupStepMeta, beamOutputStepMeta ) );
 
     return transMeta;
   }
