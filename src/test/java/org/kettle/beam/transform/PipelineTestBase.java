@@ -40,6 +40,7 @@ public class PipelineTestBase {
     tmpFolder.mkdirs();
 
     FileUtils.copyFile( new File( "src/test/resources/customers/customers-100.txt" ), new File( "/tmp/customers/input/customers-100.txt" ) );
+    FileUtils.copyFile( new File( "src/test/resources/customers/state-data.txt" ), new File( "/tmp/customers/input/state-data.txt" ) );
   }
 
 

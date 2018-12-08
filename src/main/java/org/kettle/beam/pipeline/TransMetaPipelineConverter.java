@@ -2,11 +2,14 @@ package org.kettle.beam.pipeline;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
+import org.apache.beam.sdk.extensions.joinlibrary.Join;
 import org.apache.beam.sdk.options.PipelineOptions;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.View;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
@@ -17,17 +20,20 @@ import org.apache.commons.vfs2.FileObject;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.coder.KettleRowCoder;
+import org.kettle.beam.core.fn.KettleKeyValueFn;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.core.shared.VariableValue;
 import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
 import org.kettle.beam.core.transform.GroupByTransform;
 import org.kettle.beam.core.transform.StepTransform;
+import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
 import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.beaminput.BeamInputMeta;
 import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
@@ -37,6 +43,8 @@ import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.plugins.JarFileCache;
 import org.pentaho.di.core.plugins.PluginFolder;
 import org.pentaho.di.core.plugins.PluginRegistry;
+import org.pentaho.di.core.row.RowDataUtil;
+import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
@@ -48,8 +56,8 @@ import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.di.trans.steps.groupby.GroupByMeta;
 import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
+import org.pentaho.di.trans.steps.mergejoin.MergeJoinMeta;
 import org.pentaho.di.trans.steps.sort.SortRowsMeta;
-import org.pentaho.di.trans.steps.streamlookup.StreamLookupMeta;
 import org.pentaho.di.trans.steps.uniquerows.UniqueRowsMeta;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.api.exceptions.MetaStoreException;
@@ -57,6 +65,7 @@ import org.scannotation.AnnotationDB;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -206,7 +215,7 @@ public class TransMetaPipelineConverter {
       beamInputStepMeta.getName(),
       fileInputLocation,
       transMeta.environmentSubstitute( inputFileDefinition.getSeparator() ),
-      fileRowMeta.getMetaXML(),
+      JsonRowMeta.toJson(fileRowMeta),
       stepPluginClasses,
       xpPluginClasses
     );
@@ -251,7 +260,7 @@ public class TransMetaPipelineConverter {
         transMeta.environmentSubstitute( beamOutputMeta.getFileSuffix() ),
         transMeta.environmentSubstitute( outputFileDefinition.getSeparator() ),
         transMeta.environmentSubstitute( outputFileDefinition.getEnclosure() ),
-        outputStepRowMeta.getMetaXML(),
+        JsonRowMeta.toJson(outputStepRowMeta),
         stepPluginClasses,
         xpPluginClasses
       );
@@ -329,63 +338,70 @@ public class TransMetaPipelineConverter {
         //
         List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
 
+        StepMeta firstPreviousStep;
+        RowMetaInterface rowMeta;
+        PCollection<KettleRow> input = null;
+
+        // Steps like Merge Join or Merge have no input, only info steps reaching in
+        //
         if ( previousSteps.isEmpty() ) {
-          throw new KettleException( "Steps without input aren't supported yet: " + stepMeta.getName() );
-        }
-
-        // Lookup the previous collection to apply this steps transform to.
-        // We can take any of the inputs so the first one will do.
-        //
-        StepMeta firstPreviousStep = previousSteps.get( 0 );
-
-        // No fuss with info fields sneaking in, all previous steps need to emit the same layout anyway
-        //
-        RowMetaInterface rowMeta = transMeta.getStepFields( firstPreviousStep );
-        // System.out.println("STEP FIELDS for '"+firstPreviousStep.getName()+"' : "+rowMeta);
-
-        // Check in the map to see if previousStep isn't targeting this one
-        //
-        PCollection<KettleRow> input;
-        String targetName = KettleBeamUtil.createTargetTupleId( firstPreviousStep.getName(), stepMeta.getName() );
-        input = stepCollectionMap.get( targetName );
-        if ( input == null ) {
-          input = stepCollectionMap.get( firstPreviousStep.getName() );
+          firstPreviousStep = null;
+          rowMeta = new RowMeta();
         } else {
-          log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
-        }
 
-        // If there are multiple input streams into this step, flatten all the data sources by default
-        // This means to simply merge the data.
-        //
-        if ( previousSteps.size() > 1 ) {
-          List<PCollection<KettleRow>> extraInputs = new ArrayList<>();
-          for ( int i = 1; i < previousSteps.size(); i++ ) {
-            StepMeta previousStep = previousSteps.get( i );
-            PCollection<KettleRow> previousPCollection;
-            targetName = KettleBeamUtil.createTargetTupleId( previousStep.getName(), stepMeta.getName() );
-            previousPCollection = stepCollectionMap.get( targetName );
-            if ( previousPCollection == null ) {
-              previousPCollection = stepCollectionMap.get( previousStep.getName() );
-            } else {
-              log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
-            }
-            if ( previousPCollection == null ) {
-              throw new KettleException( "Previous collection was not found for step " + previousStep.getName() + ", a previous step to " + stepMeta.getName() );
-            }
-            extraInputs.add( previousPCollection );
+          // Lookup the previous collection to apply this steps transform to.
+          // We can take any of the inputs so the first one will do.
+          //
+          firstPreviousStep = previousSteps.get( 0 );
+
+          // No fuss with info fields sneaking in, all previous steps need to emit the same layout anyway
+          //
+          rowMeta = transMeta.getStepFields( firstPreviousStep );
+          // System.out.println("STEP FIELDS for '"+firstPreviousStep.getName()+"' : "+rowMeta);
+
+          // Check in the map to see if previousStep isn't targeting this one
+          //
+          String targetName = KettleBeamUtil.createTargetTupleId( firstPreviousStep.getName(), stepMeta.getName() );
+          input = stepCollectionMap.get( targetName );
+          if ( input == null ) {
+            input = stepCollectionMap.get( firstPreviousStep.getName() );
+          } else {
+            log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
           }
 
-          // Flatten the extra inputs...
+          // If there are multiple input streams into this step, flatten all the data sources by default
+          // This means to simply merge the data.
           //
-          PCollectionList<KettleRow> inputList = PCollectionList.of( input );
+          if ( previousSteps.size() > 1 ) {
+            List<PCollection<KettleRow>> extraInputs = new ArrayList<>();
+            for ( int i = 1; i < previousSteps.size(); i++ ) {
+              StepMeta previousStep = previousSteps.get( i );
+              PCollection<KettleRow> previousPCollection;
+              targetName = KettleBeamUtil.createTargetTupleId( previousStep.getName(), stepMeta.getName() );
+              previousPCollection = stepCollectionMap.get( targetName );
+              if ( previousPCollection == null ) {
+                previousPCollection = stepCollectionMap.get( previousStep.getName() );
+              } else {
+                log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
+              }
+              if ( previousPCollection == null ) {
+                throw new KettleException( "Previous collection was not found for step " + previousStep.getName() + ", a previous step to " + stepMeta.getName() );
+              }
+              extraInputs.add( previousPCollection );
+            }
 
-          for ( PCollection<KettleRow> extraInput : extraInputs ) {
-            inputList = inputList.and( extraInput );
+            // Flatten the extra inputs...
+            //
+            PCollectionList<KettleRow> inputList = PCollectionList.of( input );
+
+            for ( PCollection<KettleRow> extraInput : extraInputs ) {
+              inputList = inputList.and( extraInput );
+            }
+
+            // Flatten all the collections.  It's business as usual behind this.
+            //
+            input = inputList.apply( stepMeta.getName() + " Flatten", Flatten.<KettleRow>pCollections() );
           }
-
-          // Flatten all the collections.  It's business as usual behind this.
-          //
-          input = inputList.apply( stepMeta.getName() + " Flatten", Flatten.<KettleRow>pCollections() );
         }
 
         // Wrap current step metadata in a tag, otherwise the XML is not valid...
@@ -395,6 +411,10 @@ public class TransMetaPipelineConverter {
         if ( stepMeta.getStepMetaInterface() instanceof MemoryGroupByMeta ) {
 
           handleGroupByStep( stepCollectionMap, log, stepMeta, rowMeta, previousSteps, input );
+
+        } else if ( stepMeta.getStepMetaInterface() instanceof MergeJoinMeta ) {
+
+          handleMergeJoinStep( stepCollectionMap, log, stepMeta );
 
         } else {
 
@@ -411,12 +431,12 @@ public class TransMetaPipelineConverter {
     //
     List<StepMeta> infoStepMetas = transMeta.findPreviousSteps( stepMeta, true );
     List<String> infoSteps = new ArrayList<>();
-    List<String> infoRowMetaXmls = new ArrayList<>();
+    List<String> infoRowMetaJsons = new ArrayList<>();
     List<PCollectionView<List<KettleRow>>> infoCollectionViews = new ArrayList<>(  );
     for (StepMeta infoStepMeta : infoStepMetas) {
       if (!previousSteps.contains(infoStepMeta)) {
         infoSteps.add( infoStepMeta.getName() );
-        infoRowMetaXmls.add( transMeta.getStepFields( infoStepMeta ).getMetaXML() );
+        infoRowMetaJsons.add( JsonRowMeta.toJson(transMeta.getStepFields( infoStepMeta )));
         PCollection<KettleRow> infoCollection = stepCollectionMap.get( infoStepMeta.getName() );
         if (infoCollection==null) {
           throw new KettleException( "Unable to find collection for step '"+infoStepMeta.getName()+" providing info for '"+stepMeta.getName()+"'");
@@ -442,7 +462,7 @@ public class TransMetaPipelineConverter {
     // Send all the information on their way to the right nodes
     //
     StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses,
-      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, rowMeta.getMetaXML(), targetSteps, infoSteps, infoRowMetaXmls, infoCollectionViews);
+      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson(rowMeta), targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews);
 
 
 
@@ -482,7 +502,7 @@ public class TransMetaPipelineConverter {
     }
 
     PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform = new GroupByTransform(
-      rowMeta.getMetaXML(),  // The input row
+      JsonRowMeta.toJson(rowMeta),  // The input row
       stepPluginClasses,
       xpPluginClasses,
       meta.getGroupField(),
@@ -498,8 +518,137 @@ public class TransMetaPipelineConverter {
     // Save this in the map
     //
     stepCollectionMap.put( stepMeta.getName(), stepPCollection );
-    log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s)" );
+    log.logBasic( "Handled Group By (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s)" );
   }
+
+
+  private void handleMergeJoinStep( Map<String, PCollection<KettleRow>> stepCollectionMap, LogChannelInterface log, StepMeta stepMeta) throws IOException, KettleException {
+
+    MergeJoinMeta meta = (MergeJoinMeta) stepMeta.getStepMetaInterface();
+
+    String joinType = meta.getJoinType();
+    String[] leftKeys = meta.getKeyFields1();
+    String[] rightKeys = meta.getKeyFields2();
+
+    StepMeta leftInfoStep = meta.getStepIOMeta().getInfoStreams().get(0).getStepMeta();
+    if (leftInfoStep==null) {
+      throw new KettleException( "The left source step isn't defined in the Merge Join step called '"+stepMeta.getName()+"'" );
+    }
+    PCollection<KettleRow> leftPCollection = stepCollectionMap.get( leftInfoStep.getName() );
+    if (leftPCollection==null) {
+      throw new KettleException( "The left source collection in the pipeline couldn't be found (probably a programming error)" );
+    }
+    RowMetaInterface leftRowMeta = transMeta.getStepFields( leftInfoStep );
+
+    StepMeta rightInfoStep = meta.getStepIOMeta().getInfoStreams().get(1).getStepMeta();
+    if (rightInfoStep==null) {
+      throw new KettleException( "The right source step isn't defined in the Merge Join step called '"+stepMeta.getName()+"'" );
+    }
+    PCollection<KettleRow> rightPCollection = stepCollectionMap.get( rightInfoStep.getName() );
+    if (rightPCollection==null) {
+      throw new KettleException( "The right source collection in the pipeline couldn't be found (probably a programming error)" );
+    }
+    RowMetaInterface rightRowMeta = transMeta.getStepFields( rightInfoStep );
+
+    // Create key-value pairs (KV) for the left collections
+    //
+    List<String> leftK = new ArrayList<>( Arrays.asList( leftKeys) );
+    RowMetaInterface leftKRowMeta = new RowMeta();
+    List<String> leftV = new ArrayList<>( );
+    RowMetaInterface leftVRowMeta = new RowMeta();
+    for (String leftKey : leftKeys) {
+      leftKRowMeta.addValueMeta(leftRowMeta.searchValueMeta( leftKey ).clone());
+    }
+    for (ValueMetaInterface valueMeta : leftRowMeta.getValueMetaList()) {
+      String valueName = valueMeta.getName();
+      if ( Const.indexOfString(valueName, leftKeys)<0) {
+        leftV.add(valueName);
+        leftVRowMeta.addValueMeta( valueMeta.clone() );
+      }
+    }
+
+    KettleKeyValueFn leftKVFn = new KettleKeyValueFn( JsonRowMeta.toJson(leftRowMeta), stepPluginClasses, xpPluginClasses, leftK.toArray( new String[0] ), leftV.toArray(new String[0]) );
+    PCollection<KV<KettleRow, KettleRow>> leftKVPCollection = leftPCollection.apply( ParDo.of( leftKVFn ) );
+
+    // Create key-value pairs (KV) for the left collections
+    //
+    List<String> rightK = new ArrayList<>( Arrays.asList( rightKeys) );
+    RowMetaInterface rightKRowMeta = new RowMeta();
+    List<String> rightV = new ArrayList<>(  );
+    RowMetaInterface rightVRowMeta = new RowMeta();
+    for (String rightKey : rightKeys) {
+      rightKRowMeta.addValueMeta(rightRowMeta.searchValueMeta( rightKey ).clone());
+    }
+    for (ValueMetaInterface valueMeta : rightRowMeta.getValueMetaList()) {
+      String valueName = valueMeta.getName();
+      if ( Const.indexOfString(valueName, rightKeys)<0) {
+        rightV.add(valueName);
+        rightVRowMeta.addValueMeta(valueMeta.clone());
+      }
+    }
+
+    KettleKeyValueFn rightKVFn = new KettleKeyValueFn( JsonRowMeta.toJson(rightRowMeta), stepPluginClasses, xpPluginClasses, rightK.toArray( new String[0] ), rightV.toArray(new String[0]) );
+    PCollection<KV<KettleRow, KettleRow>> rightKVPCollection = rightPCollection.apply( ParDo.of( rightKVFn ) );
+
+    PCollection<KV<KettleRow, KV<KettleRow, KettleRow>>> kvpCollection;
+
+    Object[] leftNull = RowDataUtil.allocateRowData( leftVRowMeta.size() );
+    Object[] rightNull = RowDataUtil.allocateRowData( rightVRowMeta.size() );
+
+    if (MergeJoinMeta.join_types[0].equals(joinType)) {
+      // Inner Join
+      //
+      kvpCollection = Join.innerJoin( leftKVPCollection, rightKVPCollection );
+    } else if (MergeJoinMeta.join_types[1].equals(joinType)) {
+      // Left outer join
+      //
+      kvpCollection = Join.leftOuterJoin( leftKVPCollection, rightKVPCollection, new KettleRow(rightNull));
+    } else if (MergeJoinMeta.join_types[2].equals(joinType)) {
+      // Right outer join
+      //
+      kvpCollection = Join.rightOuterJoin( leftKVPCollection, rightKVPCollection, new KettleRow(leftNull));
+    } else if (MergeJoinMeta.join_types[3].equals(joinType)) {
+      // Full outer join
+      //
+      kvpCollection = Join.fullOuterJoin( leftKVPCollection, rightKVPCollection, new KettleRow(leftNull), new KettleRow(rightNull));
+    } else {
+      throw new KettleException( "Join type '"+joinType+"' is not recognized or supported" );
+    }
+
+    // This is the output of the step, we'll try to mimic this
+    //
+    final RowMetaInterface outputRowMeta = leftVRowMeta.clone();
+    outputRowMeta.addRowMeta( leftKRowMeta);
+    outputRowMeta.addRowMeta( rightKRowMeta );
+    outputRowMeta.addRowMeta( rightVRowMeta );
+
+    // Now we need to collapse the results where we have a Key-Value pair of
+    // The key (left or right depending but the same row metadata (leftKRowMeta == rightKRowMeta)
+    //    The key is simply a KettleRow
+    // The value:
+    //    The value is the resulting combination of the Value parts of the left and right side.
+    //    These can be null depending on the join type
+    // So we want to grab all this information and put it back together on a single row.
+    //
+    DoFn<KV<KettleRow, KV<KettleRow, KettleRow>>, KettleRow> assemblerFn = new AssemblerFn(
+      JsonRowMeta.toJson(outputRowMeta),
+      JsonRowMeta.toJson(leftKRowMeta),
+      JsonRowMeta.toJson(leftVRowMeta),
+      JsonRowMeta.toJson(rightVRowMeta)
+    );
+
+    // Apply the step transform to the previous input step PCollection(s)
+    //
+    PCollection<KettleRow> stepPCollection = kvpCollection.apply( ParDo.of(assemblerFn) );
+
+    // Save this in the map
+    //
+    stepCollectionMap.put( stepMeta.getName(), stepPCollection );
+
+    log.logBasic( "Handled Merge Join (STEP) : " + stepMeta.getName()  );
+  }
+
+
 
   private void validateStepBeamUsage( StepMetaInterface meta ) throws KettleException {
     if ( meta instanceof GroupByMeta ) {
@@ -509,7 +658,7 @@ public class TransMetaPipelineConverter {
       throw new KettleException( "Sort rows is not yet supported on Beam." );
     }
     if ( meta instanceof UniqueRowsMeta ) {
-      throw new KettleException( "Unique rows is not yet supported on Beam" );
+      throw new KettleException( "The unique rows step is not yet supported on Beam, for now use a Memory Group By to get distrinct rows" );
     }
   }
 

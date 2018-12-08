@@ -15,6 +15,7 @@ import org.pentaho.di.trans.steps.constant.ConstantMeta;
 import org.pentaho.di.trans.steps.dummytrans.DummyTransMeta;
 import org.pentaho.di.trans.steps.filterrows.FilterRowsMeta;
 import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
+import org.pentaho.di.trans.steps.mergejoin.MergeJoinMeta;
 import org.pentaho.di.trans.steps.streamlookup.StreamLookupMeta;
 import org.pentaho.di.trans.steps.switchcase.SwitchCaseMeta;
 import org.pentaho.di.trans.steps.switchcase.SwitchCaseTarget;
@@ -58,7 +59,7 @@ public class BeamTransMetaUtil {
     //
     BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
     beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
-    beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    beamOutputMeta.setFileDescriptionName( null );
     beamOutputMeta.setFilePrefix( "customers" );
     beamOutputMeta.setFileSuffix( ".csv" );
     beamOutputMeta.setWindowed( false ); // Not yet supported
@@ -191,7 +192,7 @@ public class BeamTransMetaUtil {
     //
     BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
     beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
-    beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    beamOutputMeta.setFileDescriptionName( null );
     beamOutputMeta.setFilePrefix( "filter-test" );
     beamOutputMeta.setFileSuffix( ".csv" );
     beamOutputMeta.setWindowed( false ); // Not yet supported
@@ -282,7 +283,7 @@ public class BeamTransMetaUtil {
     //
     BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
     beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
-    beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    beamOutputMeta.setFileDescriptionName( null );
     beamOutputMeta.setFilePrefix( "switch-case-test" );
     beamOutputMeta.setFileSuffix( ".csv" );
     beamOutputMeta.setWindowed( false ); // Not yet supported
@@ -349,7 +350,7 @@ public class BeamTransMetaUtil {
     //
     BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
     beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
-    beamOutputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    beamOutputMeta.setFileDescriptionName( null );
     beamOutputMeta.setFilePrefix( "stream-lookup" );
     beamOutputMeta.setFileSuffix( ".csv" );
     beamOutputMeta.setWindowed( false ); // Not yet supported
@@ -360,6 +361,67 @@ public class BeamTransMetaUtil {
 
     return transMeta;
   }
+
+  public static final TransMeta generateMergeJoinTransMeta( String transname, String inputStepname, String outputStepname, IMetaStore metaStore ) throws Exception {
+
+    MetaStoreFactory<FileDefinition> factory = new MetaStoreFactory<>( FileDefinition.class, metaStore, PentahoDefaults.NAMESPACE );
+    FileDefinition customerFileDefinition = createCustomersInputFileDefinition();
+    factory.saveElement( customerFileDefinition );
+    FileDefinition statePopulationFileDefinition = createStatePopulationInputFileDefinition();
+    factory.saveElement( statePopulationFileDefinition );
+
+    TransMeta transMeta = new TransMeta(  );
+    transMeta.setName( transname );
+    transMeta.setMetaStore( metaStore );
+
+    // Add the left input step
+    //
+    BeamInputMeta leftInputMeta = new BeamInputMeta();
+    leftInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    leftInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
+    StepMeta leftInputStepMeta = new StepMeta(inputStepname+" Left", leftInputMeta);
+    leftInputStepMeta.setStepID( "BeamInput" );
+    transMeta.addStep( leftInputStepMeta );
+
+    BeamInputMeta rightInputMeta = new BeamInputMeta();
+    rightInputMeta.setInputLocation( "/tmp/customers/input/state-data.txt" );
+    rightInputMeta.setFileDescriptionName( statePopulationFileDefinition.getName() );
+    StepMeta rightInputStepMeta = new StepMeta(inputStepname+" Right", rightInputMeta);
+    rightInputStepMeta.setStepID( "BeamInput" );
+    transMeta.addStep( rightInputStepMeta );
+
+
+    // Add a Merge Join step
+    //
+    MergeJoinMeta mergeJoin = new MergeJoinMeta();
+    mergeJoin.allocate( 1, 1 );
+    mergeJoin.getKeyFields1()[0] = "state";
+    mergeJoin.getKeyFields2()[0] = "state";
+    mergeJoin.setJoinType(MergeJoinMeta.join_types[3] ); // FULL OUTER
+    mergeJoin.getStepIOMeta().getInfoStreams().get(0).setStepMeta( leftInputStepMeta );
+    mergeJoin.getStepIOMeta().getInfoStreams().get(1).setStepMeta( rightInputStepMeta );
+    StepMeta mergeJoinStepMeta = new StepMeta("Merge Join", mergeJoin);
+    transMeta.addStep( mergeJoinStepMeta );
+    transMeta.addTransHop( new TransHopMeta( leftInputStepMeta, mergeJoinStepMeta ) );
+    transMeta.addTransHop( new TransHopMeta( rightInputStepMeta, mergeJoinStepMeta ) );
+
+    // Add the output step to write results
+    //
+    BeamOutputMeta beamOutputMeta = new BeamOutputMeta();
+    beamOutputMeta.setOutputLocation( "/tmp/customers/output/" );
+    beamOutputMeta.setFileDescriptionName( null );
+    beamOutputMeta.setFilePrefix( "merge-join" );
+    beamOutputMeta.setFileSuffix( ".csv" );
+    beamOutputMeta.setWindowed( false ); // Not yet supported
+    StepMeta beamOutputStepMeta = new StepMeta(outputStepname, beamOutputMeta);
+    beamOutputStepMeta.setStepID( "BeamOutput" );
+    transMeta.addStep( beamOutputStepMeta );
+    transMeta.addTransHop(new TransHopMeta( mergeJoinStepMeta, beamOutputStepMeta ) );
+
+    return transMeta;
+  }
+
+
 
 
   public static FileDefinition createCustomersInputFileDefinition() {
@@ -383,6 +445,23 @@ public class BeamTransMetaUtil {
     fields.add( new FieldDefinition( "housenr", "String", 20, 0 ) );
     fields.add( new FieldDefinition( "stateCode", "String", 10, 0 ) );
     fields.add( new FieldDefinition( "state", "String", 100, 0 ) );
+
+    return fileDefinition;
+  }
+
+  public static FileDefinition createStatePopulationInputFileDefinition() {
+    FileDefinition fileDefinition = new FileDefinition();
+    fileDefinition.setName( "StatePopulation" );
+    fileDefinition.setDescription( "File description of state-data.txt" );
+
+    // state;population
+
+    fileDefinition.setSeparator( ";" );
+    fileDefinition.setEnclosure( null ); // NOT SUPPORTED YET
+
+    List<FieldDefinition> fields = fileDefinition.getFieldDefinitions();
+    fields.add( new FieldDefinition( "state", "String", 100, 0 ) );
+    fields.add( new FieldDefinition( "population", "Integer", 9, 0, "#" ) );
 
     return fileDefinition;
   }
