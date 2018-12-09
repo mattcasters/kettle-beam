@@ -33,6 +33,21 @@ public class BeamJobConfig {
   @MetaStoreAttribute
   private String pluginsToStage;
 
+  @MetaStoreAttribute
+  private String initialNumberOfWorkers;
+
+  @MetaStoreAttribute
+  private String maximumNumberOfWokers;
+
+  @MetaStoreAttribute
+  private boolean streaming;
+
+  @MetaStoreAttribute
+  private String autoScalingAlgorithm;
+
+  @MetaStoreAttribute
+  private List<JobParameter> parameters;
+
 
   //
   // Dataflow specific options
@@ -48,7 +63,20 @@ public class BeamJobConfig {
   private String gcpStagingLocation;
 
   @MetaStoreAttribute
-  private List<JobParameter> parameters;
+  private String gcpWorkerMachineType;
+
+  @MetaStoreAttribute
+  private String gcpWorkerDiskType;
+
+  @MetaStoreAttribute
+  private String gcpDiskSizeGb;
+
+  @MetaStoreAttribute
+  private String gcpRegion;
+
+  @MetaStoreAttribute
+  private String gcpZone;
+
 
 
   public BeamJobConfig() {
@@ -213,5 +241,149 @@ public class BeamJobConfig {
    */
   public void setPluginsToStage( String pluginsToStage ) {
     this.pluginsToStage = pluginsToStage;
+  }
+
+  /**
+   * Gets initialNumberOfWorkers
+   *
+   * @return value of initialNumberOfWorkers
+   */
+  public String getInitialNumberOfWorkers() {
+    return initialNumberOfWorkers;
+  }
+
+  /**
+   * @param initialNumberOfWorkers The initialNumberOfWorkers to set
+   */
+  public void setInitialNumberOfWorkers( String initialNumberOfWorkers ) {
+    this.initialNumberOfWorkers = initialNumberOfWorkers;
+  }
+
+  /**
+   * Gets maximumNumberOfWokers
+   *
+   * @return value of maximumNumberOfWokers
+   */
+  public String getMaximumNumberOfWokers() {
+    return maximumNumberOfWokers;
+  }
+
+  /**
+   * @param maximumNumberOfWokers The maximumNumberOfWokers to set
+   */
+  public void setMaximumNumberOfWokers( String maximumNumberOfWokers ) {
+    this.maximumNumberOfWokers = maximumNumberOfWokers;
+  }
+
+  /**
+   * Gets streaming
+   *
+   * @return value of streaming
+   */
+  public boolean isStreaming() {
+    return streaming;
+  }
+
+  /**
+   * @param streaming The streaming to set
+   */
+  public void setStreaming( boolean streaming ) {
+    this.streaming = streaming;
+  }
+
+  /**
+   * Gets autoScalingAlgorithm
+   *
+   * @return value of autoScalingAlgorithm
+   */
+  public String getAutoScalingAlgorithm() {
+    return autoScalingAlgorithm;
+  }
+
+  /**
+   * @param autoScalingAlgorithm The autoScalingAlgorithm to set
+   */
+  public void setAutoScalingAlgorithm( String autoScalingAlgorithm ) {
+    this.autoScalingAlgorithm = autoScalingAlgorithm;
+  }
+
+  /**
+   * Gets gcpWorkerMachineType
+   *
+   * @return value of gcpWorkerMachineType
+   */
+  public String getGcpWorkerMachineType() {
+    return gcpWorkerMachineType;
+  }
+
+  /**
+   * @param gcpWorkerMachineType The gcpWorkerMachineType to set
+   */
+  public void setGcpWorkerMachineType( String gcpWorkerMachineType ) {
+    this.gcpWorkerMachineType = gcpWorkerMachineType;
+  }
+
+  /**
+   * Gets gcpWorkerDiskType
+   *
+   * @return value of gcpWorkerDiskType
+   */
+  public String getGcpWorkerDiskType() {
+    return gcpWorkerDiskType;
+  }
+
+  /**
+   * @param gcpWorkerDiskType The gcpWorkerDiskType to set
+   */
+  public void setGcpWorkerDiskType( String gcpWorkerDiskType ) {
+    this.gcpWorkerDiskType = gcpWorkerDiskType;
+  }
+
+  /**
+   * Gets gcpDiskSizeGb
+   *
+   * @return value of gcpDiskSizeGb
+   */
+  public String getGcpDiskSizeGb() {
+    return gcpDiskSizeGb;
+  }
+
+  /**
+   * @param gcpDiskSizeGb The gcpDiskSizeGb to set
+   */
+  public void setGcpDiskSizeGb( String gcpDiskSizeGb ) {
+    this.gcpDiskSizeGb = gcpDiskSizeGb;
+  }
+
+  /**
+   * Gets gcpRegion
+   *
+   * @return value of gcpRegion
+   */
+  public String getGcpRegion() {
+    return gcpRegion;
+  }
+
+  /**
+   * @param gcpRegion The gcpRegion to set
+   */
+  public void setGcpRegion( String gcpRegion ) {
+    this.gcpRegion = gcpRegion;
+  }
+
+  /**
+   * Gets gcpZone
+   *
+   * @return value of gcpZone
+   */
+  public String getGcpZone() {
+    return gcpZone;
+  }
+
+  /**
+   * @param gcpZone The gcpZone to set
+   */
+  public void setGcpZone( String gcpZone ) {
+    this.gcpZone = gcpZone;
   }
 }

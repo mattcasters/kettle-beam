@@ -49,4 +49,3 @@ WASHINGTON;7405743
 West Virginia;1815857
 Wisconsin;5795483
 Wyoming;579315
-

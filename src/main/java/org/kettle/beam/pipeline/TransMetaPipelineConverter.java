@@ -639,7 +639,9 @@ public class TransMetaPipelineConverter {
       JsonRowMeta.toJson(leftKRowMeta),
       JsonRowMeta.toJson(leftVRowMeta),
       JsonRowMeta.toJson(rightVRowMeta),
-      stepMeta.getName()
+      stepMeta.getName(),
+      stepPluginClasses,
+      xpPluginClasses
     );
 
     // Apply the step transform to the previous input step PCollection(s)

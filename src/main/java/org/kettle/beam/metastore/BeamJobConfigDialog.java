@@ -2,14 +2,20 @@ package org.kettle.beam.metastore;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.ShellAdapter;
 import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
@@ -19,6 +25,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.Props;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.variables.Variables;
 import org.pentaho.di.i18n.BaseMessages;
@@ -45,6 +52,21 @@ public class BeamJobConfigDialog {
   private Text wName;
   private Text wDescription;
 
+  private CTabFolder wTabFolder;
+
+  private CTabItem wGeneralTab;
+  private CTabItem wParametersTab;
+  private CTabItem wDataflowTab;
+
+  private ScrolledComposite wGeneralSComp;
+  private ScrolledComposite wParametersSComp;
+  private ScrolledComposite wDataflowSComp;
+
+  private Composite wGeneralComp;
+  private Composite wParametersComp;
+  private Composite wDataflowComp;
+
+
   private ComboVar wRunner;
   private TextVar wUserAgent;
   private TextVar wTempLocation;
@@ -58,8 +80,7 @@ public class BeamJobConfigDialog {
 
   private Button wOK;
   private Button wCancel;
-
-  Control lastControl;
+  
   private VariableSpace space;
 
   private PropsUI props;
@@ -107,7 +128,7 @@ public class BeamJobConfigDialog {
     wCancel.setText( BaseMessages.getString( PKG, "System.Button.Cancel" ) );
     wCancel.addListener( SWT.Selection, e -> cancel() );
 
-    BaseStepDialog.positionBottomButtons( shell, new Button[] { wOK, wCancel }, margin, lastControl );
+    BaseStepDialog.positionBottomButtons( shell, new Button[] { wOK, wCancel }, margin, null );
 
     // The rest of the dialog is for the widgets...
     //
@@ -153,7 +174,6 @@ public class BeamJobConfigDialog {
 
   private void addFormWidgets() {
 
-    // The name
     //
     Label wlName = new Label( shell, SWT.RIGHT );
     props.setLook( wlName );
@@ -170,7 +190,7 @@ public class BeamJobConfigDialog {
     fdName.left = new FormAttachment( middle, 0 ); // To the right of the label
     fdName.right = new FormAttachment( 95, 0 );
     wName.setLayoutData( fdName );
-    lastControl = wName;
+    Control lastControl = wName;
 
     // The description
     //
@@ -191,82 +211,19 @@ public class BeamJobConfigDialog {
     wDescription.setLayoutData( fdDescription );
     lastControl = wDescription;
 
-    // Runner
-    //
-    Label wlRunner = new Label( shell, SWT.RIGHT );
-    props.setLook( wlRunner );
-    wlRunner.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.Runner.Label" ) );
-    FormData fdlRunner = new FormData();
-    fdlRunner.top = new FormAttachment( lastControl, margin );
-    fdlRunner.left = new FormAttachment( 0, 0 ); // First one in the left top corner
-    fdlRunner.right = new FormAttachment( middle, -margin );
-    wlRunner.setLayoutData( fdlRunner );
-    wRunner = new ComboVar( space, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    wRunner.setItems( RunnerType.getNames() );
-    props.setLook( wRunner );
-    FormData fdRunner = new FormData();
-    fdRunner.top = new FormAttachment( wlRunner, 0, SWT.CENTER );
-    fdRunner.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdRunner.right = new FormAttachment( 95, 0 );
-    wRunner.setLayoutData( fdRunner );
-    lastControl = wRunner;
+    wTabFolder = new CTabFolder( shell, SWT.BORDER );
+    props.setLook( wTabFolder, Props.WIDGET_STYLE_TAB );
+    wTabFolder.setSimple( false );
+    FormData fdTabFolder = new FormData();
+    fdTabFolder.left = new FormAttachment( 0, 0 );
+    fdTabFolder.right = new FormAttachment( 100, 0 );
+    fdTabFolder.top = new FormAttachment( lastControl, margin*2 );
+    fdTabFolder.bottom = new FormAttachment( wOK, -margin*2 );
 
-    // UserAgent
-    //
-    Label wlUserAgent = new Label( shell, SWT.RIGHT );
-    props.setLook( wlUserAgent );
-    wlUserAgent.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.UserAgent.Label" ) );
-    FormData fdlUserAgent = new FormData();
-    fdlUserAgent.top = new FormAttachment( lastControl, margin );
-    fdlUserAgent.left = new FormAttachment( 0, 0 ); // First one in the left top corner
-    fdlUserAgent.right = new FormAttachment( middle, -margin );
-    wlUserAgent.setLayoutData( fdlUserAgent );
-    wUserAgent = new TextVar( space, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wUserAgent );
-    FormData fdUserAgent = new FormData();
-    fdUserAgent.top = new FormAttachment( wlUserAgent, 0, SWT.CENTER );
-    fdUserAgent.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdUserAgent.right = new FormAttachment( 95, 0 );
-    wUserAgent.setLayoutData( fdUserAgent );
-    lastControl = wUserAgent;
 
-    // TempLocation
-    //
-    Label wlTempLocation = new Label( shell, SWT.RIGHT );
-    props.setLook( wlTempLocation );
-    wlTempLocation.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.TempLocation.Label" ) );
-    FormData fdlTempLocation = new FormData();
-    fdlTempLocation.top = new FormAttachment( lastControl, margin );
-    fdlTempLocation.left = new FormAttachment( 0, 0 ); // First one in the left top corner
-    fdlTempLocation.right = new FormAttachment( middle, -margin );
-    wlTempLocation.setLayoutData( fdlTempLocation );
-    wTempLocation = new TextVar( space, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wTempLocation );
-    FormData fdTempLocation = new FormData();
-    fdTempLocation.top = new FormAttachment( wlTempLocation, 0, SWT.CENTER );
-    fdTempLocation.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdTempLocation.right = new FormAttachment( 95, 0 );
-    wTempLocation.setLayoutData( fdTempLocation );
-    lastControl = wTempLocation;
+    addGeneralTab();
 
-    // PluginsToStage
-    //
-    Label wlPluginsToStage = new Label( shell, SWT.RIGHT );
-    props.setLook( wlPluginsToStage );
-    wlPluginsToStage.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.PluginsToStage.Label" ) );
-    FormData fdlPluginsToStage = new FormData();
-    fdlPluginsToStage.top = new FormAttachment( lastControl, margin );
-    fdlPluginsToStage.left = new FormAttachment( 0, 0 ); // First one in the left top corner
-    fdlPluginsToStage.right = new FormAttachment( middle, -margin );
-    wlPluginsToStage.setLayoutData( fdlPluginsToStage );
-    wPluginsToStage = new TextVar( space, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wPluginsToStage );
-    FormData fdPluginsToStage = new FormData();
-    fdPluginsToStage.top = new FormAttachment( wlPluginsToStage, 0, SWT.CENTER );
-    fdPluginsToStage.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdPluginsToStage.right = new FormAttachment( 95, 0 );
-    wPluginsToStage.setLayoutData( fdPluginsToStage );
-    lastControl=wPluginsToStage;
+
 
     // Google Cloud Platform Group
 
@@ -352,22 +309,170 @@ public class BeamJobConfigDialog {
     wlParameters.setLayoutData( fdlParameters );
     lastControl = wlParameters;
 
+
+
+  }
+
+  private void addGeneralTab() {
+    wGeneralTab = new CTabItem( wTabFolder, SWT.NONE );
+    wGeneralTab .setText( "General" );
+
+    wGeneralSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
+    wGeneralSComp.setLayout( new FillLayout() );
+
+    wGeneralComp = new Composite( wGeneralSComp, SWT.NONE );
+    props.setLook( wGeneralComp );
+
+    FormLayout fileLayout = new FormLayout();
+    fileLayout.marginWidth = 3;
+    fileLayout.marginHeight = 3;
+    wGeneralComp.setLayout( fileLayout );
+
+    // Runner
+    //
+    Label wlRunner = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlRunner );
+    wlRunner.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.Runner.Label" ) );
+    FormData fdlRunner = new FormData();
+    fdlRunner.top = new FormAttachment( null, 0);
+    fdlRunner.left = new FormAttachment( 0, 0 ); // First one in the left top corner
+    fdlRunner.right = new FormAttachment( middle, -margin );
+    wlRunner.setLayoutData( fdlRunner );
+    wRunner = new ComboVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    wRunner.setItems( RunnerType.getNames() );
+    props.setLook( wRunner );
+    FormData fdRunner = new FormData();
+    fdRunner.top = new FormAttachment( wlRunner, 0, SWT.CENTER );
+    fdRunner.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdRunner.right = new FormAttachment( 95, 0 );
+    wRunner.setLayoutData( fdRunner );
+    Control lastControl = wRunner;
+
+    // UserAgent
+    //
+    Label wlUserAgent = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlUserAgent );
+    wlUserAgent.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.UserAgent.Label" ) );
+    FormData fdlUserAgent = new FormData();
+    fdlUserAgent.top = new FormAttachment( lastControl, margin );
+    fdlUserAgent.left = new FormAttachment( 0, 0 ); // First one in the left top corner
+    fdlUserAgent.right = new FormAttachment( middle, -margin );
+    wlUserAgent.setLayoutData( fdlUserAgent );
+    wUserAgent = new TextVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wUserAgent );
+    FormData fdUserAgent = new FormData();
+    fdUserAgent.top = new FormAttachment( wlUserAgent, 0, SWT.CENTER );
+    fdUserAgent.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdUserAgent.right = new FormAttachment( 95, 0 );
+    wUserAgent.setLayoutData( fdUserAgent );
+    lastControl = wUserAgent;
+
+    // TempLocation
+    //
+    Label wlTempLocation = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlTempLocation );
+    wlTempLocation.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.TempLocation.Label" ) );
+    FormData fdlTempLocation = new FormData();
+    fdlTempLocation.top = new FormAttachment( lastControl, margin );
+    fdlTempLocation.left = new FormAttachment( 0, 0 ); // First one in the left top corner
+    fdlTempLocation.right = new FormAttachment( middle, -margin );
+    wlTempLocation.setLayoutData( fdlTempLocation );
+    wTempLocation = new TextVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wTempLocation );
+    FormData fdTempLocation = new FormData();
+    fdTempLocation.top = new FormAttachment( wlTempLocation, 0, SWT.CENTER );
+    fdTempLocation.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdTempLocation.right = new FormAttachment( 95, 0 );
+    wTempLocation.setLayoutData( fdTempLocation );
+    lastControl = wTempLocation;
+
+    // PluginsToStage
+    //
+    Label wlPluginsToStage = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlPluginsToStage );
+    wlPluginsToStage.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.PluginsToStage.Label" ) );
+    FormData fdlPluginsToStage = new FormData();
+    fdlPluginsToStage.top = new FormAttachment( lastControl, margin );
+    fdlPluginsToStage.left = new FormAttachment( 0, 0 ); // First one in the left top corner
+    fdlPluginsToStage.right = new FormAttachment( middle, -margin );
+    wlPluginsToStage.setLayoutData( fdlPluginsToStage );
+    wPluginsToStage = new TextVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wPluginsToStage );
+    FormData fdPluginsToStage = new FormData();
+    fdPluginsToStage.top = new FormAttachment( wlPluginsToStage, 0, SWT.CENTER );
+    fdPluginsToStage.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdPluginsToStage.right = new FormAttachment( 95, 0 );
+    wPluginsToStage.setLayoutData( fdPluginsToStage );
+
+
+    FormData fdGeneralComp = new FormData();
+    fdGeneralComp.left = new FormAttachment( 0, 0 );
+    fdGeneralComp.top = new FormAttachment( 0, 0 );
+    fdGeneralComp.right = new FormAttachment( 100, 0 );
+    fdGeneralComp.bottom = new FormAttachment( 100, 0 );
+    wGeneralComp.setLayoutData( fdGeneralComp );
+
+    wGeneralComp.pack();
+    Rectangle bounds = wGeneralComp.getBounds();
+
+    wGeneralSComp.setContent( wGeneralComp );
+    wGeneralSComp.setExpandHorizontal( true );
+    wGeneralSComp.setExpandVertical( true );
+    wGeneralSComp.setMinWidth( bounds.width );
+    wGeneralSComp.setMinHeight( bounds.height );
+
+    wGeneralTab.setControl( wGeneralSComp );
+  }
+
+  private void addParametersTab() {
+    wParametersTab = new CTabItem( wTabFolder, SWT.NONE );
+    wParametersTab .setText( "Parameters" );
+
+    wParametersSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
+    wParametersSComp.setLayout( new FillLayout() );
+
+    wParametersComp = new Composite( wParametersSComp, SWT.NONE );
+    props.setLook( wParametersComp );
+
+    FormLayout fileLayout = new FormLayout();
+    fileLayout.marginWidth = 3;
+    fileLayout.marginHeight = 3;
+    wParametersComp.setLayout( fileLayout );
+
+
     ColumnInfo[] columnInfos = new ColumnInfo[] {
       new ColumnInfo("Name", ColumnInfo.COLUMN_TYPE_TEXT, false, false),
       new ColumnInfo("Value", ColumnInfo.COLUMN_TYPE_TEXT, false, false),
     };
 
-    wParameters = new TableView( space, shell, SWT.BORDER, columnInfos, config.getParameters().size(), null, props );
+    wParameters = new TableView( space, wParametersComp, SWT.BORDER, columnInfos, config.getParameters().size(), null, props );
     props.setLook( wParameters );
     FormData fdParameters = new FormData();
     fdParameters.left = new FormAttachment( 0, 0 );
     fdParameters.right = new FormAttachment( 100, 0 );
-    fdParameters.top = new FormAttachment( lastControl, margin );
-    fdParameters.bottom = new FormAttachment( wOK, -margin*2 );
+    fdParameters.top = new FormAttachment( 0, 0);
+    fdParameters.bottom = new FormAttachment( 100, 0 );
     wParameters.setLayoutData( fdParameters );
-    lastControl = wParameters;
 
+    FormData fdParametersComp = new FormData();
+    fdParametersComp.left = new FormAttachment( 0, 0 );
+    fdParametersComp.top = new FormAttachment( 0, 0 );
+    fdParametersComp.right = new FormAttachment( 100, 0 );
+    fdParametersComp.bottom = new FormAttachment( 100, 0 );
+    wParametersComp.setLayoutData( fdParametersComp );
+
+    wParametersComp.pack();
+    Rectangle bounds = wParametersComp.getBounds();
+
+    wParametersSComp.setContent( wParametersComp );
+    wParametersSComp.setExpandHorizontal( true );
+    wParametersSComp.setExpandVertical( true );
+    wParametersSComp.setMinWidth( bounds.width );
+    wParametersSComp.setMinHeight( bounds.height );
+
+    wParametersTab.setControl( wParametersSComp );
   }
+
 
   public void dispose() {
     props.setScreen( new WindowProperty( shell ) );
