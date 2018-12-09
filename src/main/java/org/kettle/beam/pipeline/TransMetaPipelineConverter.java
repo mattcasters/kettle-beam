@@ -20,6 +20,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.coder.KettleRowCoder;
+import org.kettle.beam.core.fn.AssemblerFn;
 import org.kettle.beam.core.fn.KettleKeyValueFn;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.core.shared.VariableValue;
@@ -502,6 +503,7 @@ public class TransMetaPipelineConverter {
     }
 
     PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform = new GroupByTransform(
+      stepMeta.getName(),
       JsonRowMeta.toJson(rowMeta),  // The input row
       stepPluginClasses,
       xpPluginClasses,
@@ -567,7 +569,8 @@ public class TransMetaPipelineConverter {
       }
     }
 
-    KettleKeyValueFn leftKVFn = new KettleKeyValueFn( JsonRowMeta.toJson(leftRowMeta), stepPluginClasses, xpPluginClasses, leftK.toArray( new String[0] ), leftV.toArray(new String[0]) );
+    KettleKeyValueFn leftKVFn = new KettleKeyValueFn(
+      JsonRowMeta.toJson(leftRowMeta), stepPluginClasses, xpPluginClasses, leftK.toArray( new String[0] ), leftV.toArray(new String[0]), stepMeta.getName() );
     PCollection<KV<KettleRow, KettleRow>> leftKVPCollection = leftPCollection.apply( ParDo.of( leftKVFn ) );
 
     // Create key-value pairs (KV) for the left collections
@@ -587,7 +590,8 @@ public class TransMetaPipelineConverter {
       }
     }
 
-    KettleKeyValueFn rightKVFn = new KettleKeyValueFn( JsonRowMeta.toJson(rightRowMeta), stepPluginClasses, xpPluginClasses, rightK.toArray( new String[0] ), rightV.toArray(new String[0]) );
+    KettleKeyValueFn rightKVFn = new KettleKeyValueFn(
+      JsonRowMeta.toJson(rightRowMeta), stepPluginClasses, xpPluginClasses, rightK.toArray( new String[0] ), rightV.toArray(new String[0]), stepMeta.getName() );
     PCollection<KV<KettleRow, KettleRow>> rightKVPCollection = rightPCollection.apply( ParDo.of( rightKVFn ) );
 
     PCollection<KV<KettleRow, KV<KettleRow, KettleRow>>> kvpCollection;
@@ -634,7 +638,8 @@ public class TransMetaPipelineConverter {
       JsonRowMeta.toJson(outputRowMeta),
       JsonRowMeta.toJson(leftKRowMeta),
       JsonRowMeta.toJson(leftVRowMeta),
-      JsonRowMeta.toJson(rightVRowMeta)
+      JsonRowMeta.toJson(rightVRowMeta),
+      stepMeta.getName()
     );
 
     // Apply the step transform to the previous input step PCollection(s)
