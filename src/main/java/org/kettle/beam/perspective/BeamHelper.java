@@ -54,6 +54,7 @@ import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.parameters.UnknownParamException;
+import org.pentaho.di.core.plugins.KettleURLClassLoader;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.ui.core.dialog.EnterSelectionDialog;
@@ -67,6 +68,9 @@ import org.pentaho.ui.xul.dom.Document;
 import org.pentaho.ui.xul.impl.AbstractXulEventHandler;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -128,38 +132,61 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
       String choice = selectionDialog.open();
       if ( choice != null ) {
 
-
         final BeamJobConfig config = factory.loadElement( choice );
-        final Pipeline pipeline = getPipeline( transMeta, config );
 
-        PipelineResult pipelineResult = pipeline.run();
-
-
-        new Thread( new Runnable() {
+        Runnable runnable = new Runnable() {
           @Override public void run() {
 
-            Timer timer = new Timer();
-            TimerTask timerTask = new TimerTask() {
-              @Override public void run() {
+            ClassLoader oldContextClassLoader = Thread.currentThread().getContextClassLoader();
+            try {
+              try {
+                // Explain to various classes in the Beam API (@see org.apache.beam.sdk.io.FileSystems)
+                // what the context classloader is.
+                // Set it back when we're done here.
+                //
+                Thread.currentThread().setContextClassLoader( BeamHelper.getInstance().getClass().getClassLoader() );
+
+                final Pipeline pipeline = getPipeline( transMeta, config );
+
+                PipelineResult pipelineResult = pipeline.run();
+
+                Timer timer = new Timer();
+                TimerTask timerTask = new TimerTask() {
+                  @Override public void run() {
+                    logMetrics( pipelineResult );
+                  }
+                };
+                // Every 10 seconds
+                timer.schedule( timerTask, 10000, 10000 );
+
+                // Wait until we're done
+                pipelineResult.waitUntilFinish();
+
+                timer.cancel();
+                timer.purge();
+
+                // Log the metrics at the end.
                 logMetrics( pipelineResult );
+
+                spoon.getLog().logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
+              } finally {
+                Thread.currentThread().setContextClassLoader( oldContextClassLoader );
               }
-            };
-            // Every 10 seconds
-            timer.schedule( timerTask, 10000, 10000 );
 
-            // Wait until we're done
-            pipelineResult.waitUntilFinish();
-
-            timer.cancel();
-            timer.purge();
-
-            // Log the metrics at the end.
-            logMetrics( pipelineResult );
-
-            spoon.getLog().logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
-
+            } catch ( Exception e ) {
+              spoon.getDisplay().asyncExec( new Runnable() {
+                @Override public void run() {
+                  new ErrorDialog( spoon.getShell(), "Error", "There was an error building or executing the pipeline", e );
+                }
+              } );
+            }
           }
-        } ).start();
+        };
+
+        // Create a new thread on the class loader
+        //
+        Thread thread = new Thread(runnable);
+        thread.start();
 
         showMessage( "Transformation started",
           "Your transformation was started with the selected Beam Runner." + Const.CR +
@@ -185,6 +212,18 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
       );
     }
 
+  }
+
+  private KettleURLClassLoader buildKettleURLClassLoader( BeamJobConfig config ) throws Exception {
+    // We don't need all the plugins to run locally I think
+    //
+    List<String> jarFilenames = findLibraryFilesToStage( null, config.getPluginsToStage(), true );
+    URL[] urls = new URL[ jarFilenames.size() ];
+    int index=0;
+    for ( String jarFilename : jarFilenames ) {
+      urls[index++] = new File(jarFilename).toURI().toURL();
+    }
+    return new KettleURLClassLoader( urls, ClassLoader.getSystemClassLoader(), "Beam Kettle Classloader for '"+config.getName()+"'");
   }
 
   private void configureStandardOptions( BeamJobConfig config, String transformationName, PipelineOptions pipelineOptions ) {
@@ -276,7 +315,7 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
 
   private void configureDataFlowOptions( BeamJobConfig config, DataflowPipelineOptions options ) {
 
-    options.setFilesToStage( findLibraryFilesToStage(config.getPluginsToStage()) );
+    options.setFilesToStage( findLibraryFilesToStage( config.getPluginsToStage() ) );
     options.setProject( config.getGcpProjectId() );
     options.setAppName( config.getGcpAppName() );
     options.setStagingLocation( config.getGcpStagingLocation() );
@@ -300,12 +339,20 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
     return findLibraryFilesToStage( null, null );
   }
 
-  public static List<String> findLibraryFilesToStage(String pluginFolders) {
+  public static List<String> findLibraryFilesToStage( String pluginFolders ) {
     return findLibraryFilesToStage( null, pluginFolders );
   }
 
+  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders) {
+    return findLibraryFilesToStage( baseFolder, pluginFolders, true, true );
+  }
 
-  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders ) {
+
+  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders, boolean includeParent) {
+    return findLibraryFilesToStage( baseFolder, pluginFolders, includeParent, true );
+  }
+
+  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders, boolean includeParent, boolean includeBeam ) {
 
     File base;
     if ( baseFolder == null ) {
@@ -319,32 +366,43 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
     //
     Set<String> uniqueNames = new HashSet<>();
     List<String> libraries = new ArrayList<>();
-    File libFolder = new File( base.toString() + "/lib" );
 
-    Collection<File> files = FileUtils.listFiles( libFolder, new String[] { "jar" }, true );
-    if ( files != null ) {
-      for ( File file : files ) {
-        String shortName = file.getName();
-        if ( !uniqueNames.contains( shortName ) ) {
-          uniqueNames.add( shortName );
-          libraries.add( file.getAbsolutePath() );
-          // System.out.println( "Adding library : " + file.getAbsolutePath() );
+    if (includeParent) {
+
+      File libFolder = new File( base.toString() + "/lib" );
+
+      Collection<File> files = FileUtils.listFiles( libFolder, new String[] { "jar" }, true );
+      if ( files != null ) {
+        for ( File file : files ) {
+          String shortName = file.getName();
+          if ( !uniqueNames.contains( shortName ) ) {
+            uniqueNames.add( shortName );
+            libraries.add( file.getAbsolutePath() );
+            // System.out.println( "Adding library : " + file.getAbsolutePath() );
+          }
         }
       }
     }
 
-    List<String> pluginFoldersList = new ArrayList<>(  );
-    if (StringUtils.isNotEmpty( pluginFolders )) {
+    // A unique list of plugin folders
+    //
+    Set<String> pluginFoldersSet = new HashSet<>();
+    if ( StringUtils.isNotEmpty( pluginFolders ) ) {
       String[] folders = pluginFolders.split( "," );
-      for (String folder : folders) {
-        pluginFoldersList.add(folder);
+      for ( String folder : folders ) {
+        pluginFoldersSet.add( folder );
       }
+    }
+    if (includeBeam) {
+      // TODO: make this plugin folder configurable
+      //
+      pluginFoldersSet.add("kettle-beam");
     }
 
     // Now the selected plugins libs...
     //
-    for (String pluginFolder : pluginFoldersList) {
-      File pluginsFolder = new File( base.toString() + "/plugins/"+pluginFolder );
+    for ( String pluginFolder : pluginFoldersSet ) {
+      File pluginsFolder = new File( base.toString() + "/plugins/" + pluginFolder );
       Collection<File> pluginFiles = FileUtils.listFiles( pluginsFolder, new String[] { "jar" }, true );
       if ( pluginFiles != null ) {
         for ( File file : pluginFiles ) {

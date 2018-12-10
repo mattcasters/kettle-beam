@@ -16,7 +16,7 @@ public class BeamHelperTest {
   public void testLibraries() throws Exception {
 
 
-    List<String> libs = BeamHelper.findLibraryFilesToStage("/home/matt/pentaho/latest", "Neo4JOutput");
+    List<String> libs = BeamHelper.findLibraryFilesToStage("/home/matt/pentaho/latest", "Neo4JOutput", true);
 
     assertTrue( libs.size()>0 );
 
