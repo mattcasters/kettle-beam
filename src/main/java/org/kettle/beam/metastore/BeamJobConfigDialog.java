@@ -52,13 +52,16 @@ public class BeamJobConfigDialog {
   private CTabItem wGeneralTab;
   private CTabItem wParametersTab;
   private CTabItem wDataflowTab;
+  private CTabItem wSparkTab;
 
   private ScrolledComposite wGeneralSComp;
   private ScrolledComposite wDataflowSComp;
+  private ScrolledComposite wSparkSComp;
 
   private Composite wGeneralComp;
   private Composite wParametersComp;
   private Composite wDataflowComp;
+  private Composite wSparkComp;
 
   // Connection properties
   //
@@ -68,23 +71,38 @@ public class BeamJobConfigDialog {
   private TextVar wUserAgent;
   private TextVar wTempLocation;
   private TextVar wPluginsToStage;
-  private TextVar wInitialNumberOfWorkers;
-  private TextVar wMaximumNumberOfWorkers;
-  private Button wStreaming;
-  private TextVar wAutoScalingAlgorithm;
+
+  // Parameters
+
+  private TableView wParameters;
 
   // GCP settings
 
   private TextVar wGcpProjectId;
   private TextVar wGcpAppName;
   private TextVar wGcpStagingLocation;
+  private TextVar wGcpInitialNumberOfWorkers;
+  private TextVar wGcpMaximumNumberOfWorkers;
+  private TextVar wGcpAutoScalingAlgorithm;
   private ComboVar wGcpWorkerMachineType;
   private TextVar wGcpWorkerDiskType;
   private TextVar wGcpDiskSizeGb;
-  private TextVar wGcpRegion;
-  private ComboVar wGcpZone;
+  private ComboVar wGcpRegion;
+  private TextVar wGcpZone;
+  private Button wGcpStreaming;
 
-  private TableView wParameters;
+  // Spark settings
+
+  private TextVar wSparkMaster;
+  private TextVar wSparkBatchIntervalMillis;
+  private TextVar wSparkCheckpointDir;
+  private TextVar wSparkCheckpointDurationMillis;
+  private Button wsparkEnableSparkMetricSinks;
+  private TextVar wSparkMaxRecordsPerBatch;
+  private TextVar wSparkMinReadTimeMillis;
+  private TextVar wSparkReadTimePercentage;
+  private TextVar wSparkBundleSize;
+  private ComboVar wSparkStorageLevel;
 
   private Button wOK;
   private Button wCancel;
@@ -97,6 +115,7 @@ public class BeamJobConfigDialog {
   private int margin;
 
   private boolean ok;
+
 
   public BeamJobConfigDialog( Shell parent, BeamJobConfig config ) {
     this.parent = parent;
@@ -158,16 +177,24 @@ public class BeamJobConfigDialog {
     wGcpProjectId.addSelectionListener( selAdapter );
     wGcpAppName.addSelectionListener( selAdapter );
     wGcpStagingLocation.addSelectionListener( selAdapter );
-    wInitialNumberOfWorkers.addSelectionListener( selAdapter );
-    wMaximumNumberOfWorkers.addSelectionListener( selAdapter );
-    wStreaming.addSelectionListener( selAdapter );
-    wAutoScalingAlgorithm.addSelectionListener( selAdapter );
+    wGcpInitialNumberOfWorkers.addSelectionListener( selAdapter );
+    wGcpMaximumNumberOfWorkers.addSelectionListener( selAdapter );
+    wGcpStreaming.addSelectionListener( selAdapter );
+    wGcpAutoScalingAlgorithm.addSelectionListener( selAdapter );
     wGcpWorkerMachineType.addSelectionListener( selAdapter );
     wGcpWorkerDiskType.addSelectionListener( selAdapter );
     wGcpDiskSizeGb.addSelectionListener( selAdapter );
     wGcpRegion.addSelectionListener( selAdapter );
     wGcpZone.addSelectionListener( selAdapter );
-
+    wSparkMaster.addSelectionListener( selAdapter );
+    wSparkBatchIntervalMillis.addSelectionListener( selAdapter );
+    wSparkCheckpointDir.addSelectionListener( selAdapter );
+    wSparkCheckpointDurationMillis.addSelectionListener( selAdapter );
+    wSparkMaxRecordsPerBatch.addSelectionListener( selAdapter );
+    wSparkMinReadTimeMillis.addSelectionListener( selAdapter );
+    wSparkReadTimePercentage.addSelectionListener( selAdapter );
+    wSparkBundleSize.addSelectionListener( selAdapter );
+    wSparkStorageLevel.addSelectionListener( selAdapter );
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
@@ -265,6 +292,7 @@ public class BeamJobConfigDialog {
     addGeneralTab();
     addParametersTab();
     addDataflowTab();
+    addSparkTab();
 
     wTabFolder.setSelection( 0 );
 
@@ -341,65 +369,7 @@ public class BeamJobConfigDialog {
     fdPluginsToStage.right = new FormAttachment( 95, 0 );
     wPluginsToStage.setLayoutData( fdPluginsToStage );
     lastControl = wPluginsToStage;
-
-    // Initial number of workers
-    //
-    Label wlInitialNumberOfWorkers = new Label( wGeneralComp, SWT.RIGHT );
-    props.setLook( wlInitialNumberOfWorkers );
-    wlInitialNumberOfWorkers.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.InitialNumberOfWorkers.Label" ) );
-    FormData fdlInitialNumberOfWorkers = new FormData();
-    fdlInitialNumberOfWorkers.top = new FormAttachment( lastControl, margin );
-    fdlInitialNumberOfWorkers.left = new FormAttachment( 0, -margin ); // First one in the left top corner
-    fdlInitialNumberOfWorkers.right = new FormAttachment( middle, -margin );
-    wlInitialNumberOfWorkers.setLayoutData( fdlInitialNumberOfWorkers );
-    wInitialNumberOfWorkers = new TextVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wInitialNumberOfWorkers );
-    FormData fdInitialNumberOfWorkers = new FormData();
-    fdInitialNumberOfWorkers.top = new FormAttachment( wlInitialNumberOfWorkers, 0, SWT.CENTER );
-    fdInitialNumberOfWorkers.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdInitialNumberOfWorkers.right = new FormAttachment( 95, 0 );
-    wInitialNumberOfWorkers.setLayoutData( fdInitialNumberOfWorkers );
-    lastControl = wInitialNumberOfWorkers;
-
-    // Maximum number of workers
-    //
-    Label wlMaximumNumberOfWorkers = new Label( wGeneralComp, SWT.RIGHT );
-    props.setLook( wlMaximumNumberOfWorkers );
-    wlMaximumNumberOfWorkers.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.MaximumNumberOfWorkers.Label" ) );
-    FormData fdlMaximumNumberOfWorkers = new FormData();
-    fdlMaximumNumberOfWorkers.top = new FormAttachment( lastControl, margin );
-    fdlMaximumNumberOfWorkers.left = new FormAttachment( 0, -margin ); // First one in the left top corner
-    fdlMaximumNumberOfWorkers.right = new FormAttachment( middle, -margin );
-    wlMaximumNumberOfWorkers.setLayoutData( fdlMaximumNumberOfWorkers );
-    wMaximumNumberOfWorkers = new TextVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wMaximumNumberOfWorkers );
-    FormData fdMaximumNumberOfWorkers = new FormData();
-    fdMaximumNumberOfWorkers.top = new FormAttachment( wlMaximumNumberOfWorkers, 0, SWT.CENTER );
-    fdMaximumNumberOfWorkers.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdMaximumNumberOfWorkers.right = new FormAttachment( 95, 0 );
-    wMaximumNumberOfWorkers.setLayoutData( fdMaximumNumberOfWorkers );
-    lastControl = wMaximumNumberOfWorkers;
-
-    // Streaming?
-    //
-    Label wlStreaming = new Label( wGeneralComp, SWT.RIGHT );
-    props.setLook( wlStreaming );
-    wlStreaming.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.Streaming.Label" ) );
-    FormData fdlStreaming = new FormData();
-    fdlStreaming.top = new FormAttachment( lastControl, margin );
-    fdlStreaming.left = new FormAttachment( 0, -margin ); // First one in the left top corner
-    fdlStreaming.right = new FormAttachment( middle, -margin );
-    wlStreaming.setLayoutData( fdlStreaming );
-    wStreaming = new Button( wGeneralComp, SWT.CHECK | SWT.LEFT );
-    props.setLook( wStreaming );
-    FormData fdStreaming = new FormData();
-    fdStreaming.top = new FormAttachment( wlStreaming, 0, SWT.CENTER );
-    fdStreaming.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdStreaming.right = new FormAttachment( 95, 0 );
-    wStreaming.setLayoutData( fdStreaming );
-    lastControl = wStreaming;
-
-
+    
     FormData fdGeneralComp = new FormData();
     fdGeneralComp.left = new FormAttachment( 0, 0 );
     fdGeneralComp.top = new FormAttachment( 0, 0 );
@@ -453,7 +423,7 @@ public class BeamJobConfigDialog {
 
   private void addDataflowTab() {
     wDataflowTab = new CTabItem( wTabFolder, SWT.NONE );
-    wDataflowTab .setText( "GCP Dataflow" );
+    wDataflowTab .setText( "Google Cloud Platform Dataflow" );
 
     wDataflowSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wDataflowSComp.setLayout( new FillLayout() );
@@ -523,24 +493,62 @@ public class BeamJobConfigDialog {
     wGcpStagingLocation.setLayoutData( fdGcpStagingLocation );
     lastControl = wGcpStagingLocation;
 
+    // Initial number of workers
+    //
+    Label wlInitialNumberOfWorkers = new Label( wDataflowComp, SWT.RIGHT );
+    props.setLook( wlInitialNumberOfWorkers );
+    wlInitialNumberOfWorkers.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.GcpInitialNumberOfWorkers.Label" ) );
+    FormData fdlInitialNumberOfWorkers = new FormData();
+    fdlInitialNumberOfWorkers.top = new FormAttachment( lastControl, margin );
+    fdlInitialNumberOfWorkers.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlInitialNumberOfWorkers.right = new FormAttachment( middle, -margin );
+    wlInitialNumberOfWorkers.setLayoutData( fdlInitialNumberOfWorkers );
+    wGcpInitialNumberOfWorkers = new TextVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wGcpInitialNumberOfWorkers );
+    FormData fdInitialNumberOfWorkers = new FormData();
+    fdInitialNumberOfWorkers.top = new FormAttachment( wlInitialNumberOfWorkers, 0, SWT.CENTER );
+    fdInitialNumberOfWorkers.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdInitialNumberOfWorkers.right = new FormAttachment( 95, 0 );
+    wGcpInitialNumberOfWorkers.setLayoutData( fdInitialNumberOfWorkers );
+    lastControl = wGcpInitialNumberOfWorkers;
+
+    // Maximum number of workers
+    //
+    Label wlMaximumNumberOfWorkers = new Label( wDataflowComp, SWT.RIGHT );
+    props.setLook( wlMaximumNumberOfWorkers );
+    wlMaximumNumberOfWorkers.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.GcpMaximumNumberOfWorkers.Label" ) );
+    FormData fdlMaximumNumberOfWorkers = new FormData();
+    fdlMaximumNumberOfWorkers.top = new FormAttachment( lastControl, margin );
+    fdlMaximumNumberOfWorkers.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlMaximumNumberOfWorkers.right = new FormAttachment( middle, -margin );
+    wlMaximumNumberOfWorkers.setLayoutData( fdlMaximumNumberOfWorkers );
+    wGcpMaximumNumberOfWorkers = new TextVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wGcpMaximumNumberOfWorkers );
+    FormData fdMaximumNumberOfWorkers = new FormData();
+    fdMaximumNumberOfWorkers.top = new FormAttachment( wlMaximumNumberOfWorkers, 0, SWT.CENTER );
+    fdMaximumNumberOfWorkers.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdMaximumNumberOfWorkers.right = new FormAttachment( 95, 0 );
+    wGcpMaximumNumberOfWorkers.setLayoutData( fdMaximumNumberOfWorkers );
+    lastControl = wGcpMaximumNumberOfWorkers;
+
     // Auto Scaling Algorithm
     //
     Label wlAutoScalingAlgorithm = new Label( wDataflowComp, SWT.RIGHT );
     props.setLook( wlAutoScalingAlgorithm );
-    wlAutoScalingAlgorithm.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.AutoScalingAlgorithm.Label" ) );
+    wlAutoScalingAlgorithm.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.GcpAutoScalingAlgorithm.Label" ) );
     FormData fdlAutoScalingAlgorithm = new FormData();
     fdlAutoScalingAlgorithm.top = new FormAttachment( lastControl, margin );
     fdlAutoScalingAlgorithm.left = new FormAttachment( 0, -margin ); // First one in the left top corner
     fdlAutoScalingAlgorithm.right = new FormAttachment( middle, -margin );
     wlAutoScalingAlgorithm.setLayoutData( fdlAutoScalingAlgorithm );
-    wAutoScalingAlgorithm = new TextVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wAutoScalingAlgorithm );
+    wGcpAutoScalingAlgorithm = new TextVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wGcpAutoScalingAlgorithm );
     FormData fdAutoScalingAlgorithm = new FormData();
     fdAutoScalingAlgorithm.top = new FormAttachment( wlAutoScalingAlgorithm, 0, SWT.CENTER );
     fdAutoScalingAlgorithm.left = new FormAttachment( middle, 0 ); // To the right of the label
     fdAutoScalingAlgorithm.right = new FormAttachment( 95, 0 );
-    wAutoScalingAlgorithm.setLayoutData( fdAutoScalingAlgorithm );
-    lastControl = wAutoScalingAlgorithm;
+    wGcpAutoScalingAlgorithm.setLayoutData( fdAutoScalingAlgorithm );
+    lastControl = wGcpAutoScalingAlgorithm;
 
 
     // Worker machine type
@@ -555,7 +563,7 @@ public class BeamJobConfigDialog {
     wlGcpWorkerMachineType.setLayoutData( fdlGcpWorkerMachineType );
     wGcpWorkerMachineType = new ComboVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
     props.setLook( wGcpWorkerMachineType );
-    wGcpWorkerMachineType.setItems( BeamConst.getGcpWorkerMachineTypeCodes() );
+    wGcpWorkerMachineType.setItems( BeamConst.getGcpWorkerMachineTypeDescriptions() );
     FormData fdGcpWorkerMachineType = new FormData();
     fdGcpWorkerMachineType.top = new FormAttachment( wlGcpWorkerMachineType, 0, SWT.CENTER );
     fdGcpWorkerMachineType.left = new FormAttachment( middle, 0 ); // To the right of the label
@@ -611,8 +619,9 @@ public class BeamJobConfigDialog {
     fdlGcpRegion.left = new FormAttachment( 0, -margin ); // First one in the left top corner
     fdlGcpRegion.right = new FormAttachment( middle, -margin );
     wlGcpRegion.setLayoutData( fdlGcpRegion );
-    wGcpRegion = new TextVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    wGcpRegion = new ComboVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
     props.setLook( wGcpRegion );
+    wGcpRegion.setItems(BeamConst.getGcpRegionDescriptions());
     FormData fdGcpRegion = new FormData();
     fdGcpRegion.top = new FormAttachment( wlGcpRegion, 0, SWT.CENTER );
     fdGcpRegion.left = new FormAttachment( middle, 0 ); // To the right of the label
@@ -630,9 +639,8 @@ public class BeamJobConfigDialog {
     fdlGcpZone.left = new FormAttachment( 0, -margin ); // First one in the left top corner
     fdlGcpZone.right = new FormAttachment( middle, -margin );
     wlGcpZone.setLayoutData( fdlGcpZone );
-    wGcpZone = new ComboVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    wGcpZone = new TextVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
     props.setLook( wGcpZone );
-    wGcpZone.setItems(BeamConst.getGcpRegionCodes());
     FormData fdGcpZone = new FormData();
     fdGcpZone.top = new FormAttachment( wlGcpZone, 0, SWT.CENTER );
     fdGcpZone.left = new FormAttachment( middle, 0 ); // To the right of the label
@@ -640,6 +648,24 @@ public class BeamJobConfigDialog {
     wGcpZone.setLayoutData( fdGcpZone );
     lastControl = wGcpZone;
 
+    // Streaming?
+    //
+    Label wlGcpStreaming = new Label( wDataflowComp, SWT.RIGHT );
+    props.setLook( wlGcpStreaming );
+    wlGcpStreaming.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.GcpStreaming.Label" ) );
+    FormData fdlGcpStreaming = new FormData();
+    fdlGcpStreaming.top = new FormAttachment( lastControl, margin );
+    fdlGcpStreaming.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlGcpStreaming.right = new FormAttachment( middle, -margin );
+    wlGcpStreaming.setLayoutData( fdlGcpStreaming );
+    wGcpStreaming = new Button( wDataflowComp, SWT.CHECK | SWT.LEFT );
+    props.setLook( wGcpStreaming );
+    FormData fdGcpStreaming = new FormData();
+    fdGcpStreaming.top = new FormAttachment( wlGcpStreaming, 0, SWT.CENTER );
+    fdGcpStreaming.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdGcpStreaming.right = new FormAttachment( 95, 0 );
+    wGcpStreaming.setLayoutData( fdGcpStreaming );
+    lastControl = wGcpStreaming;
 
     FormData fdDataflowComp = new FormData();
     fdDataflowComp.left = new FormAttachment( 0, 0 );
@@ -660,6 +686,234 @@ public class BeamJobConfigDialog {
     wDataflowTab.setControl( wDataflowSComp );
   }
 
+  private void addSparkTab() {
+    wSparkTab = new CTabItem( wTabFolder, SWT.NONE );
+    wSparkTab .setText( "Apache Spark" );
+
+    wSparkSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
+    wSparkSComp.setLayout( new FillLayout() );
+
+    wSparkComp = new Composite( wSparkSComp, SWT.NONE );
+    props.setLook( wSparkComp );
+
+    FormLayout fileLayout = new FormLayout();
+    fileLayout.marginWidth = 3;
+    fileLayout.marginHeight = 3;
+    wSparkComp.setLayout( fileLayout );
+
+    // Spark master
+    //
+    Label wlSparkMaster = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkMaster );
+    wlSparkMaster.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkMaster.Label" ) );
+    FormData fdlSparkMaster = new FormData();
+    fdlSparkMaster.top = new FormAttachment( 0, 0 );
+    fdlSparkMaster.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkMaster.right = new FormAttachment( middle, -margin );
+    wlSparkMaster.setLayoutData( fdlSparkMaster );
+    wSparkMaster = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkMaster );
+    FormData fdSparkMaster = new FormData();
+    fdSparkMaster.top = new FormAttachment( wlSparkMaster, 0, SWT.CENTER );
+    fdSparkMaster.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkMaster.right = new FormAttachment( 95, 0 );
+    wSparkMaster.setLayoutData( fdSparkMaster );
+    Control lastControl = wSparkMaster;
+
+    // Spark batch interval in ms
+    //
+    Label wlSparkBatchIntervalMillis = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkBatchIntervalMillis );
+    wlSparkBatchIntervalMillis.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkBatchIntervalMillis.Label" ) );
+    FormData fdlSparkBatchIntervalMillis = new FormData();
+    fdlSparkBatchIntervalMillis.top = new FormAttachment( lastControl, margin );
+    fdlSparkBatchIntervalMillis.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkBatchIntervalMillis.right = new FormAttachment( middle, -margin );
+    wlSparkBatchIntervalMillis.setLayoutData( fdlSparkBatchIntervalMillis );
+    wSparkBatchIntervalMillis = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkBatchIntervalMillis );
+    FormData fdSparkBatchIntervalMillis = new FormData();
+    fdSparkBatchIntervalMillis.top = new FormAttachment( wlSparkBatchIntervalMillis, 0, SWT.CENTER );
+    fdSparkBatchIntervalMillis.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkBatchIntervalMillis.right = new FormAttachment( 95, 0 );
+    wSparkBatchIntervalMillis.setLayoutData( fdSparkBatchIntervalMillis );
+    lastControl = wSparkBatchIntervalMillis;
+
+    // Spark checkpoint directory
+    //
+    Label wlSparkCheckpointDir = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkCheckpointDir );
+    wlSparkCheckpointDir.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkCheckpointDir.Label" ) );
+    FormData fdlSparkCheckpointDir = new FormData();
+    fdlSparkCheckpointDir.top = new FormAttachment( lastControl, margin );
+    fdlSparkCheckpointDir.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkCheckpointDir.right = new FormAttachment( middle, -margin );
+    wlSparkCheckpointDir.setLayoutData( fdlSparkCheckpointDir );
+    wSparkCheckpointDir = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkCheckpointDir );
+    FormData fdSparkCheckpointDir = new FormData();
+    fdSparkCheckpointDir.top = new FormAttachment( wlSparkCheckpointDir, 0, SWT.CENTER );
+    fdSparkCheckpointDir.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkCheckpointDir.right = new FormAttachment( 95, 0 );
+    wSparkCheckpointDir.setLayoutData( fdSparkCheckpointDir );
+    lastControl = wSparkCheckpointDir;
+
+    // Spark checkpoint duration ms
+    //
+    Label wlSparkCheckpointDurationMillis = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkCheckpointDurationMillis );
+    wlSparkCheckpointDurationMillis.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkCheckpointDurationMillis.Label" ) );
+    FormData fdlSparkCheckpointDurationMillis = new FormData();
+    fdlSparkCheckpointDurationMillis.top = new FormAttachment( lastControl, margin );
+    fdlSparkCheckpointDurationMillis.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkCheckpointDurationMillis.right = new FormAttachment( middle, -margin );
+    wlSparkCheckpointDurationMillis.setLayoutData( fdlSparkCheckpointDurationMillis );
+    wSparkCheckpointDurationMillis = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkCheckpointDurationMillis );
+    FormData fdSparkCheckpointDurationMillis = new FormData();
+    fdSparkCheckpointDurationMillis.top = new FormAttachment( wlSparkCheckpointDurationMillis, 0, SWT.CENTER );
+    fdSparkCheckpointDurationMillis.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkCheckpointDurationMillis.right = new FormAttachment( 95, 0 );
+    wSparkCheckpointDurationMillis.setLayoutData( fdSparkCheckpointDurationMillis );
+    lastControl = wSparkCheckpointDurationMillis;
+
+    // Spark : enable spark metrics sink
+    //
+    Label wlsparkEnableSparkMetricSinks = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlsparkEnableSparkMetricSinks );
+    wlsparkEnableSparkMetricSinks.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.sparkEnableSparkMetricSinks.Label" ) );
+    FormData fdlsparkEnableSparkMetricSinks = new FormData();
+    fdlsparkEnableSparkMetricSinks.top = new FormAttachment( lastControl, margin );
+    fdlsparkEnableSparkMetricSinks.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlsparkEnableSparkMetricSinks.right = new FormAttachment( middle, -margin );
+    wlsparkEnableSparkMetricSinks.setLayoutData( fdlsparkEnableSparkMetricSinks );
+    wsparkEnableSparkMetricSinks = new Button( wSparkComp, SWT.CHECK| SWT.LEFT | SWT.BORDER );
+    props.setLook( wsparkEnableSparkMetricSinks );
+    FormData fdsparkEnableSparkMetricSinks = new FormData();
+    fdsparkEnableSparkMetricSinks.top = new FormAttachment( wlsparkEnableSparkMetricSinks, 0, SWT.CENTER );
+    fdsparkEnableSparkMetricSinks.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdsparkEnableSparkMetricSinks.right = new FormAttachment( 95, 0 );
+    wsparkEnableSparkMetricSinks.setLayoutData( fdsparkEnableSparkMetricSinks );
+    lastControl = wsparkEnableSparkMetricSinks;
+
+    // Spark: Max records per batch
+    //
+    Label wlSparkMaxRecordsPerBatch = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkMaxRecordsPerBatch );
+    wlSparkMaxRecordsPerBatch.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkMaxRecordsPerBatch.Label" ) );
+    FormData fdlSparkMaxRecordsPerBatch = new FormData();
+    fdlSparkMaxRecordsPerBatch.top = new FormAttachment( lastControl, margin );
+    fdlSparkMaxRecordsPerBatch.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkMaxRecordsPerBatch.right = new FormAttachment( middle, -margin );
+    wlSparkMaxRecordsPerBatch.setLayoutData( fdlSparkMaxRecordsPerBatch );
+    wSparkMaxRecordsPerBatch = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkMaxRecordsPerBatch );
+    FormData fdSparkMaxRecordsPerBatch = new FormData();
+    fdSparkMaxRecordsPerBatch.top = new FormAttachment( wlSparkMaxRecordsPerBatch, 0, SWT.CENTER );
+    fdSparkMaxRecordsPerBatch.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkMaxRecordsPerBatch.right = new FormAttachment( 95, 0 );
+    wSparkMaxRecordsPerBatch.setLayoutData( fdSparkMaxRecordsPerBatch );
+    lastControl = wSparkMaxRecordsPerBatch;
+
+
+    // Spark: minimum read time in ms
+    //
+    Label wlSparkMinReadTimeMillis = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkMinReadTimeMillis );
+    wlSparkMinReadTimeMillis.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkMinReadTimeMillis.Label" ) );
+    FormData fdlSparkMinReadTimeMillis = new FormData();
+    fdlSparkMinReadTimeMillis.top = new FormAttachment( lastControl, margin );
+    fdlSparkMinReadTimeMillis.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkMinReadTimeMillis.right = new FormAttachment( middle, -margin );
+    wlSparkMinReadTimeMillis.setLayoutData( fdlSparkMinReadTimeMillis );
+    wSparkMinReadTimeMillis = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkMinReadTimeMillis );
+    FormData fdSparkMinReadTimeMillis = new FormData();
+    fdSparkMinReadTimeMillis.top = new FormAttachment( wlSparkMinReadTimeMillis, 0, SWT.CENTER );
+    fdSparkMinReadTimeMillis.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkMinReadTimeMillis.right = new FormAttachment( 95, 0 );
+    wSparkMinReadTimeMillis.setLayoutData( fdSparkMinReadTimeMillis );
+    lastControl = wSparkMinReadTimeMillis;
+
+    // Spark read time %
+    //
+    Label wlSparkReadTimePercentage = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkReadTimePercentage );
+    wlSparkReadTimePercentage.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkReadTimePercentage.Label" ) );
+    FormData fdlSparkReadTimePercentage = new FormData();
+    fdlSparkReadTimePercentage.top = new FormAttachment( lastControl, margin );
+    fdlSparkReadTimePercentage.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkReadTimePercentage.right = new FormAttachment( middle, -margin );
+    wlSparkReadTimePercentage.setLayoutData( fdlSparkReadTimePercentage );
+    wSparkReadTimePercentage = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkReadTimePercentage );
+    FormData fdSparkReadTimePercentage = new FormData();
+    fdSparkReadTimePercentage.top = new FormAttachment( wlSparkReadTimePercentage, 0, SWT.CENTER );
+    fdSparkReadTimePercentage.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkReadTimePercentage.right = new FormAttachment( 95, 0 );
+    wSparkReadTimePercentage.setLayoutData( fdSparkReadTimePercentage );
+    lastControl = wSparkReadTimePercentage;
+
+    // Bundle size
+    //
+    Label wlSparkBundleSize = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkBundleSize );
+    wlSparkBundleSize.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkBundleSize.Label" ) );
+    FormData fdlSparkBundleSize = new FormData();
+    fdlSparkBundleSize.top = new FormAttachment( lastControl, margin );
+    fdlSparkBundleSize.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkBundleSize.right = new FormAttachment( middle, -margin );
+    wlSparkBundleSize.setLayoutData( fdlSparkBundleSize );
+    wSparkBundleSize = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkBundleSize );
+    FormData fdSparkBundleSize = new FormData();
+    fdSparkBundleSize.top = new FormAttachment( wlSparkBundleSize, 0, SWT.CENTER );
+    fdSparkBundleSize.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkBundleSize.right = new FormAttachment( 95, 0 );
+    wSparkBundleSize.setLayoutData( fdSparkBundleSize );
+    lastControl = wSparkBundleSize;
+
+    // Storage level
+    //
+    Label wlSparkStorageLevel = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkStorageLevel );
+    wlSparkStorageLevel.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkStorageLevel.Label" ) );
+    FormData fdlSparkStorageLevel = new FormData();
+    fdlSparkStorageLevel.top = new FormAttachment( lastControl, margin );
+    fdlSparkStorageLevel.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkStorageLevel.right = new FormAttachment( middle, -margin );
+    wlSparkStorageLevel.setLayoutData( fdlSparkStorageLevel );
+    wSparkStorageLevel = new ComboVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkStorageLevel );
+    wSparkStorageLevel.setItems( new String[] { "MEMORY_ONLY", "MEMORY_ONLY_SER", "MEMORY_AND_DISK" } );
+    FormData fdSparkStorageLevel = new FormData();
+    fdSparkStorageLevel.top = new FormAttachment( wlSparkStorageLevel, 0, SWT.CENTER );
+    fdSparkStorageLevel.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkStorageLevel.right = new FormAttachment( 95, 0 );
+    wSparkStorageLevel.setLayoutData( fdSparkStorageLevel );
+    lastControl = wSparkStorageLevel;
+
+
+    FormData fdSparkComp = new FormData();
+    fdSparkComp.left = new FormAttachment( 0, 0 );
+    fdSparkComp.top = new FormAttachment( 0, 0 );
+    fdSparkComp.right = new FormAttachment( 100, 0 );
+    fdSparkComp.bottom = new FormAttachment( 100, 0 );
+    wSparkComp.setLayoutData( fdSparkComp );
+
+    wSparkComp.pack();
+    Rectangle bounds = wSparkComp.getBounds();
+
+    wSparkSComp.setContent( wSparkComp );
+    wSparkSComp.setExpandHorizontal( true );
+    wSparkSComp.setExpandVertical( true );
+    wSparkSComp.setMinWidth( bounds.width );
+    wSparkSComp.setMinHeight( bounds.height );
+
+    wSparkTab.setControl( wSparkSComp );
+  }
+
+
 
   public void dispose() {
     props.setScreen( new WindowProperty( shell ) );
@@ -674,21 +928,55 @@ public class BeamJobConfigDialog {
     wRunner.setText( Const.NVL(config.getRunnerTypeName(), "") );
     wUserAgent.setText( Const.NVL(config.getUserAgent(), "") );
     wTempLocation.setText( Const.NVL(config.getTempLocation(), "") );
-    wInitialNumberOfWorkers.setText( Const.NVL(config.getInitialNumberOfWorkers(), "") );
-    wMaximumNumberOfWorkers.setText( Const.NVL(config.getMaximumNumberOfWokers(), "") );
-    wStreaming.setSelection( config.isStreaming() );
-    wAutoScalingAlgorithm.setText(Const.NVL(config.getAutoScalingAlgorithm(), "") );
+    wPluginsToStage.setText( Const.NVL(config.getPluginsToStage(), "") );
 
     // GCP
+    /*
+     */
     wGcpProjectId.setText( Const.NVL(config.getGcpProjectId(), "") );
     wGcpAppName.setText( Const.NVL(config.getGcpAppName(), "") );
     wGcpStagingLocation.setText( Const.NVL(config.getGcpStagingLocation(), "") );
-    wPluginsToStage.setText( Const.NVL(config.getPluginsToStage(), "") );
-    wGcpWorkerMachineType.setText(Const.NVL(config.getGcpWorkerMachineType(), ""));
+    String workerCode = config.getGcpWorkerMachineType();
+    String workerDescription = "";
+    if (StringUtils.isNotEmpty( workerCode )) {
+      int index = Const.indexOfString( workerCode, BeamConst.getGcpWorkerMachineTypeCodes() );
+      if (index<0) {
+        workerDescription = workerCode; // variable, manually entered in general
+      } else {
+        workerDescription = BeamConst.getGcpWorkerMachineTypeDescriptions()[index];
+      }
+    }
+    wGcpWorkerMachineType.setText(workerDescription);
     wGcpWorkerDiskType.setText(Const.NVL(config.getGcpWorkerDiskType(), ""));
     wGcpDiskSizeGb.setText(Const.NVL(config.getGcpDiskSizeGb(), ""));
-    wGcpRegion.setText(Const.NVL(config.getGcpRegion(), ""));
+    wGcpInitialNumberOfWorkers.setText( Const.NVL(config.getGcpInitialNumberOfWorkers(), "") );
+    wGcpMaximumNumberOfWorkers.setText( Const.NVL(config.getGcpMaximumNumberOfWokers(), "") );
+    wGcpAutoScalingAlgorithm.setText(Const.NVL(config.getGcpAutoScalingAlgorithm(), "") );
+    wGcpStreaming.setSelection( config.isGcpStreaming() );
+    String regionCode = config.getGcpRegion();
+    String regionDescription = "";
+    if (StringUtils.isNotEmpty( regionCode )) {
+      int index = Const.indexOfString( regionCode, BeamConst.getGcpRegionCodes() );
+      if (index<0) {
+        regionDescription = regionCode; // variable, manually entered in general
+      } else {
+        regionDescription = BeamConst.getGcpRegionDescriptions()[index];
+      }
+    }
+    wGcpRegion.setText(regionDescription);
     wGcpZone.setText(Const.NVL(config.getGcpZone(), ""));
+
+    // Spark
+    wSparkMaster.setText(Const.NVL(config.getSparkMaster(), ""));
+    wSparkBatchIntervalMillis.setText(Const.NVL(config.getSparkBatchIntervalMillis(), ""));
+    wSparkCheckpointDir.setText(Const.NVL(config.getSparkCheckpointDir(), ""));
+    wSparkCheckpointDurationMillis.setText(Const.NVL(config.getSparkCheckpointDurationMillis(), ""));
+    wsparkEnableSparkMetricSinks.setSelection(config.isSparkEnableSparkMetricSinks());
+    wSparkMaxRecordsPerBatch.setText(Const.NVL(config.getSparkMaxRecordsPerBatch(), ""));
+    wSparkMinReadTimeMillis.setText(Const.NVL(config.getSparkMinReadTimeMillis(), ""));
+    wSparkReadTimePercentage.setText(Const.NVL(config.getSparkReadTimePercentage(), ""));
+    wSparkBundleSize.setText(Const.NVL(config.getSparkBundleSize(), ""));
+    wSparkStorageLevel.setText(Const.NVL(config.getSparkStorageLevel(), ""));
 
     // Parameters
     //
@@ -730,19 +1018,54 @@ public class BeamJobConfigDialog {
     cfg.setRunnerTypeName( wRunner.getText() );
     cfg.setUserAgent( wUserAgent.getText() );
     cfg.setTempLocation( wTempLocation.getText() );
+
     cfg.setGcpProjectId( wGcpProjectId.getText() );
     cfg.setGcpAppName( wGcpAppName.getText() );
     cfg.setGcpStagingLocation( wGcpStagingLocation.getText() );
     cfg.setPluginsToStage( wPluginsToStage.getText() );
-    cfg.setInitialNumberOfWorkers( wInitialNumberOfWorkers.getText() );
-    cfg.setMaximumNumberOfWokers( wMaximumNumberOfWorkers.getText() );
-    cfg.setStreaming( wStreaming.getSelection() );
-    cfg.setAutoScalingAlgorithm( wAutoScalingAlgorithm.getText() );
-    cfg.setGcpWorkerMachineType( wGcpWorkerMachineType.getText() );
+    cfg.setGcpInitialNumberOfWorkers( wGcpInitialNumberOfWorkers.getText() );
+    cfg.setGcpMaximumNumberOfWokers( wGcpMaximumNumberOfWorkers.getText() );
+    cfg.setGcpStreaming( wGcpStreaming.getSelection() );
+    cfg.setGcpAutoScalingAlgorithm( wGcpAutoScalingAlgorithm.getText() );
+
+    String workerMachineDesciption = wGcpWorkerMachineType.getText();
+    String workerMachineCode = null;
+    if (StringUtils.isNotEmpty( workerMachineDesciption )) {
+      int index = Const.indexOfString( workerMachineDesciption, BeamConst.getGcpWorkerMachineTypeDescriptions() );
+      if (index<0) {
+        workerMachineCode = workerMachineDesciption; // Variable or manually entered
+      } else {
+        workerMachineCode = BeamConst.getGcpWorkerMachineTypeCodes()[index];
+      }
+    }
+    cfg.setGcpWorkerMachineType( workerMachineCode );
+
     cfg.setGcpWorkerDiskType( wGcpWorkerDiskType.getText() );
     cfg.setGcpDiskSizeGb( wGcpDiskSizeGb.getText() );
     cfg.setGcpZone( wGcpZone.getText() );
-    cfg.setGcpRegion( wGcpRegion.getText() );
+
+    String regionDesciption = wGcpRegion.getText();
+    String regionCode = null;
+    if (StringUtils.isNotEmpty( regionDesciption )) {
+      int index = Const.indexOfString( regionDesciption, BeamConst.getGcpRegionDescriptions() );
+      if (index<0) {
+        regionCode = regionDesciption; // Variable or manually entered
+      } else {
+        regionCode = BeamConst.getGcpRegionCodes()[index];
+      }
+    }
+    cfg.setGcpRegion( regionCode );
+    
+    cfg.setSparkMaster( wSparkMaster.getText() );
+    cfg.setSparkBatchIntervalMillis( wSparkBatchIntervalMillis.getText() );
+    cfg.setSparkCheckpointDir( wSparkCheckpointDir.getText() );
+    cfg.setSparkCheckpointDurationMillis( wSparkCheckpointDurationMillis.getText() );
+    cfg.setSparkEnableSparkMetricSinks( wsparkEnableSparkMetricSinks.getSelection() );
+    cfg.setSparkMaxRecordsPerBatch( wSparkMaxRecordsPerBatch.getText() );
+    cfg.setSparkMinReadTimeMillis( wSparkMinReadTimeMillis.getText() );
+    cfg.setSparkReadTimePercentage( wSparkReadTimePercentage.getText() );
+    cfg.setSparkBundleSize( wSparkBundleSize.getText() );
+    cfg.setSparkStorageLevel( wSparkStorageLevel.getText() );
 
     cfg.getParameters().clear();
     for (int i=0;i<wParameters.nrNonEmpty();i++) {

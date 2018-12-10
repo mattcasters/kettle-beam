@@ -4,12 +4,19 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.beam.sdk.io.FileSystemRegistrar;
 import org.apache.beam.sdk.util.common.ReflectHelpers;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -47,6 +54,27 @@ public class BeamConst {
     new String[] { "n1-ultramem-160", "Memory-optimized machine type with 160 vCPUs and 3.75 TB of memory." }
   );
 
+  private static List<String[]> gcpRegionCodeZonesDescriptions = Arrays.asList(
+    new String[] { "asia-east1", "a, b, c", "Changhua County, Taiwan" },
+    new String[] { "asia-east2", "a, b, c", "Hong Kong" },
+    new String[] { "asia-northeast1", "a, b, c", "Tokyo, Japan" },
+    new String[] { "asia-south1", "a, b, c", "Mumbai, India" },
+    new String[] { "asia-southeast1", "a, b, c", "Jurong West, Singapore" },
+    new String[] { "australia-southeast1", "a, b, c", "Sydney, Australia" },
+    new String[] { "europe-north1", "a, b, c", "Hamina, Finland" },
+    new String[] { "europe-west1", "b, c, d", "St. Ghislain, Belgium" },
+    new String[] { "europe-west2", "a, b, c", "London, England, UK" },
+    new String[] { "europe-west3", "a, b, c", "Frankfurt, Germany" },
+    new String[] { "europe-west4", "a, b, c", "Eemshaven, Netherlands" },
+    new String[] { "northamerica-northeast1", "a, b, c", "Montréal, Québec, Canada" },
+    new String[] { "southamerica-east1", "a, b, c", "São Paulo, Brazil" },
+    new String[] { "us-central1", "a, b, c, f", "Council Bluffs, Iowa, USA" },
+    new String[] { "us-east1", "b, c, d", "Moncks Corner, South Carolina, USA" },
+    new String[] { "us-east4", "a, b, c", "Ashburn, Northern Virginia, USA" },
+    new String[] { "us-west1", "a, b, c", "The Dalles, Oregon, USA" },
+    new String[] { "us-west2", "a, b, c", "Los Angeles, California, USA" }
+  );
+
   public static final String[] getGcpWorkerMachineTypeCodes() {
     String[] codes = new String[gcpWorkerCodeDescriptions.size()];
     for (int i=0;i<codes.length;i++) {
@@ -64,30 +92,86 @@ public class BeamConst {
   }
 
   public static final String[] getGcpRegionCodes() {
-    return new String[] {
-      "us-central1",
-      "us-east1",
-      "us-west1",
-      "europe-west1",
-      "asia-east1",
-      "asia-northeast1",
-    };
+    String[] codes = new String[gcpRegionCodeZonesDescriptions.size()];
+    for (int i=0;i<codes.length;i++) {
+      codes[i] = gcpRegionCodeZonesDescriptions.get(i)[0];
+    }
+    return codes;
   }
 
-  public static void testFilesystems() {
-
-    URI file = new File( "file:///tmp/customers/input/state-data.txt" ).toURI();
-    String scheme = file.getScheme();
-
-    FileSystem fileSystem = FileSystems.getFileSystem( file );
-
-    System.out.println("//////////////// local file-system URI scheme : "+scheme);
-    System.out.println("//////////////// local file-system FS  scheme : "+fileSystem.provider().getScheme());
-
-    Set<FileSystemRegistrar> registrars = Sets.newTreeSet( ReflectHelpers.ObjectsClassComparator.INSTANCE);
-
-    registrars.addAll( Lists.newArrayList( ServiceLoader.load(FileSystemRegistrar.class, ReflectHelpers.findClassLoader())));
+  public static final String[] getGcpRegionDescriptions() {
+    String[] descriptions = new String[gcpRegionCodeZonesDescriptions.size()];
+    for (int i=0;i<descriptions.length;i++) {
+      descriptions[i] = gcpRegionCodeZonesDescriptions.get(i)[2];
+    }
+    return descriptions;
+  }
 
 
+  public static final List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders, boolean includeParent, boolean includeBeam ) throws IOException {
+
+    File base;
+    if ( baseFolder == null ) {
+      base = new File( "." );
+    } else {
+      base = new File( baseFolder );
+    }
+
+    Set<String> uniqueNames = new HashSet<>();
+    List<String> libraries = new ArrayList<>();
+
+    // A unique list of plugin folders
+    //
+    Set<String> pluginFoldersSet = new HashSet<>();
+    if ( StringUtils.isNotEmpty( pluginFolders ) ) {
+      String[] folders = pluginFolders.split( "," );
+      for ( String folder : folders ) {
+        pluginFoldersSet.add( folder );
+      }
+    }
+    if (includeBeam) {
+      // TODO: make this plugin folder configurable
+      //
+      pluginFoldersSet.add("kettle-beam");
+    }
+
+    // Now the selected plugins libs...
+    //
+    for ( String pluginFolder : pluginFoldersSet ) {
+      File pluginsFolder = new File( base.toString() + "/plugins/" + pluginFolder );
+      Collection<File> pluginFiles = FileUtils.listFiles( pluginsFolder, new String[] { "jar" }, true );
+      if ( pluginFiles != null ) {
+        for ( File file : pluginFiles ) {
+          String shortName = file.getName();
+          if ( !uniqueNames.contains( shortName ) ) {
+            uniqueNames.add( shortName );
+            libraries.add( file.getCanonicalPath() );
+          }
+        }
+      }
+    }
+
+    // Add all the jar files in lib/ to the classpath.
+    //
+    if (includeParent) {
+
+      File libFolder = new File( base.toString() + "/lib" );
+
+      Collection<File> files = FileUtils.listFiles( libFolder, new String[] { "jar" }, true );
+      if ( files != null ) {
+        for ( File file : files ) {
+          String shortName = file.getName();
+          if ( !uniqueNames.contains( shortName ) ) {
+            uniqueNames.add( shortName );
+            libraries.add( file.getCanonicalPath() );
+            // System.out.println( "Adding library : " + file.getAbsolutePath() );
+          }
+        }
+      }
+    }
+
+    // Collections.sort(libraries);
+
+    return libraries;
   }
 }

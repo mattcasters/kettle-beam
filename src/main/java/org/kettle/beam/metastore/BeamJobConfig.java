@@ -34,18 +34,6 @@ public class BeamJobConfig {
   private String pluginsToStage;
 
   @MetaStoreAttribute
-  private String initialNumberOfWorkers;
-
-  @MetaStoreAttribute
-  private String maximumNumberOfWokers;
-
-  @MetaStoreAttribute
-  private boolean streaming;
-
-  @MetaStoreAttribute
-  private String autoScalingAlgorithm;
-
-  @MetaStoreAttribute
   private List<JobParameter> parameters;
 
 
@@ -63,6 +51,15 @@ public class BeamJobConfig {
   private String gcpStagingLocation;
 
   @MetaStoreAttribute
+  private String gcpInitialNumberOfWorkers;
+
+  @MetaStoreAttribute
+  private String gcpMaximumNumberOfWokers;
+
+  @MetaStoreAttribute
+  private String gcpAutoScalingAlgorithm;
+
+  @MetaStoreAttribute
   private String gcpWorkerMachineType;
 
   @MetaStoreAttribute
@@ -77,6 +74,44 @@ public class BeamJobConfig {
   @MetaStoreAttribute
   private String gcpZone;
 
+  @MetaStoreAttribute
+  private boolean gcpStreaming;
+
+
+  //
+  // Spark specific options
+  //
+
+
+  @MetaStoreAttribute
+  private String sparkMaster;
+
+  @MetaStoreAttribute
+  private String sparkBatchIntervalMillis;
+
+  @MetaStoreAttribute
+  private String sparkCheckpointDir;
+
+  @MetaStoreAttribute
+  private String sparkCheckpointDurationMillis;
+
+  @MetaStoreAttribute
+  private boolean sparkEnableSparkMetricSinks;
+
+  @MetaStoreAttribute
+  private String sparkMaxRecordsPerBatch;
+
+  @MetaStoreAttribute
+  private String sparkMinReadTimeMillis;
+
+  @MetaStoreAttribute
+  private String sparkReadTimePercentage;
+
+  @MetaStoreAttribute
+  private String sparkBundleSize;
+
+  @MetaStoreAttribute
+  private String sparkStorageLevel;
 
 
   public BeamJobConfig() {
@@ -244,67 +279,67 @@ public class BeamJobConfig {
   }
 
   /**
-   * Gets initialNumberOfWorkers
+   * Gets gcpInitialNumberOfWorkers
    *
-   * @return value of initialNumberOfWorkers
+   * @return value of gcpInitialNumberOfWorkers
    */
-  public String getInitialNumberOfWorkers() {
-    return initialNumberOfWorkers;
+  public String getGcpInitialNumberOfWorkers() {
+    return gcpInitialNumberOfWorkers;
   }
 
   /**
-   * @param initialNumberOfWorkers The initialNumberOfWorkers to set
+   * @param gcpInitialNumberOfWorkers The gcpInitialNumberOfWorkers to set
    */
-  public void setInitialNumberOfWorkers( String initialNumberOfWorkers ) {
-    this.initialNumberOfWorkers = initialNumberOfWorkers;
+  public void setGcpInitialNumberOfWorkers( String gcpInitialNumberOfWorkers ) {
+    this.gcpInitialNumberOfWorkers = gcpInitialNumberOfWorkers;
   }
 
   /**
-   * Gets maximumNumberOfWokers
+   * Gets gcpMaximumNumberOfWokers
    *
-   * @return value of maximumNumberOfWokers
+   * @return value of gcpMaximumNumberOfWokers
    */
-  public String getMaximumNumberOfWokers() {
-    return maximumNumberOfWokers;
+  public String getGcpMaximumNumberOfWokers() {
+    return gcpMaximumNumberOfWokers;
   }
 
   /**
-   * @param maximumNumberOfWokers The maximumNumberOfWokers to set
+   * @param gcpMaximumNumberOfWokers The gcpMaximumNumberOfWokers to set
    */
-  public void setMaximumNumberOfWokers( String maximumNumberOfWokers ) {
-    this.maximumNumberOfWokers = maximumNumberOfWokers;
+  public void setGcpMaximumNumberOfWokers( String gcpMaximumNumberOfWokers ) {
+    this.gcpMaximumNumberOfWokers = gcpMaximumNumberOfWokers;
   }
 
   /**
-   * Gets streaming
+   * Gets gcpStreaming
    *
-   * @return value of streaming
+   * @return value of gcpStreaming
    */
-  public boolean isStreaming() {
-    return streaming;
+  public boolean isGcpStreaming() {
+    return gcpStreaming;
   }
 
   /**
-   * @param streaming The streaming to set
+   * @param gcpStreaming The gcpStreaming to set
    */
-  public void setStreaming( boolean streaming ) {
-    this.streaming = streaming;
+  public void setGcpStreaming( boolean gcpStreaming ) {
+    this.gcpStreaming = gcpStreaming;
   }
 
   /**
-   * Gets autoScalingAlgorithm
+   * Gets gcpAutoScalingAlgorithm
    *
-   * @return value of autoScalingAlgorithm
+   * @return value of gcpAutoScalingAlgorithm
    */
-  public String getAutoScalingAlgorithm() {
-    return autoScalingAlgorithm;
+  public String getGcpAutoScalingAlgorithm() {
+    return gcpAutoScalingAlgorithm;
   }
 
   /**
-   * @param autoScalingAlgorithm The autoScalingAlgorithm to set
+   * @param gcpAutoScalingAlgorithm The gcpAutoScalingAlgorithm to set
    */
-  public void setAutoScalingAlgorithm( String autoScalingAlgorithm ) {
-    this.autoScalingAlgorithm = autoScalingAlgorithm;
+  public void setGcpAutoScalingAlgorithm( String gcpAutoScalingAlgorithm ) {
+    this.gcpAutoScalingAlgorithm = gcpAutoScalingAlgorithm;
   }
 
   /**
@@ -385,5 +420,165 @@ public class BeamJobConfig {
    */
   public void setGcpZone( String gcpZone ) {
     this.gcpZone = gcpZone;
+  }
+
+  /**
+   * Gets sparkBatchIntervalMillis
+   *
+   * @return value of sparkBatchIntervalMillis
+   */
+  public String getSparkBatchIntervalMillis() {
+    return sparkBatchIntervalMillis;
+  }
+
+  /**
+   * @param sparkBatchIntervalMillis The sparkBatchIntervalMillis to set
+   */
+  public void setSparkBatchIntervalMillis( String sparkBatchIntervalMillis ) {
+    this.sparkBatchIntervalMillis = sparkBatchIntervalMillis;
+  }
+
+  /**
+   * Gets sparkCheckpointDir
+   *
+   * @return value of sparkCheckpointDir
+   */
+  public String getSparkCheckpointDir() {
+    return sparkCheckpointDir;
+  }
+
+  /**
+   * @param sparkCheckpointDir The sparkCheckpointDir to set
+   */
+  public void setSparkCheckpointDir( String sparkCheckpointDir ) {
+    this.sparkCheckpointDir = sparkCheckpointDir;
+  }
+
+  /**
+   * Gets sparkCheckpointDurationMillis
+   *
+   * @return value of sparkCheckpointDurationMillis
+   */
+  public String getSparkCheckpointDurationMillis() {
+    return sparkCheckpointDurationMillis;
+  }
+
+  /**
+   * @param sparkCheckpointDurationMillis The sparkCheckpointDurationMillis to set
+   */
+  public void setSparkCheckpointDurationMillis( String sparkCheckpointDurationMillis ) {
+    this.sparkCheckpointDurationMillis = sparkCheckpointDurationMillis;
+  }
+
+  /**
+   * Gets sparkEnableSparkMetricSinks
+   *
+   * @return value of sparkEnableSparkMetricSinks
+   */
+  public boolean isSparkEnableSparkMetricSinks() {
+    return sparkEnableSparkMetricSinks;
+  }
+
+  /**
+   * @param sparkEnableSparkMetricSinks The sparkEnableSparkMetricSinks to set
+   */
+  public void setSparkEnableSparkMetricSinks( boolean sparkEnableSparkMetricSinks ) {
+    this.sparkEnableSparkMetricSinks = sparkEnableSparkMetricSinks;
+  }
+
+  /**
+   * Gets sparkMaxRecordsPerBatch
+   *
+   * @return value of sparkMaxRecordsPerBatch
+   */
+  public String getSparkMaxRecordsPerBatch() {
+    return sparkMaxRecordsPerBatch;
+  }
+
+  /**
+   * @param sparkMaxRecordsPerBatch The sparkMaxRecordsPerBatch to set
+   */
+  public void setSparkMaxRecordsPerBatch( String sparkMaxRecordsPerBatch ) {
+    this.sparkMaxRecordsPerBatch = sparkMaxRecordsPerBatch;
+  }
+
+  /**
+   * Gets sparkMinReadTimeMillis
+   *
+   * @return value of sparkMinReadTimeMillis
+   */
+  public String getSparkMinReadTimeMillis() {
+    return sparkMinReadTimeMillis;
+  }
+
+  /**
+   * @param sparkMinReadTimeMillis The sparkMinReadTimeMillis to set
+   */
+  public void setSparkMinReadTimeMillis( String sparkMinReadTimeMillis ) {
+    this.sparkMinReadTimeMillis = sparkMinReadTimeMillis;
+  }
+
+  /**
+   * Gets sparkReadTimePercentage
+   *
+   * @return value of sparkReadTimePercentage
+   */
+  public String getSparkReadTimePercentage() {
+    return sparkReadTimePercentage;
+  }
+
+  /**
+   * @param sparkReadTimePercentage The sparkReadTimePercentage to set
+   */
+  public void setSparkReadTimePercentage( String sparkReadTimePercentage ) {
+    this.sparkReadTimePercentage = sparkReadTimePercentage;
+  }
+
+  /**
+   * Gets sparkBundleSize
+   *
+   * @return value of sparkBundleSize
+   */
+  public String getSparkBundleSize() {
+    return sparkBundleSize;
+  }
+
+  /**
+   * @param sparkBundleSize The sparkBundleSize to set
+   */
+  public void setSparkBundleSize( String sparkBundleSize ) {
+    this.sparkBundleSize = sparkBundleSize;
+  }
+
+  /**
+   * Gets sparkMaster
+   *
+   * @return value of sparkMaster
+   */
+  public String getSparkMaster() {
+    return sparkMaster;
+  }
+
+  /**
+   * @param sparkMaster The sparkMaster to set
+   */
+  public void setSparkMaster( String sparkMaster ) {
+    this.sparkMaster = sparkMaster;
+  }
+
+  /**
+   * Gets sparkStorageLevel
+   *
+   * @return value of sparkStorageLevel
+   */
+  public String getSparkStorageLevel() {
+    return sparkStorageLevel;
+  }
+
+  /**
+   * @param sparkStorageLevel The sparkStorageLevel to set
+   */
+  public void setSparkStorageLevel( String sparkStorageLevel ) {
+    this.sparkStorageLevel = sparkStorageLevel;
   }
 }

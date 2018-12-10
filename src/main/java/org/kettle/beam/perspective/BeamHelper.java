@@ -24,6 +24,7 @@ package org.kettle.beam.perspective;
 
 import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
+import org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOptions;
 import org.apache.beam.runners.direct.DirectRunner;
 import org.apache.beam.runners.flink.FlinkPipelineOptions;
 import org.apache.beam.runners.flink.FlinkRunner;
@@ -49,12 +50,15 @@ import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.metastore.FileDefinitionDialog;
 import org.kettle.beam.metastore.JobParameter;
 import org.kettle.beam.metastore.RunnerType;
+import org.kettle.beam.pipeline.KettleBeamPipelineExecutor;
 import org.kettle.beam.pipeline.TransMetaPipelineConverter;
+import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.parameters.UnknownParamException;
 import org.pentaho.di.core.plugins.KettleURLClassLoader;
+import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.ui.core.dialog.EnterSelectionDialog;
@@ -68,7 +72,6 @@ import org.pentaho.ui.xul.dom.Document;
 import org.pentaho.ui.xul.impl.AbstractXulEventHandler;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -137,42 +140,14 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
         Runnable runnable = new Runnable() {
           @Override public void run() {
 
-            ClassLoader oldContextClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-              try {
-                // Explain to various classes in the Beam API (@see org.apache.beam.sdk.io.FileSystems)
-                // what the context classloader is.
-                // Set it back when we're done here.
-                //
-                Thread.currentThread().setContextClassLoader( BeamHelper.getInstance().getClass().getClassLoader() );
+              // KettleURLClassLoader kettleURLClassLoader = createKettleURLClassLoader(
+              //  BeamConst.findLibraryFilesToStage( null, transMeta.environmentSubstitute( config.getPluginsToStage() ), true, true )
+              //);
 
-                final Pipeline pipeline = getPipeline( transMeta, config );
-
-                PipelineResult pipelineResult = pipeline.run();
-
-                Timer timer = new Timer();
-                TimerTask timerTask = new TimerTask() {
-                  @Override public void run() {
-                    logMetrics( pipelineResult );
-                  }
-                };
-                // Every 10 seconds
-                timer.schedule( timerTask, 10000, 10000 );
-
-                // Wait until we're done
-                pipelineResult.waitUntilFinish();
-
-                timer.cancel();
-                timer.purge();
-
-                // Log the metrics at the end.
-                logMetrics( pipelineResult );
-
-                spoon.getLog().logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
-              } finally {
-                Thread.currentThread().setContextClassLoader( oldContextClassLoader );
-              }
-
+              ClassLoader pluginClassLoader = BeamHelper.this.getClass().getClassLoader();
+              KettleBeamPipelineExecutor executor = new KettleBeamPipelineExecutor( spoon.getLog(), transMeta, config, spoon.getMetaStore(), pluginClassLoader );
+              executor.execute();
             } catch ( Exception e ) {
               spoon.getDisplay().asyncExec( new Runnable() {
                 @Override public void run() {
@@ -214,222 +189,13 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
 
   }
 
-  private KettleURLClassLoader buildKettleURLClassLoader( BeamJobConfig config ) throws Exception {
-    // We don't need all the plugins to run locally I think
-    //
-    List<String> jarFilenames = findLibraryFilesToStage( null, config.getPluginsToStage(), true );
-    URL[] urls = new URL[ jarFilenames.size() ];
-    int index=0;
-    for ( String jarFilename : jarFilenames ) {
-      urls[index++] = new File(jarFilename).toURI().toURL();
+  private KettleURLClassLoader createKettleURLClassLoader(List<String> jarFilenames) throws MalformedURLException {
+
+    URL[] urls = new URL[jarFilenames.size()];
+    for (int i=0;i<urls.length;i++) {
+      urls[i] = new File( jarFilenames.get(i) ).toURI().toURL();
     }
-    return new KettleURLClassLoader( urls, ClassLoader.getSystemClassLoader(), "Beam Kettle Classloader for '"+config.getName()+"'");
-  }
-
-  private void configureStandardOptions( BeamJobConfig config, String transformationName, PipelineOptions pipelineOptions ) {
-    if ( StringUtils.isNotEmpty( transformationName ) ) {
-      String sanitizedName = transformationName.replace( " ", "_" );
-      pipelineOptions.setJobName( sanitizedName );
-    }
-    if ( StringUtils.isNotEmpty( config.getUserAgent() ) ) {
-      pipelineOptions.setUserAgent( config.getUserAgent() );
-    }
-    if ( StringUtils.isNotEmpty( config.getTempLocation() ) ) {
-      pipelineOptions.setTempLocation( config.getTempLocation() );
-    }
-  }
-
-
-  public Pipeline getPipeline( TransMeta transMeta, BeamJobConfig config ) throws KettleException {
-
-    try {
-
-      if ( StringUtils.isEmpty( config.getRunnerTypeName() ) ) {
-        throw new KettleException( "You need to specify a runner type, one of : " + RunnerType.values().toString() );
-      }
-      PipelineOptions pipelineOptions = null;
-      Class<? extends PipelineRunner<?>> pipelineRunnerClass = null;
-
-      RunnerType runnerType = RunnerType.getRunnerTypeByName( transMeta.environmentSubstitute( config.getRunnerTypeName() ) );
-      switch ( runnerType ) {
-        case Direct:
-          pipelineOptions = PipelineOptionsFactory.create();
-          pipelineRunnerClass = DirectRunner.class;
-          break;
-        case DataFlow:
-          DataflowPipelineOptions dfOptions = PipelineOptionsFactory.as( DataflowPipelineOptions.class );
-          configureDataFlowOptions( config, dfOptions );
-          pipelineOptions = dfOptions;
-          pipelineRunnerClass = DataflowRunner.class;
-          break;
-        case Spark:
-          SparkPipelineOptions sparkOptions = PipelineOptionsFactory.as( SparkPipelineOptions.class );
-          configureSparkOptions( config, sparkOptions );
-          pipelineOptions = sparkOptions;
-          pipelineRunnerClass = SparkRunner.class;
-          showMessage( "Spark", "Still missing a lot of options for Spark, this will probably fail" );
-          break;
-        case Flink:
-          FlinkPipelineOptions flinkOptions = PipelineOptionsFactory.as( FlinkPipelineOptions.class );
-          configureFlinkOptions( config, flinkOptions );
-          pipelineOptions = flinkOptions;
-          pipelineRunnerClass = FlinkRunner.class;
-          showMessage( "Flink", "Still missing a lot of options for Flink, this will probably fail" );
-          break;
-        default:
-          throw new KettleException( "Sorry, this isn't implemented yet" );
-      }
-
-      configureStandardOptions( config, transMeta.getName(), pipelineOptions );
-
-
-      setVariablesInTransformation( config, transMeta );
-
-      TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, spoon.getMetaStore(), config.getPluginsToStage() );
-      Pipeline pipeline = converter.createPipeline( pipelineRunnerClass, pipelineOptions );
-
-      return pipeline;
-    } catch ( Exception e ) {
-      throw new KettleException( "Error configuring local Beam Engine", e );
-    }
-
-  }
-
-  private void setVariablesInTransformation( BeamJobConfig config, TransMeta transMeta ) {
-    String[] parameters = transMeta.listParameters();
-    for ( JobParameter parameter : config.getParameters() ) {
-      if ( StringUtils.isNotEmpty( parameter.getVariable() ) ) {
-        if ( Const.indexOfString( parameter.getVariable(), parameters ) >= 0 ) {
-          try {
-            transMeta.setParameterValue( parameter.getVariable(), parameter.getValue() );
-          } catch ( UnknownParamException e ) {
-            transMeta.setVariable( parameter.getVariable(), parameter.getValue() );
-          }
-        } else {
-          transMeta.setVariable( parameter.getVariable(), parameter.getValue() );
-        }
-      }
-    }
-    transMeta.activateParameters();
-  }
-
-  private void configureDataFlowOptions( BeamJobConfig config, DataflowPipelineOptions options ) {
-
-    options.setFilesToStage( findLibraryFilesToStage( config.getPluginsToStage() ) );
-    options.setProject( config.getGcpProjectId() );
-    options.setAppName( config.getGcpAppName() );
-    options.setStagingLocation( config.getGcpStagingLocation() );
-  }
-
-  private void configureSparkOptions( BeamJobConfig config, SparkPipelineOptions options ) {
-
-    // TODO: Do the other things as well
-    options.setFilesToStage( findLibraryFilesToStage() );
-
-  }
-
-  private void configureFlinkOptions( BeamJobConfig config, FlinkPipelineOptions options ) {
-
-    // TODO: Do the other things as well
-    options.setFilesToStage( findLibraryFilesToStage() );
-
-  }
-
-  public static List<String> findLibraryFilesToStage() {
-    return findLibraryFilesToStage( null, null );
-  }
-
-  public static List<String> findLibraryFilesToStage( String pluginFolders ) {
-    return findLibraryFilesToStage( null, pluginFolders );
-  }
-
-  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders) {
-    return findLibraryFilesToStage( baseFolder, pluginFolders, true, true );
-  }
-
-
-  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders, boolean includeParent) {
-    return findLibraryFilesToStage( baseFolder, pluginFolders, includeParent, true );
-  }
-
-  public static List<String> findLibraryFilesToStage( String baseFolder, String pluginFolders, boolean includeParent, boolean includeBeam ) {
-
-    File base;
-    if ( baseFolder == null ) {
-      base = new File( "." );
-    } else {
-      base = new File( baseFolder );
-    }
-
-    // Add all the jar files in lib/ to the classpath.
-    // Later we'll add the plugins as well...
-    //
-    Set<String> uniqueNames = new HashSet<>();
-    List<String> libraries = new ArrayList<>();
-
-    if (includeParent) {
-
-      File libFolder = new File( base.toString() + "/lib" );
-
-      Collection<File> files = FileUtils.listFiles( libFolder, new String[] { "jar" }, true );
-      if ( files != null ) {
-        for ( File file : files ) {
-          String shortName = file.getName();
-          if ( !uniqueNames.contains( shortName ) ) {
-            uniqueNames.add( shortName );
-            libraries.add( file.getAbsolutePath() );
-            // System.out.println( "Adding library : " + file.getAbsolutePath() );
-          }
-        }
-      }
-    }
-
-    // A unique list of plugin folders
-    //
-    Set<String> pluginFoldersSet = new HashSet<>();
-    if ( StringUtils.isNotEmpty( pluginFolders ) ) {
-      String[] folders = pluginFolders.split( "," );
-      for ( String folder : folders ) {
-        pluginFoldersSet.add( folder );
-      }
-    }
-    if (includeBeam) {
-      // TODO: make this plugin folder configurable
-      //
-      pluginFoldersSet.add("kettle-beam");
-    }
-
-    // Now the selected plugins libs...
-    //
-    for ( String pluginFolder : pluginFoldersSet ) {
-      File pluginsFolder = new File( base.toString() + "/plugins/" + pluginFolder );
-      Collection<File> pluginFiles = FileUtils.listFiles( pluginsFolder, new String[] { "jar" }, true );
-      if ( pluginFiles != null ) {
-        for ( File file : pluginFiles ) {
-          String shortName = file.getName();
-          if ( !uniqueNames.contains( shortName ) ) {
-            uniqueNames.add( shortName );
-            libraries.add( file.getAbsolutePath() );
-          }
-        }
-      }
-    }
-
-    return libraries;
-  }
-
-
-  private void logMetrics( PipelineResult pipelineResult ) {
-    LogChannelInterface log = spoon.getLog();
-    MetricResults metricResults = pipelineResult.metrics();
-
-    log.logBasic( "  ----------------- Metrics refresh @ " + new SimpleDateFormat( "yyyy/MM/dd HH:mm:ss" ).format( new Date() ) + " -----------------------" );
-
-    MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
-    for ( MetricResult<Long> result : allResults.getCounters() ) {
-      log.logBasic( "Name: " + result.getName() + " Attempted: " + result.getAttempted() + " Committed: " + result.getCommitted() );
-    }
-
+    return new KettleURLClassLoader( urls, ClassLoader.getSystemClassLoader() );
   }
 
   public void showMessage( String title, String message ) {
