@@ -2,7 +2,6 @@
 package org.kettle.beam.steps.beaminput;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.ShellAdapter;
@@ -11,6 +10,7 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -44,7 +44,7 @@ public class BeamInputDialog extends BaseStepDialog implements StepDialogInterfa
   private boolean getpreviousFields = false;
 
   private TextVar wInputLocation;
-  private CCombo wFileDefinition;
+  private Combo wFileDefinition;
 
   public BeamInputDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
     super( parent, (BaseStepMeta) in, transMeta, sname );
@@ -126,7 +126,7 @@ public class BeamInputDialog extends BaseStepDialog implements StepDialogInterfa
     fdlFileDefinition.top = new FormAttachment( lastControl, margin );
     fdlFileDefinition.right = new FormAttachment( middle, -margin );
     wlFileDefinition.setLayoutData( fdlFileDefinition );
-    wFileDefinition = new CCombo( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    wFileDefinition = new Combo( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
     props.setLook( wFileDefinition );
     wFileDefinition.setItems(fileDefinitionNames);
     FormData fdFileDefinition = new FormData();
