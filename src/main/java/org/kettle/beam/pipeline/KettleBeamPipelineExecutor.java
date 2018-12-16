@@ -26,16 +26,13 @@ import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.parameters.UnknownParamException;
-import org.pentaho.di.core.plugins.KettleURLClassLoader;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.metastore.api.IMetaStore;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Timer;
@@ -43,28 +40,35 @@ import java.util.TimerTask;
 
 public class KettleBeamPipelineExecutor {
 
-  private final LogChannelInterface log;
+  private LogChannelInterface log;
   private TransMeta transMeta;
   private BeamJobConfig jobConfig;
-  private final IMetaStore metaStore;
+  private IMetaStore metaStore;
   private ClassLoader classLoader;
+  private List<BeamMetricsUpdatedListener> updatedListeners;
+  private boolean loggingMetrics;
+
+  private KettleBeamPipelineExecutor() {
+    this.updatedListeners = new ArrayList<>(  );
+  }
 
   public KettleBeamPipelineExecutor( LogChannelInterface log, TransMeta transMeta, BeamJobConfig jobConfig, IMetaStore metaStore, ClassLoader classLoader ) {
+    this();
     this.log = log;
     this.transMeta = transMeta;
     this.jobConfig = jobConfig;
     this.metaStore = metaStore;
     this.classLoader = classLoader;
+    this.loggingMetrics = true;
   }
 
-  public void execute() throws KettleException {
+  public PipelineResult execute() throws KettleException {
     ClassLoader oldContextClassLoader = Thread.currentThread().getContextClassLoader();
     try {
       // Explain to various classes in the Beam API (@see org.apache.beam.sdk.io.FileSystems)
       // what the context classloader is.
       // Set it back when we're done here.
       //
-
       Thread.currentThread().setContextClassLoader( classLoader );
 
       final Pipeline pipeline = getPipeline( transMeta, jobConfig );
@@ -74,13 +78,24 @@ public class KettleBeamPipelineExecutor {
       Timer timer = new Timer();
       TimerTask timerTask = new TimerTask() {
         @Override public void run() {
-          logMetrics( pipelineResult );
+
+          // Log the metrics...
+          //
+          if (isLoggingMetrics()) {
+            logMetrics( pipelineResult );
+          }
+
+          // Update the listeners.
+          //
+          updateListeners( pipelineResult );
         }
       };
-      // Every 10 seconds
-      timer.schedule( timerTask, 10000, 10000 );
+      // Every 5 seconds
+      //
+      timer.schedule( timerTask, 5000, 5000 );
 
       // Wait until we're done
+      //
       pipelineResult.waitUntilFinish();
 
       timer.cancel();
@@ -89,7 +104,13 @@ public class KettleBeamPipelineExecutor {
       // Log the metrics at the end.
       logMetrics( pipelineResult );
 
+      // Update a last time
+      //
+      updateListeners( pipelineResult );
+
       log.logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
+
+      return pipelineResult;
     } finally {
       Thread.currentThread().setContextClassLoader( oldContextClassLoader );
     }
@@ -104,6 +125,12 @@ public class KettleBeamPipelineExecutor {
     MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
     for ( MetricResult<Long> result : allResults.getCounters() ) {
       log.logBasic( "Name: " + result.getName() + " Attempted: " + result.getAttempted() + " Committed: " + result.getCommitted() );
+    }
+  }
+
+  public void updateListeners(PipelineResult pipelineResult) {
+    for (BeamMetricsUpdatedListener listener : updatedListeners) {
+      listener.beamMetricsUpdated(pipelineResult);
     }
   }
 
@@ -307,4 +334,36 @@ public class KettleBeamPipelineExecutor {
 
   }
 
+
+  /**
+   * Gets updatedListeners
+   *
+   * @return value of updatedListeners
+   */
+  public List<BeamMetricsUpdatedListener> getUpdatedListeners() {
+    return updatedListeners;
+  }
+
+  /**
+   * @param updatedListeners The updatedListeners to set
+   */
+  public void setUpdatedListeners( List<BeamMetricsUpdatedListener> updatedListeners ) {
+    this.updatedListeners = updatedListeners;
+  }
+
+  /**
+   * Gets loggingMetrics
+   *
+   * @return value of loggingMetrics
+   */
+  public boolean isLoggingMetrics() {
+    return loggingMetrics;
+  }
+
+  /**
+   * @param loggingMetrics The loggingMetrics to set
+   */
+  public void setLoggingMetrics( boolean loggingMetrics ) {
+    this.loggingMetrics = loggingMetrics;
+  }
 }
