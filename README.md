@@ -49,4 +49,9 @@ You can use the variables to make your transformations completely generic.  For 
 * Group By step : experimental, SUM (Integer, Number), COUNT
 * External plugins are not yet supported.
 
+## More information
+
+http://diethardsteiner.github.io/pdi/2018/12/01/Kettle-Beam.html
+
+
 
