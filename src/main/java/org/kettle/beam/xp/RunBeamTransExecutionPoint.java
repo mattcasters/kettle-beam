@@ -17,7 +17,6 @@ import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.trans.Trans;
-import org.pentaho.di.trans.TransExecutionConfiguration;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStep;
 import org.pentaho.di.trans.step.BaseStepData;
@@ -211,8 +210,12 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
           bs.setLinesRead( processed );
         } else if ( "written".equalsIgnoreCase( metricsType ) ) {
           bs.setLinesWritten( processed );
-        } else if ( "init".equalsIgnoreCase( metricsType ) ) {
+        } else if ( "input".equalsIgnoreCase( metricsType ) ) {
           bs.setLinesInput( processed );
+        } else if ( "output".equalsIgnoreCase( metricsType ) ) {
+          bs.setLinesOutput( processed );
+        } else if ( "init".equalsIgnoreCase( metricsType ) ) {
+          bs.setCopy( (int)processed );
         }
 
         // Set the step status to reflect the pipeline status.
