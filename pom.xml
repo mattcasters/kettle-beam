@@ -22,6 +22,7 @@
     <pentaho-kettle.version>8.1-SNAPSHOT</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
+    <apache-beam-version>2.9.0</apache-beam-version>
   </properties>
 
   <repositories>
@@ -51,32 +52,32 @@
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-core</artifactId>
-      <version>2.8.0</version>
+      <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-runners-direct-java</artifactId>
-      <version>2.8.0</version>
+      <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
-      <version>2.8.0</version>
+      <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-runners-spark</artifactId>
-      <version>2.8.0</version>
+      <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-runners-flink_2.11</artifactId>
-      <version>2.8.0</version>
+      <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-runners-apex</artifactId>
-      <version>2.8.0</version>
+      <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.cloud</groupId>
@@ -96,12 +97,12 @@
     <dependency>
       <groupId>kettle-beam</groupId>
       <artifactId>kettle-beam-core</artifactId>
-      <version>0.0.4-SNAPSHOT</version>
+      <version>0.1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-extensions-join-library</artifactId>
-      <version>2.8.0</version>
+      <version>${apache-beam-version}</version>
     </dependency>
 
     <dependency>
@@ -195,37 +196,37 @@
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-sdks-java-core</artifactId>
-        <version>2.8.0</version>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-runners-direct-java</artifactId>
-        <version>2.8.0</version>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-runners-google-cloud-dataflow-java</artifactId>
-        <version>2.8.0</version>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-runners-spark</artifactId>
-        <version>2.8.0</version>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-runners-flink_2.11</artifactId>
-        <version>2.8.0</version>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-runners-apex</artifactId>
-        <version>2.8.0</version>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-sdks-java-extensions-join-library</artifactId>
-        <version>2.8.0</version>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.cloud</groupId>
@@ -274,5 +275,5 @@
 
 
   <groupId>kettle-beam</groupId>
-  <version>0.0.5-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
 </project>

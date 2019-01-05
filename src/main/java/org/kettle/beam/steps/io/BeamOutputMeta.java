@@ -1,4 +1,4 @@
-package org.kettle.beam.steps.beamoutput;
+package org.kettle.beam.steps.io;
 
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.metastore.FileDefinition;

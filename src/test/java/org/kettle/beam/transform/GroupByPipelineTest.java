@@ -10,7 +10,7 @@ public class GroupByPipelineTest extends PipelineTestBase {
   public void testGroupByPipeline() throws Exception {
 
     TransMeta transMeta = BeamTransMetaUtil.generateBeamGroupByTransMeta(
-      "input-group-output",
+      "io-group-output",
       "INPUT",
       "OUTPUT",
       metaStore

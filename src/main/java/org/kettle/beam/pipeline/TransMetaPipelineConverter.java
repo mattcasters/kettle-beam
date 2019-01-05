@@ -32,8 +32,8 @@ import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
 import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
-import org.kettle.beam.steps.beaminput.BeamInputMeta;
-import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
+import org.kettle.beam.steps.io.BeamInputMeta;
+import org.kettle.beam.steps.io.BeamOutputMeta;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
@@ -173,7 +173,7 @@ public class TransMetaPipelineConverter {
     //
     Map<String, PCollection<KettleRow>> stepCollectionMap = new HashMap<>();
 
-    // Handle input
+    // Handle io
     //
     handleBeamInputSteps( log, stepCollectionMap, pipeline );
 
@@ -223,7 +223,6 @@ public class TransMetaPipelineConverter {
     PCollection<KettleRow> afterInput = pipeline.apply( beamInputTransform );
     stepCollectionMap.put( beamInputStepMeta.getName(), afterInput );
     log.logBasic( "Handled step (INPUT) : " + beamInputStepMeta.getName() );
-
   }
 
   private void handleBeamOutputSteps( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap ) throws KettleException, IOException {
@@ -335,7 +334,7 @@ public class TransMetaPipelineConverter {
         validateStepBeamUsage( stepMeta.getStepMetaInterface() );
 
         // Lookup all the previous steps for this one, excluding info steps like StreamLookup...
-        // So the usecase is : we read from multiple input steps and join to one location...
+        // So the usecase is : we read from multiple io steps and join to one location...
         //
         List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
 
@@ -343,7 +342,7 @@ public class TransMetaPipelineConverter {
         RowMetaInterface rowMeta;
         PCollection<KettleRow> input = null;
 
-        // Steps like Merge Join or Merge have no input, only info steps reaching in
+        // Steps like Merge Join or Merge have no io, only info steps reaching in
         //
         if ( previousSteps.isEmpty() ) {
           firstPreviousStep = null;
@@ -370,7 +369,7 @@ public class TransMetaPipelineConverter {
             log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
           }
 
-          // If there are multiple input streams into this step, flatten all the data sources by default
+          // If there are multiple io streams into this step, flatten all the data sources by default
           // This means to simply merge the data.
           //
           if ( previousSteps.size() > 1 ) {
@@ -467,7 +466,7 @@ public class TransMetaPipelineConverter {
 
 
 
-    // Apply the step transform to the previous input step PCollection(s)
+    // Apply the step transform to the previous io step PCollection(s)
     //
     PCollectionTuple tuple = input.apply( stepMeta.getName(), stepTransform );
 
@@ -504,7 +503,7 @@ public class TransMetaPipelineConverter {
 
     PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform = new GroupByTransform(
       stepMeta.getName(),
-      JsonRowMeta.toJson(rowMeta),  // The input row
+      JsonRowMeta.toJson(rowMeta),  // The io row
       stepPluginClasses,
       xpPluginClasses,
       meta.getGroupField(),
@@ -513,7 +512,7 @@ public class TransMetaPipelineConverter {
       meta.getAggregateField()
     );
 
-    // Apply the step transform to the previous input step PCollection(s)
+    // Apply the step transform to the previous io step PCollection(s)
     //
     PCollection<KettleRow> stepPCollection = input.apply( stepMeta.getName(), stepTransform );
 
@@ -644,7 +643,7 @@ public class TransMetaPipelineConverter {
       xpPluginClasses
     );
 
-    // Apply the step transform to the previous input step PCollection(s)
+    // Apply the step transform to the previous io step PCollection(s)
     //
     PCollection<KettleRow> stepPCollection = kvpCollection.apply( ParDo.of(assemblerFn) );
 

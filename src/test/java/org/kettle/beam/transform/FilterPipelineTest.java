@@ -29,7 +29,7 @@ public class FilterPipelineTest extends PipelineTestBase {
   public void testFilterRowsPipeline() throws Exception {
 
     TransMeta transMeta = BeamTransMetaUtil.generateFilterRowsTransMeta(
-      "input-filter-rows-output",
+      "io-filter-rows-output",
       "INPUT",
       "OUTPUT",
       metaStore

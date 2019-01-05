@@ -29,7 +29,7 @@ public class BasePipelineTest extends PipelineTestBase {
   public void testBasicPipeline() throws Exception {
 
     TransMeta transMeta = BeamTransMetaUtil.generateBeamInputOutputTransMeta(
-      "input-dummy-output",
+      "io-dummy-output",
       "INPUT",
       "OUTPUT",
       metaStore

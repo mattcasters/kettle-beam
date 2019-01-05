@@ -1,5 +1,5 @@
 
-package org.kettle.beam.steps.beamoutput;
+package org.kettle.beam.steps.io;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -34,24 +34,21 @@ import java.util.Collections;
 import java.util.List;
 
 
-public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterface {
-  private static Class<?> PKG = BeamOutput.class; // for i18n purposes, needed by Translator2!!
-  private final BeamOutputMeta input;
+public class BeamInputDialog extends BaseStepDialog implements StepDialogInterface {
+  private static Class<?> PKG = BeamInput.class; // for i18n purposes, needed by Translator2!!
+  private final BeamInputMeta input;
 
   int middle;
   int margin;
 
   private boolean getpreviousFields = false;
 
-  private TextVar wOutputLocation;
+  private TextVar wInputLocation;
   private Combo wFileDefinition;
-  private TextVar wFilePrefix;
-  private TextVar wFileSuffix;
-  private Button wWindowed;
 
-  public BeamOutputDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
+  public BeamInputDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
     super( parent, (BaseStepMeta) in, transMeta, sname );
-    input = (BeamOutputMeta) in;
+    input = (BeamInputMeta) in;
   }
 
   public String open() {
@@ -69,7 +66,7 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     formLayout.marginHeight = Const.FORM_MARGIN;
 
     shell.setLayout( formLayout );
-    shell.setText( BaseMessages.getString( PKG, "BeamOutputDialog.DialogTitle" ) );
+    shell.setText( BaseMessages.getString( PKG, "BeamInputDialog.DialogTitle" ) );
 
     middle = props.getMiddlePct();
     margin = Const.MARGIN;
@@ -81,6 +78,7 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
 
       fileDefinitionNames = fileDefinitionNameList.toArray(new String[0]);
     } catch(Exception e) {
+      log.logError("Error getting file definitions list", e);
       fileDefinitionNames = new String[] {};
     }
 
@@ -103,76 +101,25 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     wStepname.setLayoutData( fdStepname );
     Control lastControl = wStepname;
 
-    Label wlOutputLocation = new Label( shell, SWT.RIGHT );
-    wlOutputLocation.setText( BaseMessages.getString( PKG, "BeamOutputDialog.OutputLocation" ) );
-    props.setLook( wlOutputLocation );
-    FormData fdlOutputLocation = new FormData();
-    fdlOutputLocation.left = new FormAttachment( 0, 0 );
-    fdlOutputLocation.top = new FormAttachment( lastControl, margin );
-    fdlOutputLocation.right = new FormAttachment( middle, -margin );
-    wlOutputLocation.setLayoutData( fdlOutputLocation );
-    wOutputLocation = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wOutputLocation );
-    FormData fdOutputLocation = new FormData();
-    fdOutputLocation.left = new FormAttachment( middle, 0 );
-    fdOutputLocation.top = new FormAttachment( wlOutputLocation, 0, SWT.CENTER );
-    fdOutputLocation.right = new FormAttachment( 100, 0 );
-    wOutputLocation.setLayoutData( fdOutputLocation );
-    lastControl = wOutputLocation;
-
-    Label wlFilePrefix = new Label( shell, SWT.RIGHT );
-    wlFilePrefix.setText( BaseMessages.getString( PKG, "BeamOutputDialog.FilePrefix" ) );
-    props.setLook( wlFilePrefix );
-    FormData fdlFilePrefix = new FormData();
-    fdlFilePrefix.left = new FormAttachment( 0, 0 );
-    fdlFilePrefix.top = new FormAttachment( lastControl, margin );
-    fdlFilePrefix.right = new FormAttachment( middle, -margin );
-    wlFilePrefix.setLayoutData( fdlFilePrefix );
-    wFilePrefix = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wFilePrefix );
-    FormData fdFilePrefix = new FormData();
-    fdFilePrefix.left = new FormAttachment( middle, 0 );
-    fdFilePrefix.top = new FormAttachment( wlFilePrefix, 0, SWT.CENTER );
-    fdFilePrefix.right = new FormAttachment( 100, 0 );
-    wFilePrefix.setLayoutData( fdFilePrefix );
-    lastControl = wFilePrefix;
-
-    Label wlFileSuffix = new Label( shell, SWT.RIGHT );
-    wlFileSuffix.setText( BaseMessages.getString( PKG, "BeamOutputDialog.FileSuffix" ) );
-    props.setLook( wlFileSuffix );
-    FormData fdlFileSuffix = new FormData();
-    fdlFileSuffix.left = new FormAttachment( 0, 0 );
-    fdlFileSuffix.top = new FormAttachment( lastControl, margin );
-    fdlFileSuffix.right = new FormAttachment( middle, -margin );
-    wlFileSuffix.setLayoutData( fdlFileSuffix );
-    wFileSuffix = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wFileSuffix );
-    FormData fdFileSuffix = new FormData();
-    fdFileSuffix.left = new FormAttachment( middle, 0 );
-    fdFileSuffix.top = new FormAttachment( wlFileSuffix, 0, SWT.CENTER );
-    fdFileSuffix.right = new FormAttachment( 100, 0 );
-    wFileSuffix.setLayoutData( fdFileSuffix );
-    lastControl = wFileSuffix;
-    
-    Label wlWindowed = new Label( shell, SWT.RIGHT );
-    wlWindowed.setText( BaseMessages.getString( PKG, "BeamOutputDialog.Windowed" ) );
-    props.setLook( wlWindowed );
-    FormData fdlWindowed = new FormData();
-    fdlWindowed.left = new FormAttachment( 0, 0 );
-    fdlWindowed.top = new FormAttachment( lastControl, margin );
-    fdlWindowed.right = new FormAttachment( middle, -margin );
-    wlWindowed.setLayoutData( fdlWindowed );
-    wWindowed = new Button( shell, SWT.CHECK );
-    props.setLook( wWindowed );
-    FormData fdWindowed = new FormData();
-    fdWindowed.left = new FormAttachment( middle, 0 );
-    fdWindowed.top = new FormAttachment( wlWindowed, 0, SWT.CENTER );
-    fdWindowed.right = new FormAttachment( 100, 0 );
-    wWindowed.setLayoutData( fdWindowed );
-    lastControl = wWindowed;
+    Label wlInputLocation = new Label( shell, SWT.RIGHT );
+    wlInputLocation.setText( BaseMessages.getString( PKG, "BeamInputDialog.InputLocation" ) );
+    props.setLook( wlInputLocation );
+    FormData fdlInputLocation = new FormData();
+    fdlInputLocation.left = new FormAttachment( 0, 0 );
+    fdlInputLocation.top = new FormAttachment( lastControl, margin );
+    fdlInputLocation.right = new FormAttachment( middle, -margin );
+    wlInputLocation.setLayoutData( fdlInputLocation );
+    wInputLocation = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wInputLocation );
+    FormData fdInputLocation = new FormData();
+    fdInputLocation.left = new FormAttachment( middle, 0 );
+    fdInputLocation.top = new FormAttachment( wlInputLocation, 0, SWT.CENTER );
+    fdInputLocation.right = new FormAttachment( 100, 0 );
+    wInputLocation.setLayoutData( fdInputLocation );
+    lastControl = wInputLocation;
 
     Label wlFileDefinition = new Label( shell, SWT.RIGHT );
-    wlFileDefinition.setText( BaseMessages.getString( PKG, "BeamOutputDialog.FileDefinition" ) );
+    wlFileDefinition.setText( BaseMessages.getString( PKG, "BeamInputDialog.FileDefinition" ) );
     props.setLook( wlFileDefinition );
     FormData fdlFileDefinition = new FormData();
     fdlFileDefinition.left = new FormAttachment( 0, 0 );
@@ -220,9 +167,7 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
 
     wStepname.addSelectionListener( lsDef );
     wFileDefinition.addSelectionListener( lsDef );
-    wOutputLocation.addSelectionListener( lsDef );
-    wFilePrefix.addSelectionListener( lsDef );
-    wFileSuffix.addSelectionListener( lsDef );
+    wInputLocation.addSelectionListener( lsDef );
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
@@ -252,10 +197,7 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
   public void getData( ) {
     wStepname.setText( stepname );
     wFileDefinition.setText(Const.NVL(input.getFileDescriptionName(), ""));
-    wOutputLocation.setText(Const.NVL(input.getOutputLocation(), ""));
-    wFilePrefix.setText(Const.NVL(input.getFilePrefix(), ""));
-    wFileSuffix.setText(Const.NVL(input.getFileSuffix(), ""));
-    wWindowed.setSelection( input.isWindowed() );
+    wInputLocation.setText(Const.NVL(input.getInputLocation(), ""));
 
     wStepname.selectAll();
     wStepname.setFocus();
@@ -277,14 +219,11 @@ public class BeamOutputDialog extends BaseStepDialog implements StepDialogInterf
     dispose();
   }
 
-  private void getInfo( BeamOutputMeta in ) {
+  private void getInfo( BeamInputMeta in ) {
     stepname = wStepname.getText(); // return value
 
     in.setFileDescriptionName( wFileDefinition.getText() );
-    in.setOutputLocation( wOutputLocation.getText() );
-    in.setFilePrefix( wFilePrefix.getText() );
-    in.setFileSuffix( wFileSuffix.getText() );
-    in.setWindowed( wWindowed.getSelection() );
+    in.setInputLocation( wInputLocation.getText() );
 
     input.setChanged();
   }

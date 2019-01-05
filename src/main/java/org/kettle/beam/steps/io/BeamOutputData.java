@@ -1,4 +1,4 @@
-package org.kettle.beam.steps.beamoutput;
+package org.kettle.beam.steps.io;
 
 import org.pentaho.di.trans.step.BaseStepData;
 import org.pentaho.di.trans.step.StepDataInterface;

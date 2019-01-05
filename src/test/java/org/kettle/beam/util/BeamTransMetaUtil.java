@@ -1,11 +1,11 @@
 package org.kettle.beam.util;
 
+import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
-import org.kettle.beam.steps.beaminput.BeamInputMeta;
-import org.kettle.beam.steps.beamoutput.BeamOutputMeta;
+import org.kettle.beam.steps.io.BeamInputMeta;
+import org.kettle.beam.steps.io.BeamOutputMeta;
 import org.pentaho.di.core.Condition;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.row.ValueMetaAndData;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.trans.TransHopMeta;
@@ -37,10 +37,10 @@ public class BeamTransMetaUtil {
     transMeta.setName( transname );
     transMeta.setMetaStore( metaStore );
 
-    // Add the input step
+    // Add the io step
     //
     BeamInputMeta beamInputMeta = new BeamInputMeta();
-    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setInputLocation( "/tmp/customers/io/customers-100.txt" );
     beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
     StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
     beamInputStepMeta.setStepID( "BeamInput" );
@@ -81,13 +81,13 @@ public class BeamTransMetaUtil {
     transMeta.setName( transname );
     transMeta.setMetaStore( metaStore );
 
-    // Add the input step
+    // Add the io step
     //
     BeamInputMeta beamInputMeta = new BeamInputMeta();
-    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setInputLocation( "/tmp/customers/io/customers-100.txt" );
     beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
     StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
-    beamInputStepMeta.setStepID( "BeamInput" );
+    beamInputStepMeta.setStepID( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID );
     transMeta.addStep( beamInputStepMeta );
 
 
@@ -136,13 +136,13 @@ public class BeamTransMetaUtil {
     transMeta.setName( transname );
     transMeta.setMetaStore( metaStore );
 
-    // Add the input step
+    // Add the io step
     //
     BeamInputMeta beamInputMeta = new BeamInputMeta();
-    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setInputLocation( "/tmp/customers/io/customers-100.txt" );
     beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
     StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
-    beamInputStepMeta.setStepID( "BeamInput" );
+    beamInputStepMeta.setStepID( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID );
     transMeta.addStep( beamInputStepMeta );
 
 
@@ -214,13 +214,13 @@ public class BeamTransMetaUtil {
     transMeta.setName( transname );
     transMeta.setMetaStore( metaStore );
 
-    // Add the input step
+    // Add the io step
     //
     BeamInputMeta beamInputMeta = new BeamInputMeta();
-    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setInputLocation( "/tmp/customers/io/customers-100.txt" );
     beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
     StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
-    beamInputStepMeta.setStepID( "BeamInput" );
+    beamInputStepMeta.setStepID( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID );
     beamInputStepMeta.setDraw( true );
     transMeta.addStep( beamInputStepMeta );
 
@@ -307,13 +307,13 @@ public class BeamTransMetaUtil {
     transMeta.setName( transname );
     transMeta.setMetaStore( metaStore );
 
-    // Add the main input step
+    // Add the main io step
     //
     BeamInputMeta beamInputMeta = new BeamInputMeta();
-    beamInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    beamInputMeta.setInputLocation( "/tmp/customers/io/customers-100.txt" );
     beamInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
     StepMeta beamInputStepMeta = new StepMeta(inputStepname, beamInputMeta);
-    beamInputStepMeta.setStepID( "BeamInput" );
+    beamInputStepMeta.setStepID( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID );
     transMeta.addStep( beamInputStepMeta );
 
     StepMeta lookupBeamInputStepMeta = beamInputStepMeta;
@@ -343,7 +343,7 @@ public class BeamTransMetaUtil {
     streamLookupMeta.getStepIOMeta().getInfoStreams().get(0).setStepMeta( memoryGroupByStepMeta ); // Read from Mem.GroupBy
     StepMeta streamLookupStepMeta = new StepMeta("Stream Lookup", streamLookupMeta);
     transMeta.addStep(streamLookupStepMeta);
-    transMeta.addTransHop( new TransHopMeta( beamInputStepMeta, streamLookupStepMeta ) ); // Main input
+    transMeta.addTransHop( new TransHopMeta( beamInputStepMeta, streamLookupStepMeta ) ); // Main io
     transMeta.addTransHop( new TransHopMeta( memoryGroupByStepMeta, streamLookupStepMeta ) ); // info stream
 
     // Add the output step to write results
@@ -374,20 +374,20 @@ public class BeamTransMetaUtil {
     transMeta.setName( transname );
     transMeta.setMetaStore( metaStore );
 
-    // Add the left input step
+    // Add the left io step
     //
     BeamInputMeta leftInputMeta = new BeamInputMeta();
-    leftInputMeta.setInputLocation( "/tmp/customers/input/customers-100.txt" );
+    leftInputMeta.setInputLocation( "/tmp/customers/io/customers-100.txt" );
     leftInputMeta.setFileDescriptionName( customerFileDefinition.getName() );
     StepMeta leftInputStepMeta = new StepMeta(inputStepname+" Left", leftInputMeta);
-    leftInputStepMeta.setStepID( "BeamInput" );
+    leftInputStepMeta.setStepID( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID );
     transMeta.addStep( leftInputStepMeta );
 
     BeamInputMeta rightInputMeta = new BeamInputMeta();
-    rightInputMeta.setInputLocation( "/tmp/customers/input/state-data.txt" );
+    rightInputMeta.setInputLocation( "/tmp/customers/io/state-data.txt" );
     rightInputMeta.setFileDescriptionName( statePopulationFileDefinition.getName() );
     StepMeta rightInputStepMeta = new StepMeta(inputStepname+" Right", rightInputMeta);
-    rightInputStepMeta.setStepID( "BeamInput" );
+    rightInputStepMeta.setStepID( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID );
     transMeta.addStep( rightInputStepMeta );
 
 

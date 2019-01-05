@@ -32,15 +32,15 @@ public class PipelineTestBase {
 
     metaStore = new MemoryMetaStore();
 
-    File inputFolder = new File( "/tmp/customers/input" );
+    File inputFolder = new File( "/tmp/customers/io" );
     inputFolder.mkdirs();
     File outputFolder = new File( "/tmp/customers/output" );
     outputFolder.mkdirs();
     File tmpFolder = new File( "/tmp/customers/tmp" );
     tmpFolder.mkdirs();
 
-    FileUtils.copyFile( new File( "src/test/resources/customers/customers-100.txt" ), new File( "/tmp/customers/input/customers-100.txt" ) );
-    FileUtils.copyFile( new File( "src/test/resources/customers/state-data.txt" ), new File( "/tmp/customers/input/state-data.txt" ) );
+    FileUtils.copyFile( new File( "src/test/resources/customers/customers-100.txt" ), new File( "/tmp/customers/io/customers-100.txt" ) );
+    FileUtils.copyFile( new File( "src/test/resources/customers/state-data.txt" ), new File( "/tmp/customers/io/state-data.txt" ) );
   }
 
 

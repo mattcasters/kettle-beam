@@ -10,7 +10,7 @@ public class StreamLookupPipelineTest extends PipelineTestBase {
   public void testStreamLookupPipeline() throws Exception {
 
     TransMeta transMeta = BeamTransMetaUtil.generateStreamLookupTransMeta(
-      "input-stream-lookup-output",
+      "io-stream-lookup-output",
       "INPUT",
       "OUTPUT",
       metaStore

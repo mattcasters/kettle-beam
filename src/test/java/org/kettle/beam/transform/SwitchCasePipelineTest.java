@@ -10,7 +10,7 @@ public class SwitchCasePipelineTest extends PipelineTestBase {
   public void testSwitchCasePipeline() throws Exception {
 
     TransMeta transMeta = BeamTransMetaUtil.generateSwitchCaseTransMeta(
-      "input-switch-case-output",
+      "io-switch-case-output",
       "INPUT",
       "OUTPUT",
       metaStore
