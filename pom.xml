@@ -19,7 +19,7 @@
     </license>
   </licenses>
   <properties>
-    <pentaho-kettle.version>8.1-SNAPSHOT</pentaho-kettle.version>
+    <pentaho-kettle.version>8.2.0.0-342</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
     <apache-beam-version>2.9.0</apache-beam-version>

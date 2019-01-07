@@ -2,7 +2,7 @@
 *.class
 
 # Log file
-*.log
+*.logChannel
 
 # BlueJ files
 *.ctxt

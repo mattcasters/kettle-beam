@@ -17,6 +17,7 @@ import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.trans.Trans;
+import org.pentaho.di.trans.TransListener;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStep;
 import org.pentaho.di.trans.step.BaseStepData;
@@ -36,7 +37,7 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
 
   public static final String KETTLE_BEAM_PIPELINE_EXECUTOR = "KETTLE_BEAM_PIPELINE_EXECUTOR";
 
-  @Override public void callExtensionPoint( LogChannelInterface log, Object object ) throws KettleException {
+  @Override public void callExtensionPoint( LogChannelInterface log, Object object ) {
 
     Object[] arguments = (Object[]) object;
 
@@ -47,17 +48,17 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
     // Who came up with this shit?
     //
     if ( arguments[ 2 ] instanceof JobMeta ) {
-      space = (VariableSpace)arguments[2];
-      if (arguments[3] instanceof JobMeta) {
+      space = (VariableSpace) arguments[ 2 ];
+      if ( arguments[ 3 ] instanceof JobMeta ) {
         // Doing something stupid in the GUI
         // Why????
         //
         return;
       }
-      transMeta = (TransMeta) arguments[3];
+      transMeta = (TransMeta) arguments[ 3 ];
     } else {
-      space = (VariableSpace)arguments[3];
-      transMeta = (TransMeta) arguments[2];
+      space = (VariableSpace) arguments[ 3 ];
+      transMeta = (TransMeta) arguments[ 2 ];
     }
     String beamJobConfigName = (String) arguments[ 0 ];
     // TODO: do something with the exec config
@@ -65,7 +66,7 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
     ExecutionConfiguration executionConfiguration = (ExecutionConfiguration) arguments[ 1 ];
     Repository repository = (Repository) arguments[ 4 ];
 
-    log.logBasic("Executing transformation "+transMeta.getName()+" on Beam Job Config "+beamJobConfigName);
+    log.logBasic( "Executing transformation " + transMeta.getName() + " on Beam Job Config " + beamJobConfigName );
 
     try {
       // Load the job config.
@@ -81,7 +82,7 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
       // Make sure we're not running in spoon and not in a spoon job entry
       //
       Spoon spoon = Spoon.getInstance();
-      if ( spoon != null && spoon.getActiveTransGraph()!=null) {
+      if ( spoon != null && spoon.getActiveTransGraph() != null ) {
 
         executeInSpoon( executor, transMeta, repository, space );
 
@@ -115,15 +116,24 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
     // Create a new mock Trans object
     //
     TransMeta copyTransMeta = copyCleanTransMeta( transMeta, repository, spoon.getMetaStore(), space );
-    Trans trans = new Trans( copyTransMeta );
+    BeamTrans trans = new BeamTrans( copyTransMeta );
     trans.prepareExecution( null );
-    trans.setRunning( true );
+    trans.setRunning( false );
+    trans.setPreparing( false );
     trans.setInitializing( true );
 
+
+    // Correct the logging channel in the executor...
+    //
+    executor.setLogChannel( trans.getLogChannel() );
+    executor.setLoggingMetrics( false );
+
+    // Set all the steps running
+    //
     for ( StepMetaDataCombi combi : trans.getSteps() ) {
       BeamDummyTrans beamStep = new BeamDummyTrans( combi.stepMeta, combi.data, combi.copy, copyTransMeta, trans );
       combi.step = beamStep;
-      beamStep.setRunning( false );
+      beamStep.setRunning( true );
       beamStep.setStopped( false );
       beamStep.setInit( true );
     }
@@ -152,6 +162,9 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
             combi.step.markStop();
           }
           metricsUpdated( pipelineResult, trans );
+          for ( TransListener listener : trans.getTransListeners()) {
+            listener.transFinished( trans );
+          }
         } catch ( Exception e ) {
           spoon.getDisplay().asyncExec( new Runnable() {
             @Override public void run() {
@@ -172,9 +185,23 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
 
   // This gets called every 10 seconds or so
   //
-  private void metricsUpdated( PipelineResult pipelineResult, Trans trans ) {
+  private void metricsUpdated( PipelineResult pipelineResult, BeamTrans trans ) {
 
     System.out.println( "PIPELINE STATE: " + pipelineResult.getState().name() );
+
+    switch ( pipelineResult.getState() ) {
+      case DONE:
+        trans.setRunning( false );
+        trans.setFinished( true );
+        trans.setInitializing( false );
+        System.out.println( "Transformation finished.");
+        break;
+      case STOPPED:
+        trans.setStopped( true );
+        break;
+      default:
+        break;
+    }
 
     MetricResults metricResults = pipelineResult.metrics();
 
@@ -215,14 +242,13 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
         } else if ( "output".equalsIgnoreCase( metricsType ) ) {
           bs.setLinesOutput( processed );
         } else if ( "init".equalsIgnoreCase( metricsType ) ) {
-          bs.setCopy( (int)processed );
+          bs.setCopy( (int) processed );
         }
 
         // Set the step status to reflect the pipeline status.
         //
         switch ( pipelineResult.getState() ) {
           case DONE:
-            trans.setInitializing( false );
             bs.setRunning( false );
             combi.data.setStatus( BaseStepData.StepExecutionStatus.STATUS_DISPOSED );
             break;

@@ -40,7 +40,7 @@ import java.util.TimerTask;
 
 public class KettleBeamPipelineExecutor {
 
-  private LogChannelInterface log;
+  private LogChannelInterface logChannel;
   private TransMeta transMeta;
   private BeamJobConfig jobConfig;
   private IMetaStore metaStore;
@@ -54,7 +54,7 @@ public class KettleBeamPipelineExecutor {
 
   public KettleBeamPipelineExecutor( LogChannelInterface log, TransMeta transMeta, BeamJobConfig jobConfig, IMetaStore metaStore, ClassLoader classLoader ) {
     this();
-    this.log = log;
+    this.logChannel = log;
     this.transMeta = transMeta;
     this.jobConfig = jobConfig;
     this.metaStore = metaStore;
@@ -108,7 +108,7 @@ public class KettleBeamPipelineExecutor {
       //
       updateListeners( pipelineResult );
 
-      log.logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
+      logChannel.logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
 
       return pipelineResult;
     } finally {
@@ -120,11 +120,11 @@ public class KettleBeamPipelineExecutor {
   private void logMetrics( PipelineResult pipelineResult ) {
     MetricResults metricResults = pipelineResult.metrics();
 
-    log.logBasic( "  ----------------- Metrics refresh @ " + new SimpleDateFormat( "yyyy/MM/dd HH:mm:ss" ).format( new Date() ) + " -----------------------" );
+    logChannel.logBasic( "  ----------------- Metrics refresh @ " + new SimpleDateFormat( "yyyy/MM/dd HH:mm:ss" ).format( new Date() ) + " -----------------------" );
 
     MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
     for ( MetricResult<Long> result : allResults.getCounters() ) {
-      log.logBasic( "Name: " + result.getName() + " Attempted: " + result.getAttempted() + " Committed: " + result.getCommitted() );
+      logChannel.logBasic( "Name: " + result.getName() + " Attempted: " + result.getAttempted() + " Committed: " + result.getCommitted() );
     }
   }
 
@@ -168,7 +168,7 @@ public class KettleBeamPipelineExecutor {
           configureFlinkOptions( config, flinkOptions, space );
           pipelineOptions = flinkOptions;
           pipelineRunnerClass = FlinkRunner.class;
-          log.logError( "Still missing a lot of options for Spark, this will probably fail" );
+          logChannel.logError( "Still missing a lot of options for Spark, this will probably fail" );
           break;
         default:
           throw new KettleException( "Sorry, this isn't implemented yet" );
@@ -269,7 +269,7 @@ public class KettleBeamPipelineExecutor {
         DataflowPipelineWorkerPoolOptions.AutoscalingAlgorithmType algorithm = DataflowPipelineWorkerPoolOptions.AutoscalingAlgorithmType.valueOf( algorithmCode );
         options.setAutoscalingAlgorithm( algorithm );
       } catch ( Exception e ) {
-        log.logError( "Unknown autoscaling algorithm for GCP Dataflow: " + algorithmCode, e );
+        logChannel.logError( "Unknown autoscaling algorithm for GCP Dataflow: " + algorithmCode, e );
       }
     }
     options.setStreaming( config.isGcpStreaming() );
@@ -365,5 +365,21 @@ public class KettleBeamPipelineExecutor {
    */
   public void setLoggingMetrics( boolean loggingMetrics ) {
     this.loggingMetrics = loggingMetrics;
+  }
+
+  /**
+   * Gets logChannel
+   *
+   * @return value of logChannel
+   */
+  public LogChannelInterface getLogChannel() {
+    return logChannel;
+  }
+
+  /**
+   * @param logChannel The logChannel to set
+   */
+  public void setLogChannel( LogChannelInterface logChannel ) {
+    this.logChannel = logChannel;
   }
 }

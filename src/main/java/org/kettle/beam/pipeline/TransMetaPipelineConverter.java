@@ -6,7 +6,6 @@ import org.apache.beam.sdk.extensions.joinlibrary.Join;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
-import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.KV;
@@ -24,20 +23,19 @@ import org.kettle.beam.core.fn.AssemblerFn;
 import org.kettle.beam.core.fn.KettleKeyValueFn;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.core.shared.VariableValue;
-import org.kettle.beam.core.transform.BeamInputTransform;
-import org.kettle.beam.core.transform.BeamOutputTransform;
-import org.kettle.beam.core.transform.GroupByTransform;
 import org.kettle.beam.core.transform.StepTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
-import org.kettle.beam.metastore.FieldDefinition;
-import org.kettle.beam.metastore.FileDefinition;
-import org.kettle.beam.steps.io.BeamInputMeta;
-import org.kettle.beam.steps.io.BeamOutputMeta;
+import org.kettle.beam.pipeline.handler.BeamGroupByStepHandler;
+import org.kettle.beam.pipeline.handler.BeamInputStepHandler;
+import org.kettle.beam.pipeline.handler.BeamMergeJoinStepHandler;
+import org.kettle.beam.pipeline.handler.BeamOutputStepHandler;
+import org.kettle.beam.pipeline.handler.BeamPublisherStepHandler;
+import org.kettle.beam.pipeline.handler.BeamStepHandler;
+import org.kettle.beam.pipeline.handler.BeamSubscriberStepHandler;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
-import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.extension.ExtensionPoint;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -56,7 +54,6 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.di.trans.steps.groupby.GroupByMeta;
-import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
 import org.pentaho.di.trans.steps.mergejoin.MergeJoinMeta;
 import org.pentaho.di.trans.steps.sort.SortRowsMeta;
 import org.pentaho.di.trans.steps.uniquerows.UniqueRowsMeta;
@@ -80,6 +77,7 @@ public class TransMetaPipelineConverter {
   private List<String> stepPluginClasses;
   private List<String> xpPluginClasses;
   private String pluginsToStage;
+  private Map<String, BeamStepHandler> stepHandlers;
 
   public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, String pluginsToStage ) throws MetaStoreException {
     this.transMeta = transMeta;
@@ -90,28 +88,26 @@ public class TransMetaPipelineConverter {
     this.stepPluginClasses = new ArrayList<>();
     this.xpPluginClasses = new ArrayList<>();
 
+    this.stepHandlers = new HashMap<>();
+
     PluginRegistry registry = PluginRegistry.getInstance();
 
     // Find the plugins in the jar files in the plugin folders to stage...
     //
     if ( StringUtils.isEmpty( pluginsToStage ) ) {
-      // System.out.println( "No plugins to stage" );
       return;
     }
-
-    System.out.println( "Plugin folders to stage: " + pluginsToStage );
 
     String[] pluginFolders = pluginsToStage.split( "," );
 
     for ( String pluginFolder : pluginFolders ) {
-      // System.out.println( "Scanning plugin folder: " + pluginFolder );
       List<String> stepClasses = findAnnotatedClasses( pluginFolder, Step.class.getName() );
       stepPluginClasses.addAll( stepClasses );
       List<String> xpClasses = findAnnotatedClasses( pluginFolder, ExtensionPoint.class.getName() );
       xpPluginClasses.addAll( xpClasses );
     }
-    System.out.println( "Found " + stepPluginClasses.size() + " step plugin classes" );
-    System.out.println( "Found " + xpPluginClasses.size() + " XP plugin classes" );
+
+
   }
 
   private List<String> findAnnotatedClasses( String folder, String annotationClassName ) {
@@ -160,6 +156,15 @@ public class TransMetaPipelineConverter {
 
     LogChannelInterface log = LogChannel.GENERAL;
 
+    // Add the step handlers for the special cases, functionality which Beams handles specifically
+    //
+    stepHandlers.put( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID, new BeamOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_PUBLISH_PLUGIN_ID, new BeamPublisherStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_SUBSCRIBE_PLUGIN_ID, new BeamSubscriberStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+
     // Create a new Pipeline
     //
     pipelineOptions.setRunner( runnerClass );
@@ -179,11 +184,11 @@ public class TransMetaPipelineConverter {
 
     // Transform all the other steps...
     //
-    addTransforms( stepCollectionMap );
+    handleGenericStep( stepCollectionMap, pipeline );
 
     // Output handling
     //
-    handleBeamOutputSteps( log, stepCollectionMap );
+    handleBeamOutputSteps( log, stepCollectionMap, pipeline );
 
     return pipeline;
   }
@@ -192,134 +197,40 @@ public class TransMetaPipelineConverter {
 
     List<StepMeta> beamInputStepMetas = findBeamInputs();
     for ( StepMeta stepMeta : beamInputStepMetas ) {
-      handlePipelineInput( log, stepCollectionMap, pipeline, stepMeta );
+      BeamStepHandler stepHandler = stepHandlers.get( stepMeta.getStepID() );
+      if ( stepHandler != null && stepHandler.isInput() ) {
+        stepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, transMeta.getStepFields( stepMeta ), null, null );
+      }
     }
   }
 
-  private void handlePipelineInput( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, Pipeline pipeline, StepMeta beamInputStepMeta )
-    throws KettleException, IOException {
-    // Input handling
-    //
-    BeamInputMeta beamInputMeta = (BeamInputMeta) beamInputStepMeta.getStepMetaInterface();
-    FileDefinition inputFileDefinition = beamInputMeta.loadFileDefinition( metaStore );
-    RowMetaInterface fileRowMeta = inputFileDefinition.getRowMeta();
-
-    // Apply the PBegin to KettleRow transform:
-    //
-    if ( inputFileDefinition == null ) {
-      throw new KettleException( "We couldn't find or load the Beam Input step file definition" );
-    }
-    String fileInputLocation = transMeta.environmentSubstitute( beamInputMeta.getInputLocation() );
-
-    BeamInputTransform beamInputTransform = new BeamInputTransform(
-      beamInputStepMeta.getName(),
-      beamInputStepMeta.getName(),
-      fileInputLocation,
-      transMeta.environmentSubstitute( inputFileDefinition.getSeparator() ),
-      JsonRowMeta.toJson(fileRowMeta),
-      stepPluginClasses,
-      xpPluginClasses
-    );
-    PCollection<KettleRow> afterInput = pipeline.apply( beamInputTransform );
-    stepCollectionMap.put( beamInputStepMeta.getName(), afterInput );
-    log.logBasic( "Handled step (INPUT) : " + beamInputStepMeta.getName() );
-  }
-
-  private void handleBeamOutputSteps( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap ) throws KettleException, IOException {
-
+  private void handleBeamOutputSteps( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, Pipeline pipeline ) throws KettleException, IOException {
     List<StepMeta> beamOutputStepMetas = findBeamOutputs();
-    for ( StepMeta beamOutputStepMeta : beamOutputStepMetas ) {
-      BeamOutputMeta beamOutputMeta = (BeamOutputMeta) beamOutputStepMeta.getStepMetaInterface();
-      FileDefinition outputFileDefinition;
-      if ( StringUtils.isEmpty( beamOutputMeta.getFileDescriptionName() ) ) {
-        // Create a default file definition using standard output and sane defaults...
+    for ( StepMeta stepMeta : beamOutputStepMetas ) {
+      BeamStepHandler stepHandler = stepHandlers.get( stepMeta.getStepID() );
+      if ( stepHandler != null && stepHandler.isOutput() ) {
+
+        List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
+        if ( previousSteps.size() > 1 ) {
+          throw new KettleException( "Combining data from multiple steps is not supported yet!" );
+        }
+        StepMeta previousStep = previousSteps.get( 0 );
+
+        PCollection<KettleRow> input = stepCollectionMap.get( previousStep.getName() );
+        if ( input == null ) {
+          throw new KettleException( "Previous PCollection for step " + previousStep.getName() + " could not be found" );
+        }
+
+        // What fields are we getting from the previous step(s)?
         //
-        outputFileDefinition = getDefaultFileDefition( beamOutputStepMeta );
-      } else {
-        outputFileDefinition = beamOutputMeta.loadFileDefinition( metaStore );
-      }
-      RowMetaInterface outputStepRowMeta = transMeta.getStepFields( beamOutputStepMeta );
+        RowMetaInterface rowMeta = transMeta.getStepFields( previousStep );
 
-      // Empty file definition? Add all fields in the output
-      //
-      addAllFieldsToEmptyFileDefinition( outputStepRowMeta, outputFileDefinition );
-
-      // Apply the output transform from KettleRow to PDone
-      //
-      if ( outputFileDefinition == null ) {
-        throw new KettleException( "We couldn't find or load the Beam Output step file definition" );
-      }
-      if ( outputStepRowMeta == null || outputStepRowMeta.isEmpty() ) {
-        throw new KettleException( "No output fields found in the file definition" );
-      }
-
-      BeamOutputTransform beamOutputTransform = new BeamOutputTransform(
-        beamOutputStepMeta.getName(),
-        transMeta.environmentSubstitute( beamOutputMeta.getOutputLocation() ),
-        transMeta.environmentSubstitute( beamOutputMeta.getFilePrefix() ),
-        transMeta.environmentSubstitute( beamOutputMeta.getFileSuffix() ),
-        transMeta.environmentSubstitute( outputFileDefinition.getSeparator() ),
-        transMeta.environmentSubstitute( outputFileDefinition.getEnclosure() ),
-        JsonRowMeta.toJson(outputStepRowMeta),
-        stepPluginClasses,
-        xpPluginClasses
-      );
-
-      // Which step do we apply this transform to?
-      // Ignore info hops until we figure that out.
-      //
-      List<StepMeta> previousSteps = transMeta.findPreviousSteps( beamOutputStepMeta, false );
-      if ( previousSteps.size() > 1 ) {
-        throw new KettleException( "Combining data from multiple steps is not supported yet!" );
-      }
-      StepMeta previousStep = previousSteps.get( 0 );
-
-      // Where does the output step read from?
-      //
-      PCollection<KettleRow> previousPCollection = stepCollectionMap.get( previousStep.getName() );
-      if ( previousPCollection == null ) {
-        throw new KettleException( "Previous PCollection for step " + previousStep.getName() + " could not be found" );
-      }
-
-      // No need to store this, it's PDone.
-      //
-      previousPCollection.apply( beamOutputTransform );
-      log.logBasic( "Handled step (OUTPUT) : " + beamOutputStepMeta.getName() + ", gets data from " + previousStep.getName() );
-
-    }
-  }
-
-
-  private FileDefinition getDefaultFileDefition( StepMeta beamOutputStepMeta ) throws KettleStepException {
-    FileDefinition fileDefinition = new FileDefinition();
-
-    fileDefinition.setName( "Default" );
-    fileDefinition.setEnclosure( "\"" );
-    fileDefinition.setSeparator( "," );
-
-    return fileDefinition;
-  }
-
-  private void addAllFieldsToEmptyFileDefinition( RowMetaInterface rowMeta, FileDefinition fileDefinition ) throws KettleStepException {
-    if ( fileDefinition.getFieldDefinitions().isEmpty() ) {
-      for ( ValueMetaInterface valueMeta : rowMeta.getValueMetaList() ) {
-        fileDefinition.getFieldDefinitions().add( new FieldDefinition(
-            valueMeta.getName(),
-            valueMeta.getTypeDesc(),
-            valueMeta.getLength(),
-            valueMeta.getPrecision(),
-            valueMeta.getConversionMask()
-          )
-        );
+        stepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, rowMeta, previousSteps, input );
       }
     }
   }
 
-  private String buildDataFlowJobName( String name ) {
-    return name.replace( " ", "_" );
-  }
-
-  private void addTransforms( Map<String, PCollection<KettleRow>> stepCollectionMap ) throws KettleException, IOException {
+  private void handleGenericStep( Map<String, PCollection<KettleRow>> stepCollectionMap, Pipeline pipeline ) throws KettleException, IOException {
 
     LogChannelInterface log = LogChannel.GENERAL;
 
@@ -328,9 +239,14 @@ public class TransMetaPipelineConverter {
     List<StepMeta> steps = getSortedStepsList();
 
     for ( StepMeta stepMeta : steps ) {
-      if ( !stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID ) &&
-        !stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID ) ) {
 
+      // Input and output steps are handled else where.
+      //
+      BeamStepHandler stepHandler = stepHandlers.get( stepMeta.getStepID() );
+      if ( stepHandler == null || ( !stepHandler.isInput() && !stepHandler.isOutput() ) ) {
+
+        // Generic step
+        //
         validateStepBeamUsage( stepMeta.getStepMetaInterface() );
 
         // Lookup all the previous steps for this one, excluding info steps like StreamLookup...
@@ -404,25 +320,20 @@ public class TransMetaPipelineConverter {
           }
         }
 
-        // Wrap current step metadata in a tag, otherwise the XML is not valid...
-        //
-        String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
+        if ( stepHandler != null ) {
 
-        if ( stepMeta.getStepMetaInterface() instanceof MemoryGroupByMeta ) {
-
-          handleGroupByStep( stepCollectionMap, log, stepMeta, rowMeta, previousSteps, input );
-
-        } else if ( stepMeta.getStepMetaInterface() instanceof MergeJoinMeta ) {
-
-          handleMergeJoinStep( stepCollectionMap, log, stepMeta );
+          stepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, rowMeta, previousSteps, input );
 
         } else {
+
+          String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
 
           handleGenericStep( log, stepCollectionMap, stepMeta, rowMeta, previousSteps, input, stepMetaInterfaceXml );
 
         }
       }
     }
+
   }
 
   private void handleGenericStep( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, StepMeta stepMeta, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
@@ -432,14 +343,14 @@ public class TransMetaPipelineConverter {
     List<StepMeta> infoStepMetas = transMeta.findPreviousSteps( stepMeta, true );
     List<String> infoSteps = new ArrayList<>();
     List<String> infoRowMetaJsons = new ArrayList<>();
-    List<PCollectionView<List<KettleRow>>> infoCollectionViews = new ArrayList<>(  );
-    for (StepMeta infoStepMeta : infoStepMetas) {
-      if (!previousSteps.contains(infoStepMeta)) {
+    List<PCollectionView<List<KettleRow>>> infoCollectionViews = new ArrayList<>();
+    for ( StepMeta infoStepMeta : infoStepMetas ) {
+      if ( !previousSteps.contains( infoStepMeta ) ) {
         infoSteps.add( infoStepMeta.getName() );
-        infoRowMetaJsons.add( JsonRowMeta.toJson(transMeta.getStepFields( infoStepMeta )));
+        infoRowMetaJsons.add( JsonRowMeta.toJson( transMeta.getStepFields( infoStepMeta ) ) );
         PCollection<KettleRow> infoCollection = stepCollectionMap.get( infoStepMeta.getName() );
-        if (infoCollection==null) {
-          throw new KettleException( "Unable to find collection for step '"+infoStepMeta.getName()+" providing info for '"+stepMeta.getName()+"'");
+        if ( infoCollection == null ) {
+          throw new KettleException( "Unable to find collection for step '" + infoStepMeta.getName() + " providing info for '" + stepMeta.getName() + "'" );
         }
         infoCollectionViews.add( infoCollection.apply( View.asList() ) );
       }
@@ -462,8 +373,7 @@ public class TransMetaPipelineConverter {
     // Send all the information on their way to the right nodes
     //
     StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses,
-      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson(rowMeta), targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews);
-
+      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
 
 
     // Apply the step transform to the previous io step PCollection(s)
@@ -489,172 +399,8 @@ public class TransMetaPipelineConverter {
       stepCollectionMap.put( tupleId, targetPCollection );
     }
 
-    log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s), targets="+targetSteps.size()+", infos="+infoSteps.size() );
+    log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s), targets=" + targetSteps.size() + ", infos=" + infoSteps.size() );
   }
-
-  private void handleGroupByStep( Map<String, PCollection<KettleRow>> stepCollectionMap, LogChannelInterface log, StepMeta stepMeta, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
-                                  PCollection<KettleRow> input ) throws IOException {
-    MemoryGroupByMeta meta = (MemoryGroupByMeta) stepMeta.getStepMetaInterface();
-
-    String[] aggregates = new String[ meta.getAggregateType().length ];
-    for ( int i = 0; i < aggregates.length; i++ ) {
-      aggregates[ i ] = MemoryGroupByMeta.getTypeDesc( meta.getAggregateType()[ i ] );
-    }
-
-    PTransform<PCollection<KettleRow>, PCollection<KettleRow>> stepTransform = new GroupByTransform(
-      stepMeta.getName(),
-      JsonRowMeta.toJson(rowMeta),  // The io row
-      stepPluginClasses,
-      xpPluginClasses,
-      meta.getGroupField(),
-      meta.getSubjectField(),
-      aggregates,
-      meta.getAggregateField()
-    );
-
-    // Apply the step transform to the previous io step PCollection(s)
-    //
-    PCollection<KettleRow> stepPCollection = input.apply( stepMeta.getName(), stepTransform );
-
-    // Save this in the map
-    //
-    stepCollectionMap.put( stepMeta.getName(), stepPCollection );
-    log.logBasic( "Handled Group By (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s)" );
-  }
-
-
-  private void handleMergeJoinStep( Map<String, PCollection<KettleRow>> stepCollectionMap, LogChannelInterface log, StepMeta stepMeta) throws IOException, KettleException {
-
-    MergeJoinMeta meta = (MergeJoinMeta) stepMeta.getStepMetaInterface();
-
-    String joinType = meta.getJoinType();
-    String[] leftKeys = meta.getKeyFields1();
-    String[] rightKeys = meta.getKeyFields2();
-
-    StepMeta leftInfoStep = meta.getStepIOMeta().getInfoStreams().get(0).getStepMeta();
-    if (leftInfoStep==null) {
-      throw new KettleException( "The left source step isn't defined in the Merge Join step called '"+stepMeta.getName()+"'" );
-    }
-    PCollection<KettleRow> leftPCollection = stepCollectionMap.get( leftInfoStep.getName() );
-    if (leftPCollection==null) {
-      throw new KettleException( "The left source collection in the pipeline couldn't be found (probably a programming error)" );
-    }
-    RowMetaInterface leftRowMeta = transMeta.getStepFields( leftInfoStep );
-
-    StepMeta rightInfoStep = meta.getStepIOMeta().getInfoStreams().get(1).getStepMeta();
-    if (rightInfoStep==null) {
-      throw new KettleException( "The right source step isn't defined in the Merge Join step called '"+stepMeta.getName()+"'" );
-    }
-    PCollection<KettleRow> rightPCollection = stepCollectionMap.get( rightInfoStep.getName() );
-    if (rightPCollection==null) {
-      throw new KettleException( "The right source collection in the pipeline couldn't be found (probably a programming error)" );
-    }
-    RowMetaInterface rightRowMeta = transMeta.getStepFields( rightInfoStep );
-
-    // Create key-value pairs (KV) for the left collections
-    //
-    List<String> leftK = new ArrayList<>( Arrays.asList( leftKeys) );
-    RowMetaInterface leftKRowMeta = new RowMeta();
-    List<String> leftV = new ArrayList<>( );
-    RowMetaInterface leftVRowMeta = new RowMeta();
-    for (String leftKey : leftKeys) {
-      leftKRowMeta.addValueMeta(leftRowMeta.searchValueMeta( leftKey ).clone());
-    }
-    for (ValueMetaInterface valueMeta : leftRowMeta.getValueMetaList()) {
-      String valueName = valueMeta.getName();
-      if ( Const.indexOfString(valueName, leftKeys)<0) {
-        leftV.add(valueName);
-        leftVRowMeta.addValueMeta( valueMeta.clone() );
-      }
-    }
-
-    KettleKeyValueFn leftKVFn = new KettleKeyValueFn(
-      JsonRowMeta.toJson(leftRowMeta), stepPluginClasses, xpPluginClasses, leftK.toArray( new String[0] ), leftV.toArray(new String[0]), stepMeta.getName() );
-    PCollection<KV<KettleRow, KettleRow>> leftKVPCollection = leftPCollection.apply( ParDo.of( leftKVFn ) );
-
-    // Create key-value pairs (KV) for the left collections
-    //
-    List<String> rightK = new ArrayList<>( Arrays.asList( rightKeys) );
-    RowMetaInterface rightKRowMeta = new RowMeta();
-    List<String> rightV = new ArrayList<>(  );
-    RowMetaInterface rightVRowMeta = new RowMeta();
-    for (String rightKey : rightKeys) {
-      rightKRowMeta.addValueMeta(rightRowMeta.searchValueMeta( rightKey ).clone());
-    }
-    for (ValueMetaInterface valueMeta : rightRowMeta.getValueMetaList()) {
-      String valueName = valueMeta.getName();
-      if ( Const.indexOfString(valueName, rightKeys)<0) {
-        rightV.add(valueName);
-        rightVRowMeta.addValueMeta(valueMeta.clone());
-      }
-    }
-
-    KettleKeyValueFn rightKVFn = new KettleKeyValueFn(
-      JsonRowMeta.toJson(rightRowMeta), stepPluginClasses, xpPluginClasses, rightK.toArray( new String[0] ), rightV.toArray(new String[0]), stepMeta.getName() );
-    PCollection<KV<KettleRow, KettleRow>> rightKVPCollection = rightPCollection.apply( ParDo.of( rightKVFn ) );
-
-    PCollection<KV<KettleRow, KV<KettleRow, KettleRow>>> kvpCollection;
-
-    Object[] leftNull = RowDataUtil.allocateRowData( leftVRowMeta.size() );
-    Object[] rightNull = RowDataUtil.allocateRowData( rightVRowMeta.size() );
-
-    if (MergeJoinMeta.join_types[0].equals(joinType)) {
-      // Inner Join
-      //
-      kvpCollection = Join.innerJoin( leftKVPCollection, rightKVPCollection );
-    } else if (MergeJoinMeta.join_types[1].equals(joinType)) {
-      // Left outer join
-      //
-      kvpCollection = Join.leftOuterJoin( leftKVPCollection, rightKVPCollection, new KettleRow(rightNull));
-    } else if (MergeJoinMeta.join_types[2].equals(joinType)) {
-      // Right outer join
-      //
-      kvpCollection = Join.rightOuterJoin( leftKVPCollection, rightKVPCollection, new KettleRow(leftNull));
-    } else if (MergeJoinMeta.join_types[3].equals(joinType)) {
-      // Full outer join
-      //
-      kvpCollection = Join.fullOuterJoin( leftKVPCollection, rightKVPCollection, new KettleRow(leftNull), new KettleRow(rightNull));
-    } else {
-      throw new KettleException( "Join type '"+joinType+"' is not recognized or supported" );
-    }
-
-    // This is the output of the step, we'll try to mimic this
-    //
-    final RowMetaInterface outputRowMeta = leftVRowMeta.clone();
-    outputRowMeta.addRowMeta( leftKRowMeta);
-    outputRowMeta.addRowMeta( rightKRowMeta );
-    outputRowMeta.addRowMeta( rightVRowMeta );
-
-    // Now we need to collapse the results where we have a Key-Value pair of
-    // The key (left or right depending but the same row metadata (leftKRowMeta == rightKRowMeta)
-    //    The key is simply a KettleRow
-    // The value:
-    //    The value is the resulting combination of the Value parts of the left and right side.
-    //    These can be null depending on the join type
-    // So we want to grab all this information and put it back together on a single row.
-    //
-    DoFn<KV<KettleRow, KV<KettleRow, KettleRow>>, KettleRow> assemblerFn = new AssemblerFn(
-      JsonRowMeta.toJson(outputRowMeta),
-      JsonRowMeta.toJson(leftKRowMeta),
-      JsonRowMeta.toJson(leftVRowMeta),
-      JsonRowMeta.toJson(rightVRowMeta),
-      stepMeta.getName(),
-      stepPluginClasses,
-      xpPluginClasses
-    );
-
-    // Apply the step transform to the previous io step PCollection(s)
-    //
-    PCollection<KettleRow> stepPCollection = kvpCollection.apply( ParDo.of(assemblerFn) );
-
-    // Save this in the map
-    //
-    stepCollectionMap.put( stepMeta.getName(), stepPCollection );
-
-    log.logBasic( "Handled Merge Join (STEP) : " + stepMeta.getName()  );
-  }
-
-
 
   private void validateStepBeamUsage( StepMetaInterface meta ) throws KettleException {
     if ( meta instanceof GroupByMeta ) {
@@ -702,7 +448,6 @@ public class TransMetaPipelineConverter {
     }
     return steps;
   }
-
 
   /**
    * Sort the steps from start to finish...
@@ -849,5 +594,21 @@ public class TransMetaPipelineConverter {
     } // finished sorting
 
     return steps;
+  }
+
+  /**
+   * Gets stepHandlers
+   *
+   * @return value of stepHandlers
+   */
+  public Map<String, BeamStepHandler> getStepHandlers() {
+    return stepHandlers;
+  }
+
+  /**
+   * @param stepHandlers The stepHandlers to set
+   */
+  public void setStepHandlers( Map<String, BeamStepHandler> stepHandlers ) {
+    this.stepHandlers = stepHandlers;
   }
 }
