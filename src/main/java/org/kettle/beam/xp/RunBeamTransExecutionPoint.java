@@ -227,7 +227,7 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
 
       String metricsType = result.getName().getNamespace();
       String metricsName = result.getName().getName();
-      long processed = result.getCommitted();
+      long processed = result.getAttempted();
 
       StepMetaDataCombi combi = findCombi( trans, metricsName );
       if ( combi != null ) {
