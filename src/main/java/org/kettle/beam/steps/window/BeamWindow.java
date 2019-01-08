@@ -8,30 +8,16 @@ import org.pentaho.di.trans.step.StepDataInterface;
 import org.pentaho.di.trans.step.StepInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.steps.dummytrans.DummyTrans;
 
-public class BeamWindow extends BaseStep implements StepInterface {
+/** Behaves like a Dummy step, simply passing rows in the regular runner.
+ *  In Beam this code isn't used.  So the data passing in Dummy only is useful for unit testing and development in Spoon.
+ *
+ */
+public class BeamWindow extends DummyTrans implements StepInterface {
 
-  /**
-   * This is the base step that forms that basis for all steps. You can derive from this class to implement your own
-   * steps.
-   *
-   * @param stepMeta          The StepMeta object to run.
-   * @param stepDataInterface the data object to store temporary data, database connections, caches, result sets,
-   *                          hashtables etc.
-   * @param copyNr            The copynumber for this step.
-   * @param transMeta         The TransInfo of which the step stepMeta is part of.
-   * @param trans             The (running) transformation to obtain information shared among the steps.
-   */
-  public BeamWindow( StepMeta stepMeta, StepDataInterface stepDataInterface, int copyNr, TransMeta transMeta,
-                     Trans trans ) {
+  public BeamWindow( StepMeta stepMeta, StepDataInterface stepDataInterface, int copyNr, TransMeta transMeta, Trans trans ) {
     super( stepMeta, stepDataInterface, copyNr, transMeta, trans );
   }
 
-  @Override public boolean processRow( StepMetaInterface smi, StepDataInterface sdi ) throws KettleException {
-
-    // Outside of a Beam Runner this step doesn't actually do anything, it's just metadata
-    // This step gets converted into Beam API calls in a pipeline
-    //
-    return false;
-  }
 }

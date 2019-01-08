@@ -18,9 +18,8 @@ Note you need the Pentaho settings.xml in your ~/.m2 : https://github.com/pentah
 
 * Create a new directory called kettle-beam in \<PDI-DIR\>plugins/ 
 * Copy target/kettle-beam-<version>.jar to \<PDI-DIR\>/plugins/kettle-beam/
-* Copy the other jar files in target/lib to \<PDI-DIR\>/lib
+* Copy the other jar files in target/lib to \<PDI-DIR\>/plugins/kettle-beam/lib/
   
-  I know it's dirty, fixing it later
   
 ## Configure
 
@@ -44,10 +43,24 @@ You can use the variables to make your transformations completely generic.  For 
 
 ## Supported
 
-* Only straight line between Beam Input and Output is supported.  
-* Sort and Group by are not yet supported.
-* Group By step : experimental, SUM (Integer, Number), COUNT
-* External plugins are not yet supported.
+* Input: Beam Input and GCP Pub/Sub Subscribe
+* Output: Beam Output and GCP Pub/Sub Publish
+* Windowing with the Beam Window step 
+* Sort rows is not yet supported and will never be supported in a generic sense.
+* Group By step : experimental, SUM (Integer, Number), COUNT, MIN, MAX, FIRST (throws errors for not-supported stuff)
+* Merge Join
+* Stream Lookup (side loading data)
+* Filter rows (including targeting steps for true/false)
+* Switch/Case
+* Plugin support through the Beam Job Configuration: specify which plugins to include in the runtime
+
+## Runners
+* Beam Direct : working
+* Google Cloud DataFlow : working
+* Apache Spark : mostly untested, configurable (feedback welcome)
+* Apache Flink : not started yet, stubbed out code
+* Aache Apex : not started yet, stubbed out code
+* JStorm : not started yet
 
 ## More information
 
