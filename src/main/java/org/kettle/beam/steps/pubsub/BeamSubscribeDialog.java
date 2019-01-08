@@ -31,6 +31,7 @@ public class BeamSubscribeDialog extends BaseStepDialog implements StepDialogInt
   int middle;
   int margin;
 
+  private TextVar wSubscription;
   private TextVar wTopic;
   private Combo wMessageType;
   private TextVar wMessageField;
@@ -79,6 +80,23 @@ public class BeamSubscribeDialog extends BaseStepDialog implements StepDialogInt
     wStepname.setLayoutData( fdStepname );
     Control lastControl = wStepname;
 
+    Label wlSubscription = new Label( shell, SWT.RIGHT );
+    wlSubscription.setText( BaseMessages.getString( PKG, "BeamSubscribeDialog.Subscription" ) );
+    props.setLook( wlSubscription );
+    FormData fdlSubscription = new FormData();
+    fdlSubscription.left = new FormAttachment( 0, 0 );
+    fdlSubscription.top = new FormAttachment( lastControl, margin );
+    fdlSubscription.right = new FormAttachment( middle, -margin );
+    wlSubscription.setLayoutData( fdlSubscription );
+    wSubscription = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSubscription );
+    FormData fdSubscription = new FormData();
+    fdSubscription.left = new FormAttachment( middle, 0 );
+    fdSubscription.top = new FormAttachment( wlSubscription, 0, SWT.CENTER );
+    fdSubscription.right = new FormAttachment( 100, 0 );
+    wSubscription.setLayoutData( fdSubscription );
+    lastControl = wSubscription;
+    
     Label wlTopic = new Label( shell, SWT.RIGHT );
     wlTopic.setText( BaseMessages.getString( PKG, "BeamSubscribeDialog.Topic" ) );
     props.setLook( wlTopic );
@@ -175,6 +193,7 @@ public class BeamSubscribeDialog extends BaseStepDialog implements StepDialogInt
    */
   public void getData() {
     wStepname.setText( stepname );
+    wSubscription.setText( Const.NVL( input.getSubscription(), "" ) );
     wTopic.setText( Const.NVL( input.getTopic(), "" ) );
     wMessageType.setText( Const.NVL( input.getMessageType(), "" ) );
     wMessageField.setText( Const.NVL( input.getMessageField(), "" ) );
@@ -202,6 +221,7 @@ public class BeamSubscribeDialog extends BaseStepDialog implements StepDialogInt
   private void getInfo( BeamSubscribeMeta in ) {
     stepname = wStepname.getText(); // return value
 
+    in.setSubscription( wSubscription.getText() );
     in.setTopic( wTopic.getText() );
     in.setMessageType( wMessageType.getText() );
     in.setMessageField( wMessageField.getText() );

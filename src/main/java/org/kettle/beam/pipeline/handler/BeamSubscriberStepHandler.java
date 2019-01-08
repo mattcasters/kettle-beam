@@ -63,7 +63,8 @@ public class BeamSubscriberStepHandler implements BeamStepHandler {
     BeamSubscribeTransform subscribeTransform = new BeamSubscribeTransform(
       stepMeta.getName(),
       stepMeta.getName(),
-      inputMeta.getName(),
+      transMeta.environmentSubstitute(inputMeta.getSubscription()),
+      transMeta.environmentSubstitute(inputMeta.getTopic()),
       inputMeta.getMessageType(),
       rowMetaJson,
       stepPluginClasses,

@@ -2,13 +2,9 @@ package org.kettle.beam.pipeline;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
-import org.apache.beam.sdk.extensions.joinlibrary.Join;
 import org.apache.beam.sdk.options.PipelineOptions;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.Flatten;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.View;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
@@ -19,8 +15,6 @@ import org.apache.commons.vfs2.FileObject;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.coder.KettleRowCoder;
-import org.kettle.beam.core.fn.AssemblerFn;
-import org.kettle.beam.core.fn.KettleKeyValueFn;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.core.shared.VariableValue;
 import org.kettle.beam.core.transform.StepTransform;
@@ -33,7 +27,6 @@ import org.kettle.beam.pipeline.handler.BeamOutputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamPublisherStepHandler;
 import org.kettle.beam.pipeline.handler.BeamStepHandler;
 import org.kettle.beam.pipeline.handler.BeamSubscriberStepHandler;
-import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.extension.ExtensionPoint;
@@ -42,10 +35,8 @@ import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.plugins.JarFileCache;
 import org.pentaho.di.core.plugins.PluginFolder;
 import org.pentaho.di.core.plugins.PluginRegistry;
-import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.TransMeta;
@@ -54,7 +45,6 @@ import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.di.trans.steps.groupby.GroupByMeta;
-import org.pentaho.di.trans.steps.mergejoin.MergeJoinMeta;
 import org.pentaho.di.trans.steps.sort.SortRowsMeta;
 import org.pentaho.di.trans.steps.uniquerows.UniqueRowsMeta;
 import org.pentaho.metastore.api.IMetaStore;
@@ -63,7 +53,6 @@ import org.scannotation.AnnotationDB;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -198,9 +187,7 @@ public class TransMetaPipelineConverter {
     List<StepMeta> beamInputStepMetas = findBeamInputs();
     for ( StepMeta stepMeta : beamInputStepMetas ) {
       BeamStepHandler stepHandler = stepHandlers.get( stepMeta.getStepID() );
-      if ( stepHandler != null && stepHandler.isInput() ) {
-        stepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, transMeta.getStepFields( stepMeta ), null, null );
-      }
+      stepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, transMeta.getStepFields( stepMeta ), null, null );
     }
   }
 
@@ -208,25 +195,23 @@ public class TransMetaPipelineConverter {
     List<StepMeta> beamOutputStepMetas = findBeamOutputs();
     for ( StepMeta stepMeta : beamOutputStepMetas ) {
       BeamStepHandler stepHandler = stepHandlers.get( stepMeta.getStepID() );
-      if ( stepHandler != null && stepHandler.isOutput() ) {
 
-        List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
-        if ( previousSteps.size() > 1 ) {
-          throw new KettleException( "Combining data from multiple steps is not supported yet!" );
-        }
-        StepMeta previousStep = previousSteps.get( 0 );
-
-        PCollection<KettleRow> input = stepCollectionMap.get( previousStep.getName() );
-        if ( input == null ) {
-          throw new KettleException( "Previous PCollection for step " + previousStep.getName() + " could not be found" );
-        }
-
-        // What fields are we getting from the previous step(s)?
-        //
-        RowMetaInterface rowMeta = transMeta.getStepFields( previousStep );
-
-        stepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, rowMeta, previousSteps, input );
+      List<StepMeta> previousSteps = transMeta.findPreviousSteps( stepMeta, false );
+      if ( previousSteps.size() > 1 ) {
+        throw new KettleException( "Combining data from multiple steps is not supported yet!" );
       }
+      StepMeta previousStep = previousSteps.get( 0 );
+
+      PCollection<KettleRow> input = stepCollectionMap.get( previousStep.getName() );
+      if ( input == null ) {
+        throw new KettleException( "Previous PCollection for step " + previousStep.getName() + " could not be found" );
+      }
+
+      // What fields are we getting from the previous step(s)?
+      //
+      RowMetaInterface rowMeta = transMeta.getStepFields( previousStep );
+
+      stepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, rowMeta, previousSteps, input );
     }
   }
 
@@ -431,8 +416,10 @@ public class TransMetaPipelineConverter {
    */
   private List<StepMeta> findBeamInputs() throws KettleException {
     List<StepMeta> steps = new ArrayList<>();
-    for ( StepMeta stepMeta : transMeta.getSteps() ) {
-      if ( stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID ) ) {
+    for ( StepMeta stepMeta : transMeta.getTransHopSteps( false ) ) {
+
+      BeamStepHandler stepHandler = stepHandlers.get( stepMeta.getStepID() );
+      if ( stepHandler != null && stepHandler.isInput() ) {
         steps.add( stepMeta );
       }
     }
@@ -441,8 +428,9 @@ public class TransMetaPipelineConverter {
 
   private List<StepMeta> findBeamOutputs() throws KettleException {
     List<StepMeta> steps = new ArrayList<>();
-    for ( StepMeta stepMeta : transMeta.getSteps() ) {
-      if ( stepMeta.getStepID().equals( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID ) ) {
+    for ( StepMeta stepMeta : transMeta.getTransHopSteps( false ) ) {
+      BeamStepHandler stepHandler = stepHandlers.get( stepMeta.getStepID() );
+      if ( stepHandler != null && stepHandler.isOutput() ) {
         steps.add( stepMeta );
       }
     }
@@ -456,7 +444,7 @@ public class TransMetaPipelineConverter {
 
     // Create a copy of the steps
     //
-    List<StepMeta> steps = new ArrayList<>( transMeta.getSteps() );
+    List<StepMeta> steps = new ArrayList<>( transMeta.getTransHopSteps( false ) );
 
     // The bubble sort algorithm in contrast to the QuickSort or MergeSort
     // algorithms

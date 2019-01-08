@@ -79,6 +79,7 @@ public class BeamOutputStepHandler implements BeamStepHandler {
       transMeta.environmentSubstitute( beamOutputMeta.getFileSuffix() ),
       transMeta.environmentSubstitute( outputFileDefinition.getSeparator() ),
       transMeta.environmentSubstitute( outputFileDefinition.getEnclosure() ),
+      beamOutputMeta.isWindowed(),
       JsonRowMeta.toJson(rowMeta),
       stepPluginClasses,
       xpPluginClasses

@@ -58,11 +58,11 @@ public class BeamPublishMeta extends BaseStepMeta implements StepMetaInterface {
   }
 
   @Override public StepDataInterface getStepData() {
-    return new BeamSubscribeData();
+    return new BeamPublishData();
   }
 
   @Override public String getDialogClassName() {
-    return BeamSubscribeDialog.class.getName();
+    return BeamPublishDialog.class.getName();
   }
 
   @Override public void getFields( RowMetaInterface inputRowMeta, String name, RowMetaInterface[] info, StepMeta nextStep, VariableSpace space, Repository repository, IMetaStore metaStore )

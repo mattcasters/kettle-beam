@@ -36,11 +36,13 @@ import java.util.List;
 )
 public class BeamSubscribeMeta extends BaseStepMeta implements StepMetaInterface {
 
+  public static final String SUBSCRIPTION = "subscription";
   public static final String TOPIC = "topic";
   public static final String MESSAGE_TYPE = "message_type";
   public static final String MESSAGE_FIELD = "message_field";
 
   private String topic;
+  private String subscription;
   private String messageType;
   private String messageField;
 
@@ -49,6 +51,7 @@ public class BeamSubscribeMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   @Override public void setDefault() {
+    subscription = "Subscription";
     topic = "Topic";
     messageType = "String";
     messageField = "message";
@@ -80,7 +83,7 @@ public class BeamSubscribeMeta extends BaseStepMeta implements StepMetaInterface
     String fieldName = space.environmentSubstitute( messageField );
 
     ValueMetaInterface valueMeta;
-    if ( BeamDefaults.PUBSUB_MESSAGE_TYPE_STRING.equalsIgnoreCase( messageType ) ) {
+    if ( BeamDefaults.PUBSUB_MESSAGE_TYPE_STRING.equalsIgnoreCase( type ) ) {
       valueMeta = new ValueMetaString( fieldName );
     } else {
       valueMeta = new ValueMetaSerializable( fieldName );
@@ -92,6 +95,7 @@ public class BeamSubscribeMeta extends BaseStepMeta implements StepMetaInterface
 
   @Override public String getXML() throws KettleException {
     StringBuffer xml = new StringBuffer();
+    xml.append( XMLHandler.addTagValue( SUBSCRIPTION, subscription ) );
     xml.append( XMLHandler.addTagValue( TOPIC, topic ) );
     xml.append( XMLHandler.addTagValue( MESSAGE_TYPE, messageType ) );
     xml.append( XMLHandler.addTagValue( MESSAGE_FIELD, messageField ) );
@@ -99,11 +103,28 @@ public class BeamSubscribeMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   @Override public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
+    subscription = XMLHandler.getTagValue( stepnode, SUBSCRIPTION );
     topic = XMLHandler.getTagValue( stepnode, TOPIC );
     messageType = XMLHandler.getTagValue( stepnode, MESSAGE_TYPE );
     messageField = XMLHandler.getTagValue( stepnode, MESSAGE_FIELD );
   }
 
+
+  /**
+   * Gets subscription
+   *
+   * @return value of subscription
+   */
+  public String getSubscription() {
+    return subscription;
+  }
+
+  /**
+   * @param subscription The subscription to set
+   */
+  public void setSubscription( String subscription ) {
+    this.subscription = subscription;
+  }
 
   /**
    * Gets topic

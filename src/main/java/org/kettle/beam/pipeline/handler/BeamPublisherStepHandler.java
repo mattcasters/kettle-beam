@@ -59,8 +59,8 @@ public class BeamPublisherStepHandler implements BeamStepHandler {
     BeamPublishTransform beamOutputTransform = new BeamPublishTransform(
       stepMeta.getName(),
       transMeta.environmentSubstitute( publishMeta.getTopic() ),
-      publishMeta.getTopic(),
       publishMeta.getMessageType(),
+      publishMeta.getMessageField(),
       JsonRowMeta.toJson(rowMeta),
       stepPluginClasses,
       xpPluginClasses
