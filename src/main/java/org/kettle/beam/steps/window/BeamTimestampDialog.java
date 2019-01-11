@@ -16,6 +16,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.kettle.beam.core.BeamDefaults;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
@@ -24,20 +25,18 @@ import org.pentaho.di.trans.step.StepDialogInterface;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 
-public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterface {
-  private static Class<?> PKG = BeamWindowDialog.class; // for i18n purposes, needed by Translator2!!
-  private final BeamWindowMeta input;
+public class BeamTimestampDialog extends BaseStepDialog implements StepDialogInterface {
+  private static Class<?> PKG = BeamTimestampDialog.class; // for i18n purposes, needed by Translator2!!
+  private final BeamTimestampMeta input;
 
   int middle;
   int margin;
 
-  private Combo wWindowType;
-  private TextVar wDuration;
-  private TextVar wEvery;
+  private Combo wFieldName;
 
-  public BeamWindowDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
+  public BeamTimestampDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
     super( parent, (BaseStepMeta) in, transMeta, sname );
-    input = (BeamWindowMeta) in;
+    input = (BeamTimestampMeta) in;
   }
 
   public String open() {
@@ -55,10 +54,18 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     formLayout.marginHeight = Const.FORM_MARGIN;
 
     shell.setLayout( formLayout );
-    shell.setText( BaseMessages.getString( PKG, "BeamWindowDialog.DialogTitle" ) );
+    shell.setText( BaseMessages.getString( PKG, "BeamTimestampDialog.DialogTitle" ) );
 
     middle = props.getMiddlePct();
     margin = Const.MARGIN;
+
+    String[] fieldNames;
+    try {
+      fieldNames = transMeta.getPrevStepFields( stepMeta ).getFieldNames();
+    } catch( KettleException e ) {
+      log.logError("Error getting fields from previous steps", e);
+      fieldNames = new String[] {};
+    }
 
     // Stepname line
     wlStepname = new Label( shell, SWT.RIGHT );
@@ -79,57 +86,23 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     wStepname.setLayoutData( fdStepname );
     Control lastControl = wStepname;
 
-    Label wlWindowType = new Label( shell, SWT.RIGHT );
-    wlWindowType.setText( BaseMessages.getString( PKG, "BeamWindowDialog.WindowType" ) );
-    props.setLook( wlWindowType );
-    FormData fdlWindowType = new FormData();
-    fdlWindowType.left = new FormAttachment( 0, 0 );
-    fdlWindowType.top = new FormAttachment( lastControl, margin );
-    fdlWindowType.right = new FormAttachment( middle, -margin );
-    wlWindowType.setLayoutData( fdlWindowType );
-    wWindowType = new Combo( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wWindowType );
-    wWindowType.setItems( BeamDefaults.WINDOW_TYPES );
-    FormData fdWindowType = new FormData();
-    fdWindowType.left = new FormAttachment( middle, 0 );
-    fdWindowType.top = new FormAttachment( wlWindowType, 0, SWT.CENTER );
-    fdWindowType.right = new FormAttachment( 100, 0 );
-    wWindowType.setLayoutData( fdWindowType );
-    lastControl = wWindowType;
-
-    Label wlDuration = new Label( shell, SWT.RIGHT );
-    wlDuration.setText( BaseMessages.getString( PKG, "BeamWindowDialog.Duration" ) );
-    props.setLook( wlDuration );
-    FormData fdlDuration = new FormData();
-    fdlDuration.left = new FormAttachment( 0, 0 );
-    fdlDuration.top = new FormAttachment( lastControl, margin );
-    fdlDuration.right = new FormAttachment( middle, -margin );
-    wlDuration.setLayoutData( fdlDuration );
-    wDuration = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wDuration );
-    FormData fdDuration = new FormData();
-    fdDuration.left = new FormAttachment( middle, 0 );
-    fdDuration.top = new FormAttachment( wlDuration, 0, SWT.CENTER );
-    fdDuration.right = new FormAttachment( 100, 0 );
-    wDuration.setLayoutData( fdDuration );
-    lastControl = wDuration;
-
-    Label wlEvery = new Label( shell, SWT.RIGHT );
-    wlEvery.setText( BaseMessages.getString( PKG, "BeamWindowDialog.Every" ) );
-    props.setLook( wlEvery );
-    FormData fdlEvery = new FormData();
-    fdlEvery.left = new FormAttachment( 0, 0 );
-    fdlEvery.top = new FormAttachment( lastControl, margin );
-    fdlEvery.right = new FormAttachment( middle, -margin );
-    wlEvery.setLayoutData( fdlEvery );
-    wEvery = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wEvery );
-    FormData fdEvery = new FormData();
-    fdEvery.left = new FormAttachment( middle, 0 );
-    fdEvery.top = new FormAttachment( wlEvery, 0, SWT.CENTER );
-    fdEvery.right = new FormAttachment( 100, 0 );
-    wEvery.setLayoutData( fdEvery );
-    lastControl = wEvery;
+    Label wlFieldName = new Label( shell, SWT.RIGHT );
+    wlFieldName.setText( BaseMessages.getString( PKG, "BeamTimestampDialog.FieldName" ) );
+    props.setLook( wlFieldName );
+    FormData fdlFieldName = new FormData();
+    fdlFieldName.left = new FormAttachment( 0, 0 );
+    fdlFieldName.top = new FormAttachment( lastControl, margin );
+    fdlFieldName.right = new FormAttachment( middle, -margin );
+    wlFieldName.setLayoutData( fdlFieldName );
+    wFieldName = new Combo( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFieldName );
+    wFieldName.setItems( fieldNames );
+    FormData fdFieldName = new FormData();
+    fdFieldName.left = new FormAttachment( middle, 0 );
+    fdFieldName.top = new FormAttachment( wlFieldName, 0, SWT.CENTER );
+    fdFieldName.right = new FormAttachment( 100, 0 );
+    wFieldName.setLayoutData( fdFieldName );
+    lastControl = wFieldName;
 
     wOK = new Button( shell, SWT.PUSH );
     wOK.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
@@ -150,8 +123,7 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     };
 
     wStepname.addSelectionListener( lsDef );
-    wWindowType.addSelectionListener( lsDef );
-    wDuration.addSelectionListener( lsDef );
+    wFieldName.addSelectionListener( lsDef );
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addListener( SWT.Close, e->cancel());
@@ -175,9 +147,7 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
    */
   public void getData() {
     wStepname.setText( stepname );
-    wWindowType.setText( Const.NVL( input.getWindowType(), "" ) );
-    wDuration.setText( Const.NVL( input.getDuration(), "" ) );
-    wEvery.setText( Const.NVL( input.getEvery(), "" ) );
+    wFieldName.setText( Const.NVL( input.getFieldName(), "" ) );
 
     wStepname.selectAll();
     wStepname.setFocus();
@@ -199,12 +169,10 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     dispose();
   }
 
-  private void getInfo( BeamWindowMeta in ) {
+  private void getInfo( BeamTimestampMeta in ) {
     stepname = wStepname.getText(); // return value
 
-    in.setWindowType( wWindowType.getText() );
-    in.setDuration( wDuration.getText() );
-    in.setEvery( wEvery.getText() );
+    in.setFieldName( wFieldName.getText() );
 
     input.setChanged();
   }

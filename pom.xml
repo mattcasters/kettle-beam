@@ -23,6 +23,7 @@
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
     <apache-beam-version>2.9.0</apache-beam-version>
+    <kettle-beam-version>0.2.0-SNAPSHOT</kettle-beam-version>
   </properties>
 
   <repositories>
@@ -97,7 +98,7 @@
     <dependency>
       <groupId>kettle-beam</groupId>
       <artifactId>kettle-beam-core</artifactId>
-      <version>0.1.0-SNAPSHOT</version>
+      <version>${kettle-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
@@ -277,7 +278,7 @@
       <dependency>
         <groupId>kettle-beam</groupId>
         <artifactId>kettle-beam-core</artifactId>
-        <version>0.0.4-SNAPSHOT</version>
+        <version>${kettle-beam-version}</version>
       </dependency>
 
       <dependency>
@@ -292,5 +293,5 @@
 
 
   <groupId>kettle-beam</groupId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>${kettle-beam-version}</version>
 </project>

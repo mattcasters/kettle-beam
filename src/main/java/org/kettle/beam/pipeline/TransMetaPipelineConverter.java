@@ -27,6 +27,7 @@ import org.kettle.beam.pipeline.handler.BeamOutputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamPublisherStepHandler;
 import org.kettle.beam.pipeline.handler.BeamStepHandler;
 import org.kettle.beam.pipeline.handler.BeamSubscriberStepHandler;
+import org.kettle.beam.pipeline.handler.BeamTimestampStepHandler;
 import org.kettle.beam.pipeline.handler.BeamWindowStepHandler;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
@@ -155,6 +156,7 @@ public class TransMetaPipelineConverter {
     stepHandlers.put( BeamDefaults.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
     stepHandlers.put( BeamDefaults.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
     stepHandlers.put( BeamDefaults.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
 
     // Create a new Pipeline
     //
