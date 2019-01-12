@@ -20,6 +20,8 @@ import org.kettle.beam.core.shared.VariableValue;
 import org.kettle.beam.core.transform.StepTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
+import org.kettle.beam.pipeline.handler.BeamBigQueryInputStepHandler;
+import org.kettle.beam.pipeline.handler.BeamBigQueryOutputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamGroupByStepHandler;
 import org.kettle.beam.pipeline.handler.BeamInputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamMergeJoinStepHandler;
@@ -157,6 +159,8 @@ public class TransMetaPipelineConverter {
     stepHandlers.put( BeamDefaults.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
     stepHandlers.put( BeamDefaults.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
     stepHandlers.put( BeamDefaults.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID, new BeamBigQueryInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
 
     // Create a new Pipeline
     //

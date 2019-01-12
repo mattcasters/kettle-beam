@@ -105,7 +105,6 @@
       <artifactId>beam-sdks-java-extensions-join-library</artifactId>
       <version>${apache-beam-version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.11</artifactId>
@@ -117,7 +116,11 @@
       <version>2.4.0</version>
       <scope>provided</scope>
     </dependency>
-
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-bigquery</artifactId>
+      <version>1.55.0</version>
+    </dependency>
 
     <dependency>
       <groupId>junit</groupId>
@@ -261,7 +264,6 @@
         <artifactId>auto-service</artifactId>
         <version>1.0-rc4</version>
       </dependency>
-
       <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-core_2.12</artifactId>
@@ -273,7 +275,11 @@
         <version>2.4.0</version>
         <scope>provided</scope>
       </dependency>
-
+      <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-bigquery</artifactId>
+        <version>1.55.0</version>
+      </dependency>
 
       <dependency>
         <groupId>kettle-beam</groupId>
@@ -293,5 +299,5 @@
 
 
   <groupId>kettle-beam</groupId>
-  <version>${kettle-beam-version}</version>
+  <version>0.2.0-SNAPSHOT</version>
 </project>
