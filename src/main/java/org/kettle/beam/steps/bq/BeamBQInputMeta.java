@@ -1,10 +1,21 @@
 package org.kettle.beam.steps.bq;
 
+import com.google.api.services.bigquery.model.TableReference;
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.FieldList;
+import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.Schema;
+import com.google.cloud.bigquery.Table;
+import com.google.cloud.bigquery.TableDefinition;
+import org.apache.commons.lang.StringUtils;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
@@ -77,7 +88,7 @@ public class BeamBQInputMeta extends BaseStepMeta implements StepMetaInterface {
         valueMeta.setOrigin( name );
         inputRowMeta.addValueMeta( valueMeta );
       }
-    } catch(Exception e) {
+    } catch ( Exception e ) {
       throw new KettleStepException( "Error getting Beam BQ Input step output", e );
     }
   }
@@ -88,18 +99,18 @@ public class BeamBQInputMeta extends BaseStepMeta implements StepMetaInterface {
 
     xml.append( XMLHandler.addTagValue( PROJECT_ID, projectId ) );
     xml.append( XMLHandler.addTagValue( DATASET_ID, datasetId ) );
-    xml.append( XMLHandler.addTagValue( TABLE_ID, tableId) );
-    xml.append( XMLHandler.addTagValue( QUERY, query) );
+    xml.append( XMLHandler.addTagValue( TABLE_ID, tableId ) );
+    xml.append( XMLHandler.addTagValue( QUERY, query ) );
 
-    xml.append( XMLHandler.openTag( "fields") );
-    for (BQField field : fields ) {
-      xml.append( XMLHandler.openTag( "field") );
-      xml.append( XMLHandler.addTagValue( "name", field.getName()) );
-      xml.append( XMLHandler.addTagValue( "new_name", field.getNewName()) );
-      xml.append( XMLHandler.addTagValue( "type", field.getKettleType()) );
-      xml.append( XMLHandler.closeTag( "field") );
+    xml.append( XMLHandler.openTag( "fields" ) );
+    for ( BQField field : fields ) {
+      xml.append( XMLHandler.openTag( "field" ) );
+      xml.append( XMLHandler.addTagValue( "name", field.getName() ) );
+      xml.append( XMLHandler.addTagValue( "new_name", field.getNewName() ) );
+      xml.append( XMLHandler.addTagValue( "type", field.getKettleType() ) );
+      xml.append( XMLHandler.closeTag( "field" ) );
     }
-    xml.append( XMLHandler.closeTag( "fields") );
+    xml.append( XMLHandler.closeTag( "fields" ) );
 
     return xml.toString();
   }
@@ -107,18 +118,18 @@ public class BeamBQInputMeta extends BaseStepMeta implements StepMetaInterface {
   @Override public void loadXML( Node stepNode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
 
     projectId = XMLHandler.getTagValue( stepNode, PROJECT_ID );
-    datasetId= XMLHandler.getTagValue( stepNode, DATASET_ID );
-    tableId= XMLHandler.getTagValue( stepNode, TABLE_ID);
-    query= XMLHandler.getTagValue( stepNode, QUERY);
+    datasetId = XMLHandler.getTagValue( stepNode, DATASET_ID );
+    tableId = XMLHandler.getTagValue( stepNode, TABLE_ID );
+    query = XMLHandler.getTagValue( stepNode, QUERY );
 
     Node fieldsNode = XMLHandler.getSubNode( stepNode, "fields" );
     List<Node> fieldNodes = XMLHandler.getNodes( fieldsNode, "field" );
-    fields =new ArrayList<>(  );
-    for (Node fieldNode : fieldNodes) {
+    fields = new ArrayList<>();
+    for ( Node fieldNode : fieldNodes ) {
       String name = XMLHandler.getTagValue( fieldNode, "name" );
       String newName = XMLHandler.getTagValue( fieldNode, "new_name" );
       String kettleType = XMLHandler.getTagValue( fieldNode, "type" );
-      fields.add(new BQField( name, newName, kettleType ));
+      fields.add( new BQField( name, newName, kettleType ) );
     }
   }
 

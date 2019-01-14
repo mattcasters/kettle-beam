@@ -1,6 +1,14 @@
 
 package org.kettle.beam.steps.bq;
 
+import com.google.cloud.bigquery.BigQuery;
+import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.FieldList;
+import com.google.cloud.bigquery.Schema;
+import com.google.cloud.bigquery.Table;
+import com.google.cloud.bigquery.TableDefinition;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -10,18 +18,17 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
-import org.kettle.beam.metastore.FileDefinition;
+import org.kettle.beam.core.fn.BQSchemaAndRecordToKettleFn;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Props;
+import org.pentaho.di.core.row.RowMeta;
+import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.value.ValueMetaFactory;
 import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.core.variables.Variables;
@@ -29,15 +36,11 @@ import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
+import org.pentaho.di.ui.core.dialog.ErrorDialog;
 import org.pentaho.di.ui.core.widget.ColumnInfo;
 import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
-import org.pentaho.metastore.persist.MetaStoreFactory;
-import org.pentaho.metastore.util.PentahoDefaults;
-
-import java.util.Collections;
-import java.util.List;
 
 
 public class BeamBQInputDialog extends BaseStepDialog implements StepDialogInterface {
@@ -148,19 +151,19 @@ public class BeamBQInputDialog extends BaseStepDialog implements StepDialogInter
     wTableId.setLayoutData( fdTableId );
     lastControl = wTableId;
 
-    Label wlQuery = new Label( shell, SWT.RIGHT | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL );
+    Label wlQuery = new Label( shell, SWT.LEFT );
     wlQuery.setText( BaseMessages.getString( PKG, "BeamBQInputDialog.Query" ) );
     props.setLook( wlQuery );
     FormData fdlQuery = new FormData();
     fdlQuery.left = new FormAttachment( 0, 0 );
     fdlQuery.top = new FormAttachment( lastControl, margin );
-    fdlQuery.right = new FormAttachment( middle, -margin );
+    fdlQuery.right = new FormAttachment( 100, 0 );
     wlQuery.setLayoutData( fdlQuery );
-    wQuery = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    wQuery = new TextVar( transMeta, shell, SWT.LEFT | SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL );
     props.setLook( wQuery, Props.WIDGET_STYLE_FIXED);
     FormData fdQuery = new FormData();
-    fdQuery.left = new FormAttachment( middle, 0 );
-    fdQuery.top = new FormAttachment( wlQuery, 0, SWT.CENTER );
+    fdQuery.left = new FormAttachment( 0, 0 );
+    fdQuery.top = new FormAttachment( wlQuery, margin );
     fdQuery.right = new FormAttachment( 100, 0 );
     fdQuery.bottom = new FormAttachment( wlQuery, 250);
     wQuery.setLayoutData( fdQuery );
@@ -177,11 +180,12 @@ public class BeamBQInputDialog extends BaseStepDialog implements StepDialogInter
 
     wOK = new Button( shell, SWT.PUSH );
     wOK.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
-
+    wGet = new Button(shell, SWT.PUSH);
+    wGet.setText(BaseMessages.getString( PKG, "System.Button.GetFields" ) );
     wCancel = new Button( shell, SWT.PUSH );
     wCancel.setText( BaseMessages.getString( PKG, "System.Button.Cancel" ) );
 
-    setButtonPositions( new Button[] { wOK, wCancel }, margin, null );
+    setButtonPositions( new Button[] { wOK, wGet, wCancel }, margin, null );
 
     ColumnInfo[] columns = new ColumnInfo[] {
       new ColumnInfo( BaseMessages.getString( PKG, "BeamBQInputDialog.Fields.Column.Name" ), ColumnInfo.COLUMN_TYPE_TEXT, false, false ),
@@ -199,18 +203,11 @@ public class BeamBQInputDialog extends BaseStepDialog implements StepDialogInter
     lastControl = wFields;
 
     // Add listeners
-    lsOK = new Listener() {
-      public void handleEvent( Event e ) {
-        ok();
-      }
-    };
-    lsCancel = new Listener() {
-      public void handleEvent( Event e ) {
-        cancel();
-      }
-    };
+    lsOK = e -> ok();
+    lsCancel = e -> cancel();
 
     wOK.addListener( SWT.Selection, lsOK );
+    wGet.addListener( SWT.Selection, e-> getFields() );
     wCancel.addListener( SWT.Selection, lsCancel );
 
     lsDef = new SelectionAdapter() {
@@ -242,6 +239,45 @@ public class BeamBQInputDialog extends BaseStepDialog implements StepDialogInter
       }
     }
     return stepname;
+  }
+
+  public void getFields() {
+    try {
+
+      BeamBQInputMeta meta = new BeamBQInputMeta();
+      getInfo(meta);
+
+      BigQuery bigQuery = BigQueryOptions.getDefaultInstance().getService();
+
+      if ( StringUtils.isNotEmpty( meta.getDatasetId() ) &&
+           StringUtils.isNotEmpty( meta.getTableId() )) {
+
+        Table table = bigQuery.getTable(
+          transMeta.environmentSubstitute( meta.getDatasetId()),
+          transMeta.environmentSubstitute( meta.getTableId() )
+        );
+
+        TableDefinition definition = table.getDefinition();
+        Schema schema = definition.getSchema();
+        FieldList fieldList = schema.getFields();
+
+        RowMetaInterface rowMeta = new RowMeta();
+        for ( int i = 0; i< fieldList.size(); i++) {
+          Field field = fieldList.get( i );
+
+          String name = field.getName();
+          String type = field.getType().name();
+
+          int kettleType = BQSchemaAndRecordToKettleFn.AvroType.valueOf( type ).getKettleType();
+          rowMeta.addValueMeta( ValueMetaFactory.createValueMeta( name, kettleType ) );
+        }
+
+        BaseStepDialog.getFieldsFromPrevious( rowMeta, wFields, 1, new int[] { 1 }, new int[] { 3 }, -1, -1, true, null );
+      }
+
+    } catch ( Exception e ) {
+      new ErrorDialog( shell, "Error", "Error getting BQ fields", e );
+    }
   }
 
 

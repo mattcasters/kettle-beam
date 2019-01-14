@@ -70,6 +70,7 @@ public class BeamTimestampStepHandler implements BeamStepHandler {
         xpPluginClasses
         )) );
 
+
     // Save this in the map
     //
     stepCollectionMap.put( stepMeta.getName(), stepPCollection );
