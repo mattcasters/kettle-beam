@@ -43,10 +43,10 @@ You can use the variables to make your transformations completely generic.  For 
 
 ## Supported
 
-* Input: Beam Input and GCP Pub/Sub Subscribe
-* Output: Beam Output and GCP Pub/Sub Publish
-* Windowing with the Beam Window step 
-* Sort rows is not yet supported and will never be supported in a generic sense.
+* Input: Beam Input, Google Pub/Sub Subscribe and Google BigQuery Input
+* Output: Beam Output, Google Pub/Sub Publish and Google BigQuery Output
+* Windowing with the Beam Window step and adding timestamps to bounded data for streaming (Beam Timestamp)
+* Sort rows is not yet supported and will never be supported in a generic sense like in Kettle.
 * Group By step : experimental, SUM (Integer, Number), COUNT, MIN, MAX, FIRST (throws errors for not-supported stuff)
 * Merge Join
 * Stream Lookup (side loading data)
