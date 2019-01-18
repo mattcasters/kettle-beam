@@ -22,6 +22,7 @@ import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
 import org.kettle.beam.pipeline.handler.BeamBigQueryInputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamBigQueryOutputStepHandler;
+import org.kettle.beam.pipeline.handler.BeamGenericStepHandler;
 import org.kettle.beam.pipeline.handler.BeamGroupByStepHandler;
 import org.kettle.beam.pipeline.handler.BeamInputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamMergeJoinStepHandler;
@@ -71,6 +72,7 @@ public class TransMetaPipelineConverter {
   private List<String> xpPluginClasses;
   private String pluginsToStage;
   private Map<String, BeamStepHandler> stepHandlers;
+  private BeamStepHandler genericStepHandler;
 
   public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, String pluginsToStage ) throws MetaStoreException {
     this.transMeta = transMeta;
@@ -100,7 +102,19 @@ public class TransMetaPipelineConverter {
       xpPluginClasses.addAll( xpClasses );
     }
 
-
+    // Add the step handlers for the special cases, functionality which Beams handles specifically
+    //
+    stepHandlers.put( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID, new BeamOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_PUBLISH_PLUGIN_ID, new BeamPublisherStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_SUBSCRIBE_PLUGIN_ID, new BeamSubscriberStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID, new BeamBigQueryInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    genericStepHandler = new BeamGenericStepHandler( metaStore, metaStoreJson, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   private List<String> findAnnotatedClasses( String folder, String annotationClassName ) {
@@ -148,19 +162,6 @@ public class TransMetaPipelineConverter {
   public Pipeline createPipeline( Class<? extends PipelineRunner<?>> runnerClass, PipelineOptions pipelineOptions ) throws Exception {
 
     LogChannelInterface log = LogChannel.GENERAL;
-
-    // Add the step handlers for the special cases, functionality which Beams handles specifically
-    //
-    stepHandlers.put( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID, new BeamOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_PUBLISH_PLUGIN_ID, new BeamPublisherStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_SUBSCRIBE_PLUGIN_ID, new BeamSubscriberStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID, new BeamBigQueryInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
 
     // Create a new Pipeline
     //
@@ -319,80 +320,12 @@ public class TransMetaPipelineConverter {
 
         } else {
 
-          String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
-
-          handleGenericStep( log, stepCollectionMap, stepMeta, rowMeta, previousSteps, input, stepMetaInterfaceXml );
+          genericStepHandler.handleStep( log, stepMeta, stepCollectionMap, pipeline, rowMeta, previousSteps, input );
 
         }
       }
     }
 
-  }
-
-  private void handleGenericStep( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, StepMeta stepMeta, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
-                                  PCollection<KettleRow> input, String stepMetaInterfaceXml ) throws KettleException, IOException {
-    // See if the step has Info steps
-    //
-    List<StepMeta> infoStepMetas = transMeta.findPreviousSteps( stepMeta, true );
-    List<String> infoSteps = new ArrayList<>();
-    List<String> infoRowMetaJsons = new ArrayList<>();
-    List<PCollectionView<List<KettleRow>>> infoCollectionViews = new ArrayList<>();
-    for ( StepMeta infoStepMeta : infoStepMetas ) {
-      if ( !previousSteps.contains( infoStepMeta ) ) {
-        infoSteps.add( infoStepMeta.getName() );
-        infoRowMetaJsons.add( JsonRowMeta.toJson( transMeta.getStepFields( infoStepMeta ) ) );
-        PCollection<KettleRow> infoCollection = stepCollectionMap.get( infoStepMeta.getName() );
-        if ( infoCollection == null ) {
-          throw new KettleException( "Unable to find collection for step '" + infoStepMeta.getName() + " providing info for '" + stepMeta.getName() + "'" );
-        }
-        infoCollectionViews.add( infoCollection.apply( View.asList() ) );
-      }
-    }
-
-    // Get the list of variables from the TransMeta variable space:
-    //
-    List<VariableValue> variableValues = getVariableValues( transMeta );
-
-    // Find out all the target steps for this step...
-    //
-    StepIOMetaInterface ioMeta = stepMeta.getStepMetaInterface().getStepIOMeta();
-    List<String> targetSteps = new ArrayList<String>();
-    for ( StreamInterface targetStream : ioMeta.getTargetStreams() ) {
-      if ( targetStream.getStepMeta() != null ) {
-        targetSteps.add( targetStream.getStepMeta().getName() );
-      }
-    }
-
-    // Send all the information on their way to the right nodes
-    //
-    StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses,
-      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
-
-
-    // Apply the step transform to the previous io step PCollection(s)
-    //
-    PCollectionTuple tuple = input.apply( stepMeta.getName(), stepTransform );
-
-    // The main collection
-    //
-    PCollection<KettleRow> mainPCollection = tuple.get( new TupleTag<KettleRow>( KettleBeamUtil.createMainOutputTupleId( stepMeta.getName() ) ) );
-
-    // Save this in the map
-    //
-    stepCollectionMap.put( stepMeta.getName(), mainPCollection );
-
-    // Were there any targeted steps in this step?
-    //
-    for ( String targetStep : targetSteps ) {
-      String tupleId = KettleBeamUtil.createTargetTupleId( stepMeta.getName(), targetStep );
-      PCollection<KettleRow> targetPCollection = tuple.get( new TupleTag<KettleRow>( tupleId ) );
-
-      // Store this in the map as well
-      //
-      stepCollectionMap.put( tupleId, targetPCollection );
-    }
-
-    log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s), targets=" + targetSteps.size() + ", infos=" + infoSteps.size() );
   }
 
   private void validateStepBeamUsage( StepMetaInterface meta ) throws KettleException {
@@ -407,15 +340,7 @@ public class TransMetaPipelineConverter {
     }
   }
 
-  private List<VariableValue> getVariableValues( VariableSpace space ) {
 
-    List<VariableValue> variableValues = new ArrayList<>();
-    for ( String variable : space.listVariables() ) {
-      String value = space.getVariable( variable );
-      variableValues.add( new VariableValue( variable, value ) );
-    }
-    return variableValues;
-  }
 
   /**
    * Find the Beam Input steps, return them
@@ -606,5 +531,21 @@ public class TransMetaPipelineConverter {
    */
   public void setStepHandlers( Map<String, BeamStepHandler> stepHandlers ) {
     this.stepHandlers = stepHandlers;
+  }
+
+  /**
+   * Gets genericStepHandler
+   *
+   * @return value of genericStepHandler
+   */
+  public BeamStepHandler getGenericStepHandler() {
+    return genericStepHandler;
+  }
+
+  /**
+   * @param genericStepHandler The genericStepHandler to set
+   */
+  public void setGenericStepHandler( BeamStepHandler genericStepHandler ) {
+    this.genericStepHandler = genericStepHandler;
   }
 }
