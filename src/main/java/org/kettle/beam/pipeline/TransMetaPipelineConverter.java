@@ -89,17 +89,14 @@ public class TransMetaPipelineConverter {
 
     // Find the plugins in the jar files in the plugin folders to stage...
     //
-    if ( StringUtils.isEmpty( pluginsToStage ) ) {
-      return;
-    }
-
-    String[] pluginFolders = pluginsToStage.split( "," );
-
-    for ( String pluginFolder : pluginFolders ) {
-      List<String> stepClasses = findAnnotatedClasses( pluginFolder, Step.class.getName() );
-      stepPluginClasses.addAll( stepClasses );
-      List<String> xpClasses = findAnnotatedClasses( pluginFolder, ExtensionPoint.class.getName() );
-      xpPluginClasses.addAll( xpClasses );
+    if ( StringUtils.isNotEmpty( pluginsToStage ) ) {
+      String[] pluginFolders = pluginsToStage.split( "," );
+      for ( String pluginFolder : pluginFolders ) {
+        List<String> stepClasses = findAnnotatedClasses( pluginFolder, Step.class.getName() );
+        stepPluginClasses.addAll( stepClasses );
+        List<String> xpClasses = findAnnotatedClasses( pluginFolder, ExtensionPoint.class.getName() );
+        xpPluginClasses.addAll( xpClasses );
+      }
     }
 
     // Add the step handlers for the special cases, functionality which Beams handles specifically
