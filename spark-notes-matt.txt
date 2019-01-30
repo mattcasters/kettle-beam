@@ -1,0 +1,76 @@
+Setup of Spark environment, folders, input data
+----------------------------------------------------
+
+# Change the next 3 lines
+#
+export MASTER=ec2-35-158-121-77.eu-central-1.compute.amazonaws.com
+export KEYFILE=/home/matt/parking/ec2/flintrock-spark-frankfurt.pem
+export CLUSTER=kb
+
+flintrock run-command ${CLUSTER} 'echo "export HADOOP_HOME=/home/ec2-user/hadoop" >> /home/ec2-user/.bashrc'
+flintrock run-command ${CLUSTER} 'echo "export HADOOP_CONF_DIR=/home/ec2-user/hadoop/conf   " >> /home/ec2-user/.bashrc'
+flintrock run-command ${CLUSTER} 'sudo cp /home/ec2-user/hadoop/lib/native/* /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-0.amzn2.x86_64/jre/lib/amd64/'
+
+
+flintrock run-command ${CLUSTER} --master-only 'hdfs dfs -mkdir -p /input /output /tmp /binaries /metadata'
+
+flintrock run-command ${CLUSTER} --master-only 'wget https://s3.amazonaws.com/mattcasters/customers-noheader-1M.txt -O /tmp/customers-noheader-1M.txt'
+flintrock run-command ${CLUSTER} --master-only 'hdfs dfs -put -f /tmp/customers-noheader-1M.txt /input'
+flintrock run-command ${CLUSTER} --master-only 'wget https://s3.amazonaws.com/mattcasters/state-data.txt -O /tmp/state-data.txt'
+flintrock run-command ${CLUSTER} --master-only 'hdfs dfs -put -f /tmp/state-data.txt /input'
+
+flintrock run-command ${CLUSTER} --master-only 'mkdir beam'
+
+
+# After running Spark transformation in Spoon
+# You'll get a folder filled with goodies...
+#
+scp -i ${KEYFILE} kettle-beam-fat.jar ec2-user@${MASTER}:beam/
+scp -i ${KEYFILE} transformation.ktr ec2-user@${MASTER}:beam/
+scp -i ${KEYFILE} metastore.json ec2-user@${MASTER}:beam/
+
+
+# Then you go to the master 
+#
+flintrock login ${CLUSTER}
+
+# Go to the beam/ folder
+#
+cd beam/
+
+# Here we create a file called : submit-command.sh
+# TODO: CHANGE THE MASTER
+# Copy paste the following
+
+set -ex
+
+export MASTER=ec2-35-158-121-77.eu-central-1.compute.amazonaws.com
+
+if [ "$1" != "skip" ]
+then
+  hdfs dfs -put -f kettle-beam-fat.jar /binaries/
+  hdfs dfs -put -f transformation.ktr /metadata
+  hdfs dfs -put -f metastore.json /metadata
+fi
+
+spark-submit \
+  --driver-java-options -Djava.library.path=/home/ec2-user/hadoop/lib/native \
+  --class org.kettle.beam.pipeline.spark.MainSpark \
+  --master spark://${MASTER}:7077 \
+  --deploy-mode cluster \
+  --files hdfs:///metadata/transformation.ktr,hdfs:///metadata/metastore.json \
+  hdfs:///binaries/kettle-beam-fat.jar \
+  transformation.ktr \
+  metastore.json \
+  'Spark' \
+  "spark://${MASTER}:7077" \
+ 'Kettle Beam Submit of input-process-output' \
+org.kettle.beam.steps.io.BeamInputMeta,org.kettle.beam.steps.bq.BeamBQOutputMeta,org.kettle.beam.steps.pubsub.BeamPublishMeta,org.kettle.beam.steps.pubsub.BeamSubscribeMeta,org.kettle.beam.steps.window.BeamTimestampMeta,org.kettle.beam.steps.io.BeamOutputMeta,org.kettle.beam.steps.window.BeamWindowMeta,org.kettle.beam.steps.bq.BeamBQInputMeta \
+ org.kettle.beam.xp.RunBeamTransExecutionPoint \
+
+
+# Now run this command to start the transformation on Spark
+#
+sh submit-command.sh
+
+

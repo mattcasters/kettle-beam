@@ -4,21 +4,14 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.transforms.Flatten;
-import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionList;
-import org.apache.beam.sdk.values.PCollectionTuple;
-import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.sdk.values.TupleTag;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.coder.KettleRowCoder;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
-import org.kettle.beam.core.shared.VariableValue;
-import org.kettle.beam.core.transform.StepTransform;
-import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
 import org.kettle.beam.pipeline.handler.BeamBigQueryInputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamBigQueryOutputStepHandler;
@@ -42,13 +35,9 @@ import org.pentaho.di.core.plugins.PluginFolder;
 import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.variables.VariableSpace;
-import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.step.StepIOMetaInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.StepMetaInterface;
-import org.pentaho.di.trans.step.errorhandling.StreamInterface;
 import org.pentaho.di.trans.steps.groupby.GroupByMeta;
 import org.pentaho.di.trans.steps.sort.SortRowsMeta;
 import org.pentaho.di.trans.steps.uniquerows.UniqueRowsMeta;
@@ -70,23 +59,37 @@ public class TransMetaPipelineConverter {
   private String metaStoreJson;
   private List<String> stepPluginClasses;
   private List<String> xpPluginClasses;
-  private String pluginsToStage;
   private Map<String, BeamStepHandler> stepHandlers;
   private BeamStepHandler genericStepHandler;
 
-  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, String pluginsToStage ) throws MetaStoreException {
+  public TransMetaPipelineConverter() {
+    this.stepHandlers = new HashMap<>();
+    this.stepPluginClasses = new ArrayList<>(  );
+    this.xpPluginClasses = new ArrayList<>(  );
+  }
+
+  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, String pluginsToStage ) throws MetaStoreException, KettleException {
+    this();
     this.transMeta = transMeta;
     this.metaStore = new SerializableMetaStore( metaStore );
     this.metaStoreJson = this.metaStore.toJson();
-    this.pluginsToStage = pluginsToStage;
 
-    this.stepPluginClasses = new ArrayList<>();
-    this.xpPluginClasses = new ArrayList<>();
+    addClassesFromPluginsToStage( pluginsToStage );
+    addDefaultStepHandlers();
+  }
 
-    this.stepHandlers = new HashMap<>();
+  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, List<String> stepPluginClasses, List<String> xpPluginClasses ) throws MetaStoreException {
+    this();
+    this.transMeta = transMeta;
+    this.metaStore = new SerializableMetaStore( metaStore );
+    this.metaStoreJson = this.metaStore.toJson();
+    this.stepPluginClasses = stepPluginClasses;
+    this.xpPluginClasses = xpPluginClasses;
 
-    PluginRegistry registry = PluginRegistry.getInstance();
+    addDefaultStepHandlers();
+  }
 
+  public void addClassesFromPluginsToStage( String pluginsToStage ) throws KettleException {
     // Find the plugins in the jar files in the plugin folders to stage...
     //
     if ( StringUtils.isNotEmpty( pluginsToStage ) ) {
@@ -98,7 +101,9 @@ public class TransMetaPipelineConverter {
         xpPluginClasses.addAll( xpClasses );
       }
     }
+  }
 
+  public void addDefaultStepHandlers() throws MetaStoreException {
     // Add the step handlers for the special cases, functionality which Beams handles specifically
     //
     stepHandlers.put( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
@@ -114,7 +119,7 @@ public class TransMetaPipelineConverter {
     genericStepHandler = new BeamGenericStepHandler( metaStore, metaStoreJson, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
-  private List<String> findAnnotatedClasses( String folder, String annotationClassName ) {
+  public static List<String> findAnnotatedClasses( String folder, String annotationClassName ) throws KettleException {
     JarFileCache jarFileCache = JarFileCache.getInstance();
     List<String> classnames = new ArrayList<>();
 
@@ -150,7 +155,7 @@ public class TransMetaPipelineConverter {
         System.out.println( "No jar files found in plugin folder " + pluginFolder.getFolder() );
       }
     } catch ( Exception e ) {
-      e.printStackTrace();
+      throw new KettleException( "Unable to find annotated classes of class "+annotationClassName, e);
     }
 
     return classnames;
@@ -336,7 +341,6 @@ public class TransMetaPipelineConverter {
       throw new KettleException( "The unique rows step is not yet supported on Beam, for now use a Memory Group By to get distrinct rows" );
     }
   }
-
 
 
   /**

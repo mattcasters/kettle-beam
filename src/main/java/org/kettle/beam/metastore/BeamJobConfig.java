@@ -87,6 +87,9 @@ public class BeamJobConfig {
   private String sparkMaster;
 
   @MetaStoreAttribute
+  private String sparkDeployFolder;
+
+  @MetaStoreAttribute
   private String sparkBatchIntervalMillis;
 
   @MetaStoreAttribute
@@ -580,5 +583,21 @@ public class BeamJobConfig {
    */
   public void setSparkStorageLevel( String sparkStorageLevel ) {
     this.sparkStorageLevel = sparkStorageLevel;
+  }
+
+  /**
+   * Gets sparkDeployFolder
+   *
+   * @return value of sparkDeployFolder
+   */
+  public String getSparkDeployFolder() {
+    return sparkDeployFolder;
+  }
+
+  /**
+   * @param sparkDeployFolder The sparkDeployFolder to set
+   */
+  public void setSparkDeployFolder( String sparkDeployFolder ) {
+    this.sparkDeployFolder = sparkDeployFolder;
   }
 }

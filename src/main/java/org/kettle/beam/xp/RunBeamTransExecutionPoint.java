@@ -151,27 +151,22 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
 
     // Start the execution in a different thread to not block the UI...
     //
-    Runnable runnable = new Runnable() {
-      @Override public void run() {
-
-        try {
-          PipelineResult pipelineResult = executor.execute();
+    Runnable runnable = () -> {
+      try {
+        PipelineResult pipelineResult = executor.execute();
+        if (pipelineResult!=null) {
           trans.setRunning( false );
           for ( StepMetaDataCombi combi : trans.getSteps() ) {
             combi.step.setRunning( false );
             combi.step.markStop();
           }
           metricsUpdated( pipelineResult, trans );
-          for ( TransListener listener : trans.getTransListeners()) {
+          for ( TransListener listener : trans.getTransListeners() ) {
             listener.transFinished( trans );
           }
-        } catch ( Exception e ) {
-          spoon.getDisplay().asyncExec( new Runnable() {
-            @Override public void run() {
-              new ErrorDialog( spoon.getShell(), "Error", "There was an error building or executing the pipeline", e );
-            }
-          } );
         }
+      } catch ( Exception e ) {
+        spoon.getDisplay().asyncExec( () -> new ErrorDialog( spoon.getShell(), "Error", "There was an error building or executing the pipeline", e ) );
       }
     };
 

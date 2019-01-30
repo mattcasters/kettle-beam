@@ -6,30 +6,41 @@ import org.apache.beam.runners.dataflow.options.DataflowPipelineWorkerPoolOption
 import org.apache.beam.runners.direct.DirectRunner;
 import org.apache.beam.runners.flink.FlinkPipelineOptions;
 import org.apache.beam.runners.flink.FlinkRunner;
+import org.apache.beam.runners.spark.SparkContextOptions;
 import org.apache.beam.runners.spark.SparkPipelineOptions;
 import org.apache.beam.runners.spark.SparkRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.PipelineRunner;
+import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.metrics.MetricQueryResults;
 import org.apache.beam.sdk.metrics.MetricResult;
 import org.apache.beam.sdk.metrics.MetricResults;
 import org.apache.beam.sdk.metrics.MetricsFilter;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.metastore.JobParameter;
 import org.kettle.beam.metastore.RunnerType;
+import org.kettle.beam.pipeline.fatjar.FatJarBuilder;
+import org.kettle.beam.pipeline.spark.MainSpark;
 import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.extension.ExtensionPoint;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.parameters.UnknownParamException;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.metastore.api.IMetaStore;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -37,6 +48,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import static org.kettle.beam.pipeline.TransMetaPipelineConverter.findAnnotatedClasses;
 
 public class KettleBeamPipelineExecutor {
 
@@ -47,22 +60,158 @@ public class KettleBeamPipelineExecutor {
   private ClassLoader classLoader;
   private List<BeamMetricsUpdatedListener> updatedListeners;
   private boolean loggingMetrics;
+  private List<String> stepPluginClasses;
+  private List<String> xpPluginClasses;
+  private JavaSparkContext sparkContext;
 
   private KettleBeamPipelineExecutor() {
-    this.updatedListeners = new ArrayList<>(  );
+    this.updatedListeners = new ArrayList<>();
   }
 
   public KettleBeamPipelineExecutor( LogChannelInterface log, TransMeta transMeta, BeamJobConfig jobConfig, IMetaStore metaStore, ClassLoader classLoader ) {
+    this(log, transMeta, jobConfig, metaStore, classLoader, null, null);
+  }
+
+  public KettleBeamPipelineExecutor( LogChannelInterface log, TransMeta transMeta, BeamJobConfig jobConfig, IMetaStore metaStore, ClassLoader classLoader, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
     this();
     this.logChannel = log;
     this.transMeta = transMeta;
     this.jobConfig = jobConfig;
     this.metaStore = metaStore;
     this.classLoader = classLoader;
+    this.stepPluginClasses = stepPluginClasses;
+    this.xpPluginClasses = xpPluginClasses;
     this.loggingMetrics = true;
   }
 
   public PipelineResult execute() throws KettleException {
+    return execute( false );
+  }
+
+  public PipelineResult execute( boolean server ) throws KettleException {
+
+    RunnerType runnerType = RunnerType.getRunnerTypeByName( transMeta.environmentSubstitute( jobConfig.getRunnerTypeName() ) );
+    switch ( runnerType ) {
+      case Direct:
+      case DataFlow:
+        return executePipeline();
+
+      case Spark:
+        if ( server ) {
+          return executePipeline();
+        } else {
+          return executeSpark();
+        }
+      default:
+        throw new KettleException( "Execution on runner '" + runnerType.name() + "' is not supported yet, sorry." );
+    }
+  }
+
+  private PipelineResult executeSpark() throws KettleException {
+    try {
+
+      // Write our artifacts to the deploy folder of the spark environment
+      //
+      String deployFolder = transMeta.environmentSubstitute( jobConfig.getSparkDeployFolder() );
+      if ( !deployFolder.endsWith( File.separator ) ) {
+        deployFolder += File.separator;
+      }
+
+      // The transformation
+      //
+      String shortTransformationFilename = "transformation.ktr";
+      String transformationFilename = deployFolder + shortTransformationFilename;
+      FileUtils.copyFile( new File( transMeta.getFilename() ), new File( transformationFilename ) );
+
+      // Serialize TransMeta and MetaStore, set as variables...
+      //
+      SerializableMetaStore serializableMetaStore = new SerializableMetaStore( metaStore );
+      String shortMetastoreJsonFilename = "metastore.json"; ;
+      String metastoreJsonFilename = deployFolder + shortMetastoreJsonFilename;
+      FileUtils.writeStringToFile( new File( metastoreJsonFilename ), serializableMetaStore.toJson(), "UTF-8" );
+
+      // Create a fat jar...
+      //
+      // Find the list of jar files to stage...
+      //
+      List<String> libraryFilesToStage = BeamConst.findLibraryFilesToStage( null, transMeta.environmentSubstitute( jobConfig.getPluginsToStage() ), true, true );
+
+      String shortFatJarFilename = "kettle-beam-fat.jar";
+      String fatJarFilename = deployFolder + shortFatJarFilename;
+
+      FatJarBuilder fatJarBuilder = new FatJarBuilder( fatJarFilename, libraryFilesToStage );
+      // if (!new File(fatJarBuilder.getTargetJarFile()).exists()) {
+      fatJarBuilder.buildTargetJar();
+      // }
+
+      String master = transMeta.environmentSubstitute( jobConfig.getSparkMaster() );
+
+      // Figure out the list of step and XP plugin classes...
+      //
+      StringBuilder stepPluginClasses = new StringBuilder();
+      StringBuilder xpPluginClasses = new StringBuilder();
+
+      String pluginsToStage = jobConfig.getPluginsToStage();
+      if (!pluginsToStage.contains( "kettle-beam" )) {
+        if ( StringUtils.isEmpty( pluginsToStage ) ) {
+          pluginsToStage = "kettle-beam";
+        } else {
+          pluginsToStage = "kettle-beam,"+pluginsToStage;
+        }
+      }
+
+      if ( StringUtils.isNotEmpty( pluginsToStage ) ) {
+        String[] pluginFolders = pluginsToStage.split( "," );
+        for ( String pluginFolder : pluginFolders ) {
+          List<String> stepClasses = findAnnotatedClasses( pluginFolder, Step.class.getName() );
+          for (String stepClass : stepClasses) {
+            if (stepPluginClasses.length()>0) {
+              stepPluginClasses.append(",");
+            }
+            stepPluginClasses.append(stepClass);
+          }
+          List<String> xpClasses = findAnnotatedClasses( pluginFolder, ExtensionPoint.class.getName() );
+          for (String xpClass : xpClasses) {
+            if (xpPluginClasses.length()>0) {
+              xpPluginClasses.append(",");
+            }
+            xpPluginClasses.append(xpClass);
+          }
+        }
+      }
+
+      // Write the spark-submit command
+      //
+      StringBuilder command = new StringBuilder();
+      command.append( "spark-submit" ).append( " \\\n" );
+      command.append( " --class " ).append( MainSpark.class.getName() ).append( " \\\n" );
+      command.append( " --master " ).append( master ).append( " \\\n" );
+      command.append( " --deploy-mode cluster" ).append( " \\\n" );
+      command.append( " --files " ).append( shortTransformationFilename ).append( "," ).append( shortMetastoreJsonFilename ).append( " \\\n" );
+      command.append( " " ).append( shortFatJarFilename ).append( " \\\n" );
+      command.append( " " ).append( shortTransformationFilename ).append( " \\\n" );
+      command.append( " " ).append( shortMetastoreJsonFilename ).append( " \\\n" );
+      command.append( " '" ).append( jobConfig.getName() ).append( "'" ).append( " \\\n" );
+      command.append( " '" ).append( master ).append( "'" ).append( " \\\n" );
+      command.append( " '" ).append( transMeta.getName() ).append( "'" ).append(" \\\n");
+      command.append( " " ).append( stepPluginClasses.toString() ).append(" \\\n");
+      command.append( " " ).append( xpPluginClasses.toString() ).append(" \\\n");
+      command.append( "\n" ).append( "\n" );
+
+      // Write this command to file
+      //
+      String commandFilename = deployFolder + "submit-command.sh";
+      FileUtils.writeStringToFile( new File( commandFilename ), command.toString() );
+
+      // TODO, unify it all...
+      //
+      return null;
+    } catch ( Exception e ) {
+      throw new KettleException( "Error executing transformation on Spark", e );
+    }
+  }
+
+  private PipelineResult executePipeline() throws KettleException {
     ClassLoader oldContextClassLoader = Thread.currentThread().getContextClassLoader();
     try {
       // Explain to various classes in the Beam API (@see org.apache.beam.sdk.io.FileSystems)
@@ -81,7 +230,7 @@ public class KettleBeamPipelineExecutor {
 
           // Log the metrics...
           //
-          if (isLoggingMetrics()) {
+          if ( isLoggingMetrics() ) {
             logMetrics( pipelineResult );
           }
 
@@ -117,6 +266,7 @@ public class KettleBeamPipelineExecutor {
 
   }
 
+
   private void logMetrics( PipelineResult pipelineResult ) {
     MetricResults metricResults = pipelineResult.metrics();
 
@@ -128,9 +278,9 @@ public class KettleBeamPipelineExecutor {
     }
   }
 
-  public void updateListeners(PipelineResult pipelineResult) {
-    for (BeamMetricsUpdatedListener listener : updatedListeners) {
-      listener.beamMetricsUpdated(pipelineResult);
+  public void updateListeners( PipelineResult pipelineResult ) {
+    for ( BeamMetricsUpdatedListener listener : updatedListeners ) {
+      listener.beamMetricsUpdated( pipelineResult );
     }
   }
 
@@ -158,7 +308,14 @@ public class KettleBeamPipelineExecutor {
           pipelineRunnerClass = DataflowRunner.class;
           break;
         case Spark:
-          SparkPipelineOptions sparkOptions = PipelineOptionsFactory.as( SparkPipelineOptions.class );
+          SparkPipelineOptions sparkOptions;
+          if (sparkContext!=null) {
+            SparkContextOptions sparkContextOptions = PipelineOptionsFactory.as( SparkContextOptions.class );
+            sparkContextOptions.setProvidedSparkContext( sparkContext );
+            sparkOptions = sparkContextOptions;
+          } else {
+            sparkOptions = PipelineOptionsFactory.as( SparkPipelineOptions.class );
+          }
           configureSparkOptions( config, sparkOptions, space );
           pipelineOptions = sparkOptions;
           pipelineRunnerClass = SparkRunner.class;
@@ -176,11 +333,19 @@ public class KettleBeamPipelineExecutor {
 
       configureStandardOptions( config, transMeta.getName(), pipelineOptions, space );
 
-
       setVariablesInTransformation( config, transMeta );
 
-      TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, metaStore, config.getPluginsToStage() );
+      TransMetaPipelineConverter converter;
+      if (stepPluginClasses!=null && xpPluginClasses!=null) {
+        converter = new TransMetaPipelineConverter( transMeta, metaStore, stepPluginClasses, xpPluginClasses );
+      } else {
+        converter = new TransMetaPipelineConverter( transMeta, metaStore, config.getPluginsToStage() );
+      }
       Pipeline pipeline = converter.createPipeline( pipelineRunnerClass, pipelineOptions );
+
+      // Also set the pipeline options...
+      //
+      FileSystems.setDefaultPipelineOptions(pipelineOptions);
 
       return pipeline;
     } catch ( Exception e ) {
@@ -278,7 +443,7 @@ public class KettleBeamPipelineExecutor {
 
   private void configureSparkOptions( BeamJobConfig config, SparkPipelineOptions options, VariableSpace space ) throws IOException {
 
-    options.setFilesToStage( BeamConst.findLibraryFilesToStage( null, config.getPluginsToStage(), true, true ) );
+    // options.setFilesToStage( BeamConst.findLibraryFilesToStage( null, config.getPluginsToStage(), true, true ) );
 
     if ( StringUtils.isNotEmpty( config.getSparkMaster() ) ) {
       options.setSparkMaster( space.environmentSubstitute( config.getSparkMaster() ) );
@@ -381,5 +546,21 @@ public class KettleBeamPipelineExecutor {
    */
   public void setLogChannel( LogChannelInterface logChannel ) {
     this.logChannel = logChannel;
+  }
+
+  /**
+   * Gets sparkContext
+   *
+   * @return value of sparkContext
+   */
+  public JavaSparkContext getSparkContext() {
+    return sparkContext;
+  }
+
+  /**
+   * @param sparkContext The sparkContext to set
+   */
+  public void setSparkContext( JavaSparkContext sparkContext ) {
+    this.sparkContext = sparkContext;
   }
 }

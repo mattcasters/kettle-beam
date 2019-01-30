@@ -94,6 +94,7 @@ public class BeamJobConfigDialog {
   // Spark settings
 
   private TextVar wSparkMaster;
+  private TextVar wSparkDeployFolder;
   private TextVar wSparkBatchIntervalMillis;
   private TextVar wSparkCheckpointDir;
   private TextVar wSparkCheckpointDurationMillis;
@@ -187,6 +188,7 @@ public class BeamJobConfigDialog {
     wGcpRegion.addSelectionListener( selAdapter );
     wGcpZone.addSelectionListener( selAdapter );
     wSparkMaster.addSelectionListener( selAdapter );
+    wSparkDeployFolder.addSelectionListener( selAdapter );
     wSparkBatchIntervalMillis.addSelectionListener( selAdapter );
     wSparkCheckpointDir.addSelectionListener( selAdapter );
     wSparkCheckpointDurationMillis.addSelectionListener( selAdapter );
@@ -720,6 +722,25 @@ public class BeamJobConfigDialog {
     wSparkMaster.setLayoutData( fdSparkMaster );
     Control lastControl = wSparkMaster;
 
+    // Folder to deploy Spark submit artifacts in
+    //
+    Label wlSparkDeployFolder = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkDeployFolder );
+    wlSparkDeployFolder.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkDeployFolder.Label" ) );
+    FormData fdlSparkDeployFolder = new FormData();
+    fdlSparkDeployFolder.top = new FormAttachment( lastControl, margin );
+    fdlSparkDeployFolder.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkDeployFolder.right = new FormAttachment( middle, -margin );
+    wlSparkDeployFolder.setLayoutData( fdlSparkDeployFolder );
+    wSparkDeployFolder = new TextVar( space, wSparkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wSparkDeployFolder );
+    FormData fdSparkDeployFolder = new FormData();
+    fdSparkDeployFolder.top = new FormAttachment( wlSparkDeployFolder, 0, SWT.CENTER );
+    fdSparkDeployFolder.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkDeployFolder.right = new FormAttachment( 95, 0 );
+    wSparkDeployFolder.setLayoutData( fdSparkDeployFolder );
+    lastControl = wSparkDeployFolder;
+
     // Spark batch interval in ms
     //
     Label wlSparkBatchIntervalMillis = new Label( wSparkComp, SWT.RIGHT );
@@ -968,6 +989,7 @@ public class BeamJobConfigDialog {
 
     // Spark
     wSparkMaster.setText(Const.NVL(config.getSparkMaster(), ""));
+    wSparkDeployFolder.setText(Const.NVL(config.getSparkDeployFolder(), ""));
     wSparkBatchIntervalMillis.setText(Const.NVL(config.getSparkBatchIntervalMillis(), ""));
     wSparkCheckpointDir.setText(Const.NVL(config.getSparkCheckpointDir(), ""));
     wSparkCheckpointDurationMillis.setText(Const.NVL(config.getSparkCheckpointDurationMillis(), ""));
@@ -1055,8 +1077,9 @@ public class BeamJobConfigDialog {
       }
     }
     cfg.setGcpRegion( regionCode );
-    
+
     cfg.setSparkMaster( wSparkMaster.getText() );
+    cfg.setSparkDeployFolder( wSparkDeployFolder.getText() );
     cfg.setSparkBatchIntervalMillis( wSparkBatchIntervalMillis.getText() );
     cfg.setSparkCheckpointDir( wSparkCheckpointDir.getText() );
     cfg.setSparkCheckpointDurationMillis( wSparkCheckpointDurationMillis.getText() );
