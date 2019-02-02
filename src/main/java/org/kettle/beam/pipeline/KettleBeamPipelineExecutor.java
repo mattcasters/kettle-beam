@@ -316,7 +316,7 @@ public class KettleBeamPipelineExecutor {
           } else {
             sparkOptions = PipelineOptionsFactory.as( SparkPipelineOptions.class );
           }
-          configureSparkOptions( config, sparkOptions, space );
+          configureSparkOptions( config, sparkOptions, space, transMeta.getName() );
           pipelineOptions = sparkOptions;
           pipelineRunnerClass = SparkRunner.class;
           break;
@@ -441,7 +441,7 @@ public class KettleBeamPipelineExecutor {
 
   }
 
-  private void configureSparkOptions( BeamJobConfig config, SparkPipelineOptions options, VariableSpace space ) throws IOException {
+  private void configureSparkOptions( BeamJobConfig config, SparkPipelineOptions options, VariableSpace space, String transformationName ) throws IOException {
 
     // options.setFilesToStage( BeamConst.findLibraryFilesToStage( null, config.getPluginsToStage(), true, true ) );
 
@@ -490,6 +490,8 @@ public class KettleBeamPipelineExecutor {
     if ( StringUtils.isNotEmpty( config.getSparkStorageLevel() ) ) {
       options.setStorageLevel( space.environmentSubstitute( config.getSparkStorageLevel() ) );
     }
+    String appName = transformationName.replace( " ", "_" );
+    options.setAppName( appName );
   }
 
   private void configureFlinkOptions( BeamJobConfig config, FlinkPipelineOptions options, VariableSpace space ) throws IOException {

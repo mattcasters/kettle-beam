@@ -18,6 +18,8 @@ import org.kettle.beam.pipeline.handler.BeamBigQueryOutputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamGenericStepHandler;
 import org.kettle.beam.pipeline.handler.BeamGroupByStepHandler;
 import org.kettle.beam.pipeline.handler.BeamInputStepHandler;
+import org.kettle.beam.pipeline.handler.BeamKafkaInputStepHandler;
+import org.kettle.beam.pipeline.handler.BeamKafkaOutputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamMergeJoinStepHandler;
 import org.kettle.beam.pipeline.handler.BeamOutputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamPublisherStepHandler;
@@ -25,6 +27,7 @@ import org.kettle.beam.pipeline.handler.BeamStepHandler;
 import org.kettle.beam.pipeline.handler.BeamSubscriberStepHandler;
 import org.kettle.beam.pipeline.handler.BeamTimestampStepHandler;
 import org.kettle.beam.pipeline.handler.BeamWindowStepHandler;
+import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.extension.ExtensionPoint;
@@ -106,16 +109,18 @@ public class TransMetaPipelineConverter {
   public void addDefaultStepHandlers() throws MetaStoreException {
     // Add the step handlers for the special cases, functionality which Beams handles specifically
     //
-    stepHandlers.put( BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_OUTPUT_PLUGIN_ID, new BeamOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_PUBLISH_PLUGIN_ID, new BeamPublisherStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_SUBSCRIBE_PLUGIN_ID, new BeamSubscriberStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID, new BeamBigQueryInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamDefaults.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_OUTPUT_PLUGIN_ID, new BeamOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_PUBLISH_PLUGIN_ID, new BeamPublisherStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_SUBSCRIBE_PLUGIN_ID, new BeamSubscriberStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID, new BeamBigQueryInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_CONSUME_PLUGIN_ID, new BeamKafkaInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_PRODUCE_PLUGIN_ID, new BeamKafkaOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
     genericStepHandler = new BeamGenericStepHandler( metaStore, metaStoreJson, transMeta, stepPluginClasses, xpPluginClasses );
   }
 

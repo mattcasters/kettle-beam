@@ -23,6 +23,21 @@ import java.util.Set;
 
 public class BeamConst {
 
+  public static final String STRING_BEAM_INPUT_PLUGIN_ID = "BeamInput";
+  public static final String STRING_BEAM_OUTPUT_PLUGIN_ID = "BeamOutput";
+  public static final String STRING_BEAM_SUBSCRIBE_PLUGIN_ID = "BeamSubscribe";
+  public static final String STRING_BEAM_PUBLISH_PLUGIN_ID = "BeamPublish";
+  public static final String STRING_MEMORY_GROUP_BY_PLUGIN_ID = "MemoryGroupBy";
+  public static final String STRING_MERGE_JOIN_PLUGIN_ID = "MergeJoin";
+  public static final String STRING_BEAM_WINDOW_PLUGIN_ID = "BeamWindow";
+  public static final String STRING_BEAM_TIMESTAMP_PLUGIN_ID = "BeamTimestamp";
+  public static final String STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID = "BeamBQInput";
+  public static final String STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID = "BeamBQOutput";
+  public static final String STRING_BEAM_KAFKA_CONSUME_PLUGIN_ID = "BeamKafkaConsume";
+  public static final String STRING_BEAM_KAFKA_PRODUCE_PLUGIN_ID = "BeamKafkaProduce";
+
+  public static final String STRING_KETTLE_BEAM = "Kettle Beam";
+
   private static List<String[]> gcpWorkerCodeDescriptions = Arrays.asList(
     new String[] { "n1-standard-1", "Standard machine type with 1 vCPU and 3.75 GB of memory." },
     new String[] { "n1-standard-2", "Standard machine type with 2 vCPUs and 7.5 GB of memory." },

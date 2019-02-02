@@ -1011,6 +1011,13 @@ public class BeamJobConfigDialog {
     wParameters.setRowNums();
     wParameters.optWidth( true );
 
+    if (StringUtils.isNotEmpty(config.getGcpProjectId())) {
+      wTabFolder.setSelection( 2 );
+    }
+    if (StringUtils.isNotEmpty(config.getSparkMaster())) {
+      wTabFolder.setSelection( 3 );
+    }
+
     wName.selectAll();
     wName.setFocus();
   }

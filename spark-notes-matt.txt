@@ -14,8 +14,8 @@ flintrock run-command ${CLUSTER} 'sudo cp /home/ec2-user/hadoop/lib/native/* /us
 
 flintrock run-command ${CLUSTER} --master-only 'hdfs dfs -mkdir -p /input /output /tmp /binaries /metadata'
 
-flintrock run-command ${CLUSTER} --master-only 'wget https://s3.amazonaws.com/mattcasters/customers-noheader-1M.txt -O /tmp/customers-noheader-1M.txt'
-flintrock run-command ${CLUSTER} --master-only 'hdfs dfs -put -f /tmp/customers-noheader-1M.txt /input'
+flintrock run-command ${CLUSTER} --master-only 'wget https://s3.amazonaws.com/mattcasters/customers-noheader-1M.txt -O /tmp/customers-noheader.txt'
+flintrock run-command ${CLUSTER} --master-only 'hdfs dfs -put -f /tmp/customers-noheader.txt /input'
 flintrock run-command ${CLUSTER} --master-only 'wget https://s3.amazonaws.com/mattcasters/state-data.txt -O /tmp/state-data.txt'
 flintrock run-command ${CLUSTER} --master-only 'hdfs dfs -put -f /tmp/state-data.txt /input'
 
@@ -44,7 +44,7 @@ cd beam/
 
 set -ex
 
-export MASTER=ec2-35-158-121-77.eu-central-1.compute.amazonaws.com
+MASTER=ec2-35-158-121-77.eu-central-1.compute.amazonaws.com
 
 if [ "$1" != "skip" ]
 then
@@ -54,19 +54,18 @@ then
 fi
 
 spark-submit \
-  --driver-java-options -Djava.library.path=/home/ec2-user/hadoop/lib/native \
+  --driver-java-options \
+  -Djava.library.path=/home/ec2-user/hadoop/lib/native \
   --class org.kettle.beam.pipeline.spark.MainSpark \
   --master spark://${MASTER}:7077 \
   --deploy-mode cluster \
-  --files hdfs:///metadata/transformation.ktr,hdfs:///metadata/metastore.json \
   hdfs:///binaries/kettle-beam-fat.jar \
-  transformation.ktr \
-  metastore.json \
+  hdfs:///metadata/transformation.ktr \
+  hdfs:///metadata/metastore.json \
   'Spark' \
-  "spark://${MASTER}:7077" \
- 'Kettle Beam Submit of input-process-output' \
-org.kettle.beam.steps.io.BeamInputMeta,org.kettle.beam.steps.bq.BeamBQOutputMeta,org.kettle.beam.steps.pubsub.BeamPublishMeta,org.kettle.beam.steps.pubsub.BeamSubscribeMeta,org.kettle.beam.steps.window.BeamTimestampMeta,org.kettle.beam.steps.io.BeamOutputMeta,org.kettle.beam.steps.window.BeamWindowMeta,org.kettle.beam.steps.bq.BeamBQInputMeta \
- org.kettle.beam.xp.RunBeamTransExecutionPoint \
+  org.kettle.beam.steps.io.BeamInputMeta,org.kettle.beam.steps.bq.BeamBQOutputMeta,org.kettle.beam.steps.pubsub.BeamPublishMeta,org.kettle.beam.steps.pubsub.BeamSubscribeMeta,org.kettle.beam.steps.window.BeamTimestampMeta,org.kettle.beam.steps.io.BeamOutputMeta,org.kettle.beam.steps.window.BeamWindowMeta,org.kettle.beam.steps.bq.BeamBQInputMeta \
+  org.kettle.beam.xp.RunBeamTransExecutionPoint 
+
 
 
 # Now run this command to start the transformation on Spark

@@ -15,6 +15,7 @@ import org.junit.Ignore;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.pipeline.TransMetaPipelineConverter;
+import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.stores.memory.MemoryMetaStore;
@@ -56,7 +57,7 @@ public class PipelineTestBase {
     PipelineOptions pipelineOptions = PipelineOptionsFactory.create();
 
     pipelineOptions.setJobName( transMeta.getName() );
-    pipelineOptions.setUserAgent( BeamDefaults.STRING_KETTLE_BEAM );
+    pipelineOptions.setUserAgent( BeamConst.STRING_KETTLE_BEAM );
 
     // No extra plugins to load : null option
     TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, metaStore, (String) null );

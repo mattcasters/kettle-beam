@@ -10,6 +10,7 @@ import org.kettle.beam.core.BeamKettle;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.pipeline.KettleBeamPipelineExecutor;
+import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.plugins.PluginInterface;
@@ -77,7 +78,7 @@ public class MainSpark {
 
       System.out.println( ">>>>>> Building Apache Beam Kettle Pipeline..." );
       PluginRegistry registry = PluginRegistry.getInstance();
-      PluginInterface beamInputPlugin = registry.getPlugin( StepPluginType.class, BeamDefaults.STRING_BEAM_INPUT_PLUGIN_ID );
+      PluginInterface beamInputPlugin = registry.getPlugin( StepPluginType.class, BeamConst.STRING_BEAM_INPUT_PLUGIN_ID );
       if ( beamInputPlugin != null ) {
         System.out.println( ">>>>>> Found Beam Input step plugin class loader" );
       } else {

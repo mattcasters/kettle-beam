@@ -2,15 +2,14 @@ package org.kettle.beam.pipeline.handler;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.transform.BeamBQOutputTransform;
-import org.kettle.beam.core.transform.BeamOutputTransform;
+import org.kettle.beam.core.transform.BeamKafkaOutputTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.bq.BeamBQOutputMeta;
-import org.kettle.beam.steps.io.BeamOutputMeta;
+import org.kettle.beam.steps.kafka.BeamProduceMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -23,14 +22,14 @@ import org.pentaho.metastore.api.IMetaStore;
 import java.util.List;
 import java.util.Map;
 
-public class BeamBigQueryOutputStepHandler implements BeamStepHandler {
+public class BeamKafkaOutputStepHandler implements BeamStepHandler {
 
   private IMetaStore metaStore;
   private TransMeta transMeta;
   private List<String> stepPluginClasses;
   private List<String> xpPluginClasses;
 
-  public BeamBigQueryOutputStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+  public BeamKafkaOutputStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
     this.metaStore = metaStore;
     this.transMeta = transMeta;
     this.stepPluginClasses = stepPluginClasses;
@@ -49,13 +48,14 @@ public class BeamBigQueryOutputStepHandler implements BeamStepHandler {
                                     Pipeline pipeline, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
                                     PCollection<KettleRow> input  ) throws KettleException {
 
-    BeamBQOutputMeta beamOutputMeta = (BeamBQOutputMeta) beamOutputStepMeta.getStepMetaInterface();
+    BeamProduceMeta beamProduceMeta = (BeamProduceMeta) beamOutputStepMeta.getStepMetaInterface();
 
-    BeamBQOutputTransform beamOutputTransform = new BeamBQOutputTransform(
+    BeamKafkaOutputTransform beamOutputTransform = new BeamKafkaOutputTransform(
       beamOutputStepMeta.getName(),
-      transMeta.environmentSubstitute( beamOutputMeta.getProjectId() ),
-      transMeta.environmentSubstitute( beamOutputMeta.getDatasetId() ),
-      transMeta.environmentSubstitute( beamOutputMeta.getTableId() ),
+      transMeta.environmentSubstitute( beamProduceMeta.getBootstrapServers() ),
+      transMeta.environmentSubstitute( beamProduceMeta.getTopic() ),
+      transMeta.environmentSubstitute( beamProduceMeta.getKeyField() ),
+      transMeta.environmentSubstitute( beamProduceMeta.getMessageField() ),
       JsonRowMeta.toJson(rowMeta),
       stepPluginClasses,
       xpPluginClasses
@@ -72,6 +72,6 @@ public class BeamBigQueryOutputStepHandler implements BeamStepHandler {
     // No need to store this, it's PDone.
     //
     input.apply( beamOutputTransform );
-    log.logBasic( "Handled step (BQ OUTPUT) : " + beamOutputStepMeta.getName() + ", gets data from " + previousStep.getName() );
+    log.logBasic( "Handled step (KAFKA OUTPUT) : " + beamOutputStepMeta.getName() + ", gets data from " + previousStep.getName() );
   }
 }
