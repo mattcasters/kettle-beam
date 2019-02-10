@@ -283,7 +283,7 @@ public class TransMetaPipelineConverter {
           if ( input == null ) {
             input = stepCollectionMap.get( firstPreviousStep.getName() );
           } else {
-            log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targetting this one using : " + targetName );
+            log.logBasic( "Step " + stepMeta.getName() + " reading from previous step targeting this one using : " + targetName );
           }
 
           // If there are multiple io streams into this step, flatten all the data sources by default
@@ -303,8 +303,9 @@ public class TransMetaPipelineConverter {
               }
               if ( previousPCollection == null ) {
                 throw new KettleException( "Previous collection was not found for step " + previousStep.getName() + ", a previous step to " + stepMeta.getName() );
+              } else {
+                extraInputs.add( previousPCollection );
               }
-              extraInputs.add( previousPCollection );
             }
 
             // Flatten the extra inputs...

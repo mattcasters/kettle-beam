@@ -1,15 +1,21 @@
 package org.kettle.beam.pipeline.handler;
 
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.transforms.Flatten;
+import org.apache.beam.sdk.transforms.GroupByKey;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.transforms.View;
+import org.apache.beam.sdk.transforms.WithKeys;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.TupleTag;
 import org.kettle.beam.core.KettleRow;
+import org.kettle.beam.core.fn.StringToKettleRowFn;
 import org.kettle.beam.core.shared.VariableValue;
-import org.kettle.beam.core.transform.GroupByTransform;
 import org.kettle.beam.core.transform.StepTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
@@ -22,10 +28,10 @@ import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepIOMetaInterface;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.trans.step.errorhandling.StreamInterface;
-import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
 import org.pentaho.metastore.api.IMetaStore;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +61,11 @@ public class BeamGenericStepHandler implements BeamStepHandler {
 
   @Override public void handleStep( LogChannelInterface log, StepMeta stepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
                                     Pipeline pipeline, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
-                                    PCollection<KettleRow> input  ) throws KettleException {
+                                    PCollection<KettleRow> input ) throws KettleException {
+
+    // If we have no previous step, it's an input step.  We need to start from pipeline
+    //
+    boolean inputStep = input == null;
 
     String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
 
@@ -95,8 +105,21 @@ public class BeamGenericStepHandler implements BeamStepHandler {
     // Send all the information on their way to the right nodes
     //
     StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses,
-      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
+      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), inputStep,
+      targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
 
+    if ( input == null ) {
+      // Start from a dummy row and group over it.
+      // Trick Beam into only running a single thread of the step that comes next.
+      //
+      input = pipeline
+        .apply( Create.of( Arrays.asList( "kettle-dummy-input-value" ) ) ).setCoder( StringUtf8Coder.of() )
+        .apply( WithKeys.of( (Void) null ) )
+        .apply( GroupByKey.create() )
+        .apply( Values.create() )
+        .apply( Flatten.iterables() )
+        .apply( ParDo.of( new StringToKettleRowFn( stepMeta.getName(), JsonRowMeta.toJson( rowMeta ), stepPluginClasses, xpPluginClasses ) ) );
+    }
 
     // Apply the step transform to the previous io step PCollection(s)
     //
@@ -112,7 +135,8 @@ public class BeamGenericStepHandler implements BeamStepHandler {
 
     // Were there any targeted steps in this step?
     //
-    for ( String targetStep : targetSteps ) {
+    for (
+      String targetStep : targetSteps ) {
       String tupleId = KettleBeamUtil.createTargetTupleId( stepMeta.getName(), targetStep );
       PCollection<KettleRow> targetPCollection = tuple.get( new TupleTag<KettleRow>( tupleId ) );
 
@@ -122,7 +146,6 @@ public class BeamGenericStepHandler implements BeamStepHandler {
     }
 
     log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s), targets=" + targetSteps.size() + ", infos=" + infoSteps.size() );
-
   }
 
 
