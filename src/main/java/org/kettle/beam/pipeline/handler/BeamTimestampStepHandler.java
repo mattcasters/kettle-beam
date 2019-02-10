@@ -55,7 +55,7 @@ public class BeamTimestampStepHandler implements BeamStepHandler {
 
     BeamTimestampMeta beamTimestampMeta = (BeamTimestampMeta) stepMeta.getStepMetaInterface();
 
-    if ( StringUtils.isNotEmpty( beamTimestampMeta.getFieldName() )) {
+    if ( !beamTimestampMeta.isReadingTimestamp() && StringUtils.isNotEmpty( beamTimestampMeta.getFieldName() )) {
       if (rowMeta.searchValueMeta( beamTimestampMeta.getFieldName() )==null ) {
         throw new KettleException( "Please specify a valid field name '" + stepMeta.getName() + "'" );
       }
