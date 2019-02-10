@@ -65,7 +65,8 @@ public class BeamTimestampStepHandler implements BeamStepHandler {
       new TimestampFn(
         stepMeta.getName(),
         JsonRowMeta.toJson( rowMeta ),
-        beamTimestampMeta.getFieldName(),
+        transMeta.environmentSubstitute( beamTimestampMeta.getFieldName() ),
+        beamTimestampMeta.isReadingTimestamp(),
         stepPluginClasses,
         xpPluginClasses
         )) );

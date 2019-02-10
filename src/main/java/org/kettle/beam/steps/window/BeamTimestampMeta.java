@@ -1,12 +1,12 @@
 package org.kettle.beam.steps.window;
 
-import org.kettle.beam.core.BeamDefaults;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaDate;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.repository.Repository;
@@ -34,8 +34,11 @@ import java.util.List;
 public class BeamTimestampMeta extends BaseStepMeta implements StepMetaInterface {
 
   public static final String FIELD_NAME = "field_name";
+  public static final String READ_TIMESTAMP = "read_timestamp";
 
   private String fieldName;
+
+  private boolean readingTimestamp;
 
   public BeamTimestampMeta() {
     super();
@@ -60,17 +63,23 @@ public class BeamTimestampMeta extends BaseStepMeta implements StepMetaInterface
   @Override public void getFields( RowMetaInterface inputRowMeta, String name, RowMetaInterface[] info, StepMeta nextStep, VariableSpace space, Repository repository, IMetaStore metaStore )
     throws KettleStepException {
 
-    // No change to the stream
+    if ( readingTimestamp ) {
+      ValueMetaDate valueMeta = new ValueMetaDate( fieldName );
+      valueMeta.setOrigin( name );
+      inputRowMeta.addValueMeta( valueMeta );
+    }
   }
 
   @Override public String getXML() throws KettleException {
     StringBuffer xml = new StringBuffer();
     xml.append( XMLHandler.addTagValue( FIELD_NAME, fieldName ) );
+    xml.append( XMLHandler.addTagValue( READ_TIMESTAMP, readingTimestamp ) );
     return xml.toString();
   }
 
   @Override public void loadXML( Node stepnode, List<DatabaseMeta> databases, IMetaStore metaStore ) throws KettleXMLException {
     fieldName = XMLHandler.getTagValue( stepnode, FIELD_NAME );
+    readingTimestamp = "Y".equalsIgnoreCase( XMLHandler.getTagValue( stepnode, READ_TIMESTAMP ) );
   }
 
 
@@ -90,4 +99,19 @@ public class BeamTimestampMeta extends BaseStepMeta implements StepMetaInterface
     this.fieldName = fieldName;
   }
 
+  /**
+   * Gets readingTimestamp
+   *
+   * @return value of readingTimestamp
+   */
+  public boolean isReadingTimestamp() {
+    return readingTimestamp;
+  }
+
+  /**
+   * @param readingTimestamp The readingTimestamp to set
+   */
+  public void setReadingTimestamp( boolean readingTimestamp ) {
+    this.readingTimestamp = readingTimestamp;
+  }
 }

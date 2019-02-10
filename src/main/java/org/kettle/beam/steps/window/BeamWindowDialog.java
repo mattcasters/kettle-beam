@@ -34,6 +34,9 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
   private Combo wWindowType;
   private TextVar wDuration;
   private TextVar wEvery;
+  private TextVar wStartTimeField;
+  private TextVar wEndTimeField;
+  private TextVar wMaxTimeField;
 
   public BeamWindowDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
     super( parent, (BaseStepMeta) in, transMeta, sname );
@@ -131,6 +134,58 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     wEvery.setLayoutData( fdEvery );
     lastControl = wEvery;
 
+
+    Label wlStartTimeField = new Label( shell, SWT.RIGHT );
+    wlStartTimeField.setText( BaseMessages.getString( PKG, "BeamWindowDialog.StartTimeField" ) );
+    props.setLook( wlStartTimeField );
+    FormData fdlStartTimeField = new FormData();
+    fdlStartTimeField.left = new FormAttachment( 0, 0 );
+    fdlStartTimeField.top = new FormAttachment( lastControl, margin );
+    fdlStartTimeField.right = new FormAttachment( middle, -margin );
+    wlStartTimeField.setLayoutData( fdlStartTimeField );
+    wStartTimeField = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wStartTimeField );
+    FormData fdStartTimeField = new FormData();
+    fdStartTimeField.left = new FormAttachment( middle, 0 );
+    fdStartTimeField.top = new FormAttachment( wlStartTimeField, 0, SWT.CENTER );
+    fdStartTimeField.right = new FormAttachment( 100, 0 );
+    wStartTimeField.setLayoutData( fdStartTimeField );
+    lastControl = wStartTimeField;
+
+    Label wlEndTimeField = new Label( shell, SWT.RIGHT );
+    wlEndTimeField.setText( BaseMessages.getString( PKG, "BeamWindowDialog.EndTimeField" ) );
+    props.setLook( wlEndTimeField );
+    FormData fdlEndTimeField = new FormData();
+    fdlEndTimeField.left = new FormAttachment( 0, 0 );
+    fdlEndTimeField.top = new FormAttachment( lastControl, margin );
+    fdlEndTimeField.right = new FormAttachment( middle, -margin );
+    wlEndTimeField.setLayoutData( fdlEndTimeField );
+    wEndTimeField = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wEndTimeField );
+    FormData fdEndTimeField = new FormData();
+    fdEndTimeField.left = new FormAttachment( middle, 0 );
+    fdEndTimeField.top = new FormAttachment( wlEndTimeField, 0, SWT.CENTER );
+    fdEndTimeField.right = new FormAttachment( 100, 0 );
+    wEndTimeField.setLayoutData( fdEndTimeField );
+    lastControl = wEndTimeField;
+
+    Label wlMaxTimeField = new Label( shell, SWT.RIGHT );
+    wlMaxTimeField.setText( BaseMessages.getString( PKG, "BeamWindowDialog.MaxTimeField" ) );
+    props.setLook( wlMaxTimeField );
+    FormData fdlMaxTimeField = new FormData();
+    fdlMaxTimeField.left = new FormAttachment( 0, 0 );
+    fdlMaxTimeField.top = new FormAttachment( lastControl, margin );
+    fdlMaxTimeField.right = new FormAttachment( middle, -margin );
+    wlMaxTimeField.setLayoutData( fdlMaxTimeField );
+    wMaxTimeField = new TextVar( transMeta, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wMaxTimeField );
+    FormData fdMaxTimeField = new FormData();
+    fdMaxTimeField.left = new FormAttachment( middle, 0 );
+    fdMaxTimeField.top = new FormAttachment( wlMaxTimeField, 0, SWT.CENTER );
+    fdMaxTimeField.right = new FormAttachment( 100, 0 );
+    wMaxTimeField.setLayoutData( fdMaxTimeField );
+    lastControl = wMaxTimeField;
+    
     wOK = new Button( shell, SWT.PUSH );
     wOK.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
 
@@ -152,6 +207,10 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     wStepname.addSelectionListener( lsDef );
     wWindowType.addSelectionListener( lsDef );
     wDuration.addSelectionListener( lsDef );
+    wEvery.addSelectionListener( lsDef );
+    wStartTimeField.addSelectionListener( lsDef );
+    wEndTimeField.addSelectionListener( lsDef );
+    wMaxTimeField.addSelectionListener( lsDef );
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addListener( SWT.Close, e->cancel());
@@ -178,6 +237,9 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     wWindowType.setText( Const.NVL( input.getWindowType(), "" ) );
     wDuration.setText( Const.NVL( input.getDuration(), "" ) );
     wEvery.setText( Const.NVL( input.getEvery(), "" ) );
+    wStartTimeField.setText( Const.NVL( input.getStartWindowField(), "" ) );
+    wEndTimeField.setText( Const.NVL( input.getEndWindowField(), "" ) );
+    wMaxTimeField.setText( Const.NVL( input.getMaxWindowField(), "" ) );
 
     wStepname.selectAll();
     wStepname.setFocus();
@@ -205,6 +267,9 @@ public class BeamWindowDialog extends BaseStepDialog implements StepDialogInterf
     in.setWindowType( wWindowType.getText() );
     in.setDuration( wDuration.getText() );
     in.setEvery( wEvery.getText() );
+    in.setStartWindowField( wStartTimeField.getText() );
+    in.setEndWindowField( wEndTimeField.getText() );
+    in.setMaxWindowField( wMaxTimeField.getText() );
 
     input.setChanged();
   }

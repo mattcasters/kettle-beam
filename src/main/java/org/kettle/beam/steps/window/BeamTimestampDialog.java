@@ -33,6 +33,7 @@ public class BeamTimestampDialog extends BaseStepDialog implements StepDialogInt
   int margin;
 
   private Combo wFieldName;
+  private Button wReading;
 
   public BeamTimestampDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
     super( parent, (BaseStepMeta) in, transMeta, sname );
@@ -104,6 +105,23 @@ public class BeamTimestampDialog extends BaseStepDialog implements StepDialogInt
     wFieldName.setLayoutData( fdFieldName );
     lastControl = wFieldName;
 
+    Label wlReading = new Label( shell, SWT.RIGHT );
+    wlReading.setText( BaseMessages.getString( PKG, "BeamTimestampDialog.Reading" ) );
+    props.setLook( wlReading );
+    FormData fdlReading = new FormData();
+    fdlReading.left = new FormAttachment( 0, 0 );
+    fdlReading.top = new FormAttachment( lastControl, margin );
+    fdlReading.right = new FormAttachment( middle, -margin );
+    wlReading.setLayoutData( fdlReading );
+    wReading = new Button( shell, SWT.CHECK | SWT.LEFT );
+    props.setLook( wReading );
+    FormData fdReading = new FormData();
+    fdReading.left = new FormAttachment( middle, 0 );
+    fdReading.top = new FormAttachment( wlReading, 0, SWT.CENTER );
+    fdReading.right = new FormAttachment( 100, 0 );
+    wReading.setLayoutData( fdReading );
+    lastControl = wReading;
+
     wOK = new Button( shell, SWT.PUSH );
     wOK.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
 
@@ -148,6 +166,7 @@ public class BeamTimestampDialog extends BaseStepDialog implements StepDialogInt
   public void getData() {
     wStepname.setText( stepname );
     wFieldName.setText( Const.NVL( input.getFieldName(), "" ) );
+    wReading.setSelection( input.isReadingTimestamp() );
 
     wStepname.selectAll();
     wStepname.setFocus();
@@ -173,6 +192,7 @@ public class BeamTimestampDialog extends BaseStepDialog implements StepDialogInt
     stepname = wStepname.getText(); // return value
 
     in.setFieldName( wFieldName.getText() );
+    in.setReadingTimestamp( wReading.getSelection() );
 
     input.setChanged();
   }

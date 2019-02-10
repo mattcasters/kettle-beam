@@ -27,3 +27,5 @@ target/
 
 *.kate-swp
 
+src/main/resources/*.png
+
