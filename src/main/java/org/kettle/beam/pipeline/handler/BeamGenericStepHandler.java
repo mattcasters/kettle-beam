@@ -1,7 +1,9 @@
 package org.kettle.beam.pipeline.handler;
 
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.coders.VoidCoder;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.GroupByKey;
@@ -66,6 +68,7 @@ public class BeamGenericStepHandler implements BeamStepHandler {
     // If we have no previous step, it's an input step.  We need to start from pipeline
     //
     boolean inputStep = input == null;
+    boolean reduceParallelism = checkStepCopiesForReducedParallelism(stepMeta);
 
     String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
 
@@ -104,7 +107,7 @@ public class BeamGenericStepHandler implements BeamStepHandler {
 
     // Send all the information on their way to the right nodes
     //
-    StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses,
+    StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses, transMeta.getSizeRowset(),
       stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), inputStep,
       targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
 
@@ -119,6 +122,21 @@ public class BeamGenericStepHandler implements BeamStepHandler {
         .apply( Values.create() )
         .apply( Flatten.iterables() )
         .apply( ParDo.of( new StringToKettleRowFn( stepMeta.getName(), JsonRowMeta.toJson( rowMeta ), stepPluginClasses, xpPluginClasses ) ) );
+
+      // Store this new collection so we can hook up other steps...
+      //
+      String tupleId = KettleBeamUtil.createMainInputTupleId( stepMeta.getName() );
+      stepCollectionMap.put( tupleId, input );
+    } else if (reduceParallelism) {
+
+      // group across all fields to get down to a single thread...
+      //
+      input = input.apply(WithKeys.of((Void) null))
+        .setCoder( KvCoder.of( VoidCoder.of(), input.getCoder()))
+        .apply(GroupByKey.create())
+        .apply(Values.create())
+        .apply(Flatten.iterables())
+        ;
     }
 
     // Apply the step transform to the previous io step PCollection(s)
@@ -135,8 +153,7 @@ public class BeamGenericStepHandler implements BeamStepHandler {
 
     // Were there any targeted steps in this step?
     //
-    for (
-      String targetStep : targetSteps ) {
+    for ( String targetStep : targetSteps ) {
       String tupleId = KettleBeamUtil.createTargetTupleId( stepMeta.getName(), targetStep );
       PCollection<KettleRow> targetPCollection = tuple.get( new TupleTag<KettleRow>( tupleId ) );
 
@@ -146,6 +163,22 @@ public class BeamGenericStepHandler implements BeamStepHandler {
     }
 
     log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s), targets=" + targetSteps.size() + ", infos=" + infoSteps.size() );
+  }
+
+  private boolean checkStepCopiesForReducedParallelism( StepMeta stepMeta ) {
+    if (stepMeta.getCopiesString()==null) {
+      return false;
+    }
+    String copiesString = stepMeta.getCopiesString();
+
+    String[] keyWords = new String[] { "BEAM_SINGLE", "SINGLE_BEAM", "BEAM_OUTPUT", "OUTPUT" };
+
+    for (String keyWord : keyWords) {
+      if (copiesString.equalsIgnoreCase( keyWord )) {
+        return true;
+      }
+    }
+    return false;
   }
 
 
