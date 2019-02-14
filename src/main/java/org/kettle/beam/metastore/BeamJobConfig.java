@@ -1,5 +1,11 @@
 package org.kettle.beam.metastore;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.beam.sdk.options.Default;
+import org.apache.beam.sdk.options.Description;
+import org.apache.flink.api.common.ExecutionMode;
+import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.pentaho.metastore.persist.MetaStoreAttribute;
 import org.pentaho.metastore.persist.MetaStoreElementType;
 
@@ -116,6 +122,47 @@ public class BeamJobConfig {
   @MetaStoreAttribute
   private String sparkStorageLevel;
 
+  //
+  // Flink options
+  //
+  private String flinkMaster;
+
+  private String flinkParallelism;
+
+  private String flinkCheckpointingInterval;
+
+  private String flinkCheckpointingMode;
+
+  private String flinkCheckpointTimeoutMillis;
+
+  private String flinkMinPauseBetweenCheckpoints;
+
+  private String flinkNumberOfExecutionRetries;
+
+  private String flinkExecutionRetryDelay;
+
+  private String flinkObjectReuse;
+
+  private String flinkStateBackend;
+
+  private String flinkEnableMetrics;
+
+  private String flinkExternalizedCheckpointsEnabled;
+
+  private String flinkRetainExternalizedCheckpointsOnCancellation;
+
+  private String flinkMaxBundleSize;
+
+  private String flinkMaxBundleTimeMills;
+
+  private String flinkShutdownSourcesOnFinalWatermark;
+
+  private String flinkLatencyTrackingInterval;
+
+  private String flinkAutoWatermarkInterval;
+
+  private String flinkExecutionModeForBatch;
+  
 
   public BeamJobConfig() {
     parameters = new ArrayList<>();
@@ -599,5 +646,309 @@ public class BeamJobConfig {
    */
   public void setSparkDeployFolder( String sparkDeployFolder ) {
     this.sparkDeployFolder = sparkDeployFolder;
+  }
+
+  /**
+   * Gets flinkMaster
+   *
+   * @return value of flinkMaster
+   */
+  public String getFlinkMaster() {
+    return flinkMaster;
+  }
+
+  /**
+   * @param flinkMaster The flinkMaster to set
+   */
+  public void setFlinkMaster( String flinkMaster ) {
+    this.flinkMaster = flinkMaster;
+  }
+
+  /**
+   * Gets flinkParallelism
+   *
+   * @return value of flinkParallelism
+   */
+  public String getFlinkParallelism() {
+    return flinkParallelism;
+  }
+
+  /**
+   * @param flinkParallelism The flinkParallelism to set
+   */
+  public void setFlinkParallelism( String flinkParallelism ) {
+    this.flinkParallelism = flinkParallelism;
+  }
+
+  /**
+   * Gets flinkCheckpointingInterval
+   *
+   * @return value of flinkCheckpointingInterval
+   */
+  public String getFlinkCheckpointingInterval() {
+    return flinkCheckpointingInterval;
+  }
+
+  /**
+   * @param flinkCheckpointingInterval The flinkCheckpointingInterval to set
+   */
+  public void setFlinkCheckpointingInterval( String flinkCheckpointingInterval ) {
+    this.flinkCheckpointingInterval = flinkCheckpointingInterval;
+  }
+
+  /**
+   * Gets flinkCheckpointingMode
+   *
+   * @return value of flinkCheckpointingMode
+   */
+  public String getFlinkCheckpointingMode() {
+    return flinkCheckpointingMode;
+  }
+
+  /**
+   * @param flinkCheckpointingMode The flinkCheckpointingMode to set
+   */
+  public void setFlinkCheckpointingMode( String flinkCheckpointingMode ) {
+    this.flinkCheckpointingMode = flinkCheckpointingMode;
+  }
+
+  /**
+   * Gets flinkCheckpointTimeoutMillis
+   *
+   * @return value of flinkCheckpointTimeoutMillis
+   */
+  public String getFlinkCheckpointTimeoutMillis() {
+    return flinkCheckpointTimeoutMillis;
+  }
+
+  /**
+   * @param flinkCheckpointTimeoutMillis The flinkCheckpointTimeoutMillis to set
+   */
+  public void setFlinkCheckpointTimeoutMillis( String flinkCheckpointTimeoutMillis ) {
+    this.flinkCheckpointTimeoutMillis = flinkCheckpointTimeoutMillis;
+  }
+
+  /**
+   * Gets flinkMinPauseBetweenCheckpoints
+   *
+   * @return value of flinkMinPauseBetweenCheckpoints
+   */
+  public String getFlinkMinPauseBetweenCheckpoints() {
+    return flinkMinPauseBetweenCheckpoints;
+  }
+
+  /**
+   * @param flinkMinPauseBetweenCheckpoints The flinkMinPauseBetweenCheckpoints to set
+   */
+  public void setFlinkMinPauseBetweenCheckpoints( String flinkMinPauseBetweenCheckpoints ) {
+    this.flinkMinPauseBetweenCheckpoints = flinkMinPauseBetweenCheckpoints;
+  }
+
+  /**
+   * Gets flinkNumberOfExecutionRetries
+   *
+   * @return value of flinkNumberOfExecutionRetries
+   */
+  public String getFlinkNumberOfExecutionRetries() {
+    return flinkNumberOfExecutionRetries;
+  }
+
+  /**
+   * @param flinkNumberOfExecutionRetries The flinkNumberOfExecutionRetries to set
+   */
+  public void setFlinkNumberOfExecutionRetries( String flinkNumberOfExecutionRetries ) {
+    this.flinkNumberOfExecutionRetries = flinkNumberOfExecutionRetries;
+  }
+
+  /**
+   * Gets flinkExecutionRetryDelay
+   *
+   * @return value of flinkExecutionRetryDelay
+   */
+  public String getFlinkExecutionRetryDelay() {
+    return flinkExecutionRetryDelay;
+  }
+
+  /**
+   * @param flinkExecutionRetryDelay The flinkExecutionRetryDelay to set
+   */
+  public void setFlinkExecutionRetryDelay( String flinkExecutionRetryDelay ) {
+    this.flinkExecutionRetryDelay = flinkExecutionRetryDelay;
+  }
+
+  /**
+   * Gets flinkObjectReuse
+   *
+   * @return value of flinkObjectReuse
+   */
+  public String getFlinkObjectReuse() {
+    return flinkObjectReuse;
+  }
+
+  /**
+   * @param flinkObjectReuse The flinkObjectReuse to set
+   */
+  public void setFlinkObjectReuse( String flinkObjectReuse ) {
+    this.flinkObjectReuse = flinkObjectReuse;
+  }
+
+  /**
+   * Gets flinkStateBackend
+   *
+   * @return value of flinkStateBackend
+   */
+  public String getFlinkStateBackend() {
+    return flinkStateBackend;
+  }
+
+  /**
+   * @param flinkStateBackend The flinkStateBackend to set
+   */
+  public void setFlinkStateBackend( String flinkStateBackend ) {
+    this.flinkStateBackend = flinkStateBackend;
+  }
+
+  /**
+   * Gets flinkEnableMetrics
+   *
+   * @return value of flinkEnableMetrics
+   */
+  public String getFlinkEnableMetrics() {
+    return flinkEnableMetrics;
+  }
+
+  /**
+   * @param flinkEnableMetrics The flinkEnableMetrics to set
+   */
+  public void setFlinkEnableMetrics( String flinkEnableMetrics ) {
+    this.flinkEnableMetrics = flinkEnableMetrics;
+  }
+
+  /**
+   * Gets flinkExternalizedCheckpointsEnabled
+   *
+   * @return value of flinkExternalizedCheckpointsEnabled
+   */
+  public String getFlinkExternalizedCheckpointsEnabled() {
+    return flinkExternalizedCheckpointsEnabled;
+  }
+
+  /**
+   * @param flinkExternalizedCheckpointsEnabled The flinkExternalizedCheckpointsEnabled to set
+   */
+  public void setFlinkExternalizedCheckpointsEnabled( String flinkExternalizedCheckpointsEnabled ) {
+    this.flinkExternalizedCheckpointsEnabled = flinkExternalizedCheckpointsEnabled;
+  }
+
+  /**
+   * Gets flinkRetainExternalizedCheckpointsOnCancellation
+   *
+   * @return value of flinkRetainExternalizedCheckpointsOnCancellation
+   */
+  public String getFlinkRetainExternalizedCheckpointsOnCancellation() {
+    return flinkRetainExternalizedCheckpointsOnCancellation;
+  }
+
+  /**
+   * @param flinkRetainExternalizedCheckpointsOnCancellation The flinkRetainExternalizedCheckpointsOnCancellation to set
+   */
+  public void setFlinkRetainExternalizedCheckpointsOnCancellation( String flinkRetainExternalizedCheckpointsOnCancellation ) {
+    this.flinkRetainExternalizedCheckpointsOnCancellation = flinkRetainExternalizedCheckpointsOnCancellation;
+  }
+
+  /**
+   * Gets flinkMaxBundleSize
+   *
+   * @return value of flinkMaxBundleSize
+   */
+  public String getFlinkMaxBundleSize() {
+    return flinkMaxBundleSize;
+  }
+
+  /**
+   * @param flinkMaxBundleSize The flinkMaxBundleSize to set
+   */
+  public void setFlinkMaxBundleSize( String flinkMaxBundleSize ) {
+    this.flinkMaxBundleSize = flinkMaxBundleSize;
+  }
+
+  /**
+   * Gets flinkMaxBundleTimeMills
+   *
+   * @return value of flinkMaxBundleTimeMills
+   */
+  public String getFlinkMaxBundleTimeMills() {
+    return flinkMaxBundleTimeMills;
+  }
+
+  /**
+   * @param flinkMaxBundleTimeMills The flinkMaxBundleTimeMills to set
+   */
+  public void setFlinkMaxBundleTimeMills( String flinkMaxBundleTimeMills ) {
+    this.flinkMaxBundleTimeMills = flinkMaxBundleTimeMills;
+  }
+
+  /**
+   * Gets flinkShutdownSourcesOnFinalWatermark
+   *
+   * @return value of flinkShutdownSourcesOnFinalWatermark
+   */
+  public String getFlinkShutdownSourcesOnFinalWatermark() {
+    return flinkShutdownSourcesOnFinalWatermark;
+  }
+
+  /**
+   * @param flinkShutdownSourcesOnFinalWatermark The flinkShutdownSourcesOnFinalWatermark to set
+   */
+  public void setFlinkShutdownSourcesOnFinalWatermark( String flinkShutdownSourcesOnFinalWatermark ) {
+    this.flinkShutdownSourcesOnFinalWatermark = flinkShutdownSourcesOnFinalWatermark;
+  }
+
+  /**
+   * Gets flinkLatencyTrackingInterval
+   *
+   * @return value of flinkLatencyTrackingInterval
+   */
+  public String getFlinkLatencyTrackingInterval() {
+    return flinkLatencyTrackingInterval;
+  }
+
+  /**
+   * @param flinkLatencyTrackingInterval The flinkLatencyTrackingInterval to set
+   */
+  public void setFlinkLatencyTrackingInterval( String flinkLatencyTrackingInterval ) {
+    this.flinkLatencyTrackingInterval = flinkLatencyTrackingInterval;
+  }
+
+  /**
+   * Gets flinkAutoWatermarkInterval
+   *
+   * @return value of flinkAutoWatermarkInterval
+   */
+  public String getFlinkAutoWatermarkInterval() {
+    return flinkAutoWatermarkInterval;
+  }
+
+  /**
+   * @param flinkAutoWatermarkInterval The flinkAutoWatermarkInterval to set
+   */
+  public void setFlinkAutoWatermarkInterval( String flinkAutoWatermarkInterval ) {
+    this.flinkAutoWatermarkInterval = flinkAutoWatermarkInterval;
+  }
+
+  /**
+   * Gets flinkExecutionModeForBatch
+   *
+   * @return value of flinkExecutionModeForBatch
+   */
+  public String getFlinkExecutionModeForBatch() {
+    return flinkExecutionModeForBatch;
+  }
+
+  /**
+   * @param flinkExecutionModeForBatch The flinkExecutionModeForBatch to set
+   */
+  public void setFlinkExecutionModeForBatch( String flinkExecutionModeForBatch ) {
+    this.flinkExecutionModeForBatch = flinkExecutionModeForBatch;
   }
 }

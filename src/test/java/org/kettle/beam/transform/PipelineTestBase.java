@@ -70,7 +70,7 @@ public class PipelineTestBase {
 
     MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
     for ( MetricResult<Long> result : allResults.getCounters() ) {
-      System.out.println( "Name: " + result.getName() + " Attempted: " + result.getAttempted() + " Committed: " + result.getCommitted() );
+      System.out.println( "Name: " + result.getName() + " Attempted: " + result.getAttempted() );
     }
   }
 }

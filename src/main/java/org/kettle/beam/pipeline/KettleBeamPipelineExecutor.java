@@ -21,6 +21,8 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.flink.api.common.ExecutionMode;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
@@ -93,6 +95,7 @@ public class KettleBeamPipelineExecutor {
     RunnerType runnerType = RunnerType.getRunnerTypeByName( transMeta.environmentSubstitute( jobConfig.getRunnerTypeName() ) );
     switch ( runnerType ) {
       case Direct:
+      case Flink:
       case DataFlow:
         return executePipeline();
 
@@ -102,6 +105,7 @@ public class KettleBeamPipelineExecutor {
         } else {
           return executeSpark();
         }
+
       default:
         throw new KettleException( "Execution on runner '" + runnerType.name() + "' is not supported yet, sorry." );
     }
@@ -274,7 +278,7 @@ public class KettleBeamPipelineExecutor {
 
     MetricQueryResults allResults = metricResults.queryMetrics( MetricsFilter.builder().build() );
     for ( MetricResult<Long> result : allResults.getCounters() ) {
-      logChannel.logBasic( "Name: " + result.getName() + " Attempted: " + result.getAttempted() + " Committed: " + result.getCommitted() );
+      logChannel.logBasic( "Name: " + result.getName() + " Attempted: " + result.getAttempted() );
     }
   }
 
@@ -325,7 +329,6 @@ public class KettleBeamPipelineExecutor {
           configureFlinkOptions( config, flinkOptions, space );
           pipelineOptions = flinkOptions;
           pipelineRunnerClass = FlinkRunner.class;
-          logChannel.logError( "Still missing a lot of options for Spark, this will probably fail" );
           break;
         default:
           throw new KettleException( "Sorry, this isn't implemented yet" );
@@ -496,9 +499,165 @@ public class KettleBeamPipelineExecutor {
 
   private void configureFlinkOptions( BeamJobConfig config, FlinkPipelineOptions options, VariableSpace space ) throws IOException {
 
-    // TODO: Do the other things as well
     options.setFilesToStage( BeamConst.findLibraryFilesToStage( null, config.getPluginsToStage(), true, true ) );
 
+    // Address of the Flink Master where the Pipeline should be executed. Can either be of the form \"host:port\" or one of the special values [local], [collection] or [auto].")
+    if (StringUtils.isNotEmpty( config.getFlinkMaster() )) {
+      options.setFlinkMaster(space.environmentSubstitute( options.getFlinkMaster() ) );
+    }
+
+    // The degree of parallelism to be used when distributing operations onto workers. If the parallelism is not set, the configured Flink default is used, or 1 if none can be found.")
+    if (StringUtils.isNotEmpty( config.getFlinkParallelism() )) {
+      int value = Const.toInt( space.environmentSubstitute(config.getFlinkParallelism()), -1 );
+      if (value>0) {
+        options.setParallelism(value);
+      }
+    }
+
+    // The interval in milliseconds at which to trigger checkpoints of the running pipeline. Default: No checkpointing.")
+    if (StringUtils.isNotEmpty( config.getFlinkCheckpointingInterval() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkCheckpointingInterval() ), -1L );
+      if (value>0) {
+        options.setCheckpointingInterval( value );
+      }
+    }
+
+    // The checkpointing mode that defines consistency guarantee.")
+    if (StringUtils.isNotEmpty( config.getFlinkCheckpointingMode() )) {
+      String modeString = space.environmentSubstitute( config.getFlinkCheckpointingMode() );
+      try {
+        CheckpointingMode mode = CheckpointingMode.valueOf( modeString);
+        if ( mode != null ) {
+          options.setCheckpointingMode( mode );
+        }
+      } catch(Exception e) {
+        throw new IOException( "Unable to parse flink check pointing mode '"+modeString+"'", e );
+      }
+    }
+
+    // The maximum time in milliseconds that a checkpoint may take before being discarded.")
+    if (StringUtils.isNotEmpty( config.getFlinkCheckpointTimeoutMillis() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkCheckpointTimeoutMillis() ), -1L );
+      if (value>0) {
+        options.setCheckpointTimeoutMillis( value );
+      }
+    }
+
+    // The minimal pause in milliseconds before the next checkpoint is triggered.")
+    if (StringUtils.isNotEmpty( config.getFlinkMinPauseBetweenCheckpoints() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkMinPauseBetweenCheckpoints() ), -1L );
+      if (value>0) {
+        options.setMinPauseBetweenCheckpoints( value );
+      }
+    }
+
+    // Sets the number of times that failed tasks are re-executed. A value of zero effectively disables fault tolerance. A value of -1 indicates that the system default value (as defined in the configuration) should be used.")
+    if (StringUtils.isNotEmpty( config.getFlinkNumberOfExecutionRetries() )) {
+      int value = Const.toInt( space.environmentSubstitute(config.getFlinkNumberOfExecutionRetries()), -1 );
+      if (value>=0) {
+        options.setNumberOfExecutionRetries( value );
+      }
+    }
+
+    // Sets the delay in milliseconds between executions. A value of {@code -1} indicates that the default value should be used.")
+    if (StringUtils.isNotEmpty( config.getFlinkExecutionRetryDelay() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkExecutionRetryDelay() ), -1L );
+      if (value>0) {
+        options.setExecutionRetryDelay( value );
+      }
+    }
+
+    // Sets the behavior of reusing objects.")
+    if (StringUtils.isNotEmpty( config.getFlinkObjectReuse() )) {
+      String str = space.environmentSubstitute( config.getFlinkObjectReuse() );
+      boolean value = "Y".equalsIgnoreCase( str ) || "TRUE".equalsIgnoreCase( str );
+      options.setObjectReuse( value );
+    }
+
+    // Sets the state backend to use in streaming mode. Otherwise the default is read from the Flink config.")
+    /** TODO
+    if (StringUtils.isNotEmpty( config.getFlinkStateBackend() )) {
+      String str = space.environmentSubstitute( config.getFlinkStateBackend() );
+      try {
+
+        options.setStateBackend(StateBackEnd);
+      } catch(Exception e) {
+        throw new IOException( "Unable to parse flink state back-end '"+modeString+"'", e );
+      }
+    }
+    */
+
+    // Enable/disable Beam metrics in Flink Runner")
+    if (StringUtils.isNotEmpty( config.getFlinkEnableMetrics() )) {
+      String str = space.environmentSubstitute( config.getFlinkEnableMetrics() );
+      boolean value = "Y".equalsIgnoreCase( str ) || "TRUE".equalsIgnoreCase( str );
+      options.setEnableMetrics( value );
+    }
+
+    // Enables or disables externalized checkpoints. Works in conjunction with CheckpointingInterval")
+    if (StringUtils.isNotEmpty( config.getFlinkExternalizedCheckpointsEnabled() )) {
+      String str = space.environmentSubstitute( config.getFlinkExternalizedCheckpointsEnabled() );
+      boolean value = "Y".equalsIgnoreCase( str ) || "TRUE".equalsIgnoreCase( str );
+      options.setExternalizedCheckpointsEnabled( value );
+    }
+
+    // Sets the behavior of externalized checkpoints on cancellation.")
+    if (StringUtils.isNotEmpty( config.getFlinkRetainExternalizedCheckpointsOnCancellation() )) {
+      String str = space.environmentSubstitute( config.getFlinkRetainExternalizedCheckpointsOnCancellation() );
+      boolean value = "Y".equalsIgnoreCase( str ) || "TRUE".equalsIgnoreCase( str );
+      options.setRetainExternalizedCheckpointsOnCancellation( value );
+    }
+
+    // The maximum number of elements in a bundle.")
+    if (StringUtils.isNotEmpty( config.getFlinkMaxBundleSize() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkMaxBundleSize() ), -1L );
+      if (value>0) {
+        options.setMaxBundleSize( value );
+      }
+    }
+
+    // The maximum time to wait before finalising a bundle (in milliseconds).")
+    if (StringUtils.isNotEmpty( config.getFlinkMaxBundleTimeMills() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkMaxBundleTimeMills() ), -1L );
+      if ( value > 0 ) {
+        options.setMaxBundleSize( value );
+      }
+    }
+
+    // If set, shutdown sources when their watermark reaches +Inf.")
+    if (StringUtils.isNotEmpty( config.getFlinkShutdownSourcesOnFinalWatermark() )) {
+      String str = space.environmentSubstitute( config.getFlinkShutdownSourcesOnFinalWatermark() );
+      boolean value = "Y".equalsIgnoreCase( str ) || "TRUE".equalsIgnoreCase( str );
+      options.setShutdownSourcesOnFinalWatermark( value );
+    }
+
+    // Interval in milliseconds for sending latency tracking marks from the sources to the sinks. Interval value <= 0 disables the feature.")
+    if (StringUtils.isNotEmpty( config.getFlinkLatencyTrackingInterval() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkLatencyTrackingInterval() ), -1L );
+      if (value>0) {
+        options.setLatencyTrackingInterval( value );
+      }
+    }
+
+    // The interval in milliseconds for automatic watermark emission.")
+    if (StringUtils.isNotEmpty( config.getFlinkAutoWatermarkInterval() )) {
+      long value = Const.toLong( space.environmentSubstitute( config.getFlinkAutoWatermarkInterval() ), -1L );
+      if (value>0) {
+        options.setAutoWatermarkInterval( value );
+      }
+    }
+
+    // Flink mode for data exchange of batch pipelines. Reference {@link org.apache.flink.api.common.ExecutionMode}.
+    // Set this to BATCH_FORCED if pipelines get blocked, see https://issues.apache.org/jira/browse/FLINK-10672")
+    if (StringUtils.isNotEmpty( config.getFlinkExecutionModeForBatch() )) {
+      String str = space.environmentSubstitute( config.getFlinkExecutionModeForBatch() );
+      ExecutionMode value = ExecutionMode.valueOf( str );
+      try {
+        options.setExecutionModeForBatch( value );
+      } catch(Exception e) {
+        throw new IOException( "Unable to parse flink execution mode for batch '"+str+"'", e );
+      }
+    }
   }
 
 

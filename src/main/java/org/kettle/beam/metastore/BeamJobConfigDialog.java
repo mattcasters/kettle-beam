@@ -53,15 +53,18 @@ public class BeamJobConfigDialog {
   private CTabItem wParametersTab;
   private CTabItem wDataflowTab;
   private CTabItem wSparkTab;
+  private CTabItem wFlinkTab;
 
   private ScrolledComposite wGeneralSComp;
   private ScrolledComposite wDataflowSComp;
   private ScrolledComposite wSparkSComp;
+  private ScrolledComposite wFlinkSComp;
 
   private Composite wGeneralComp;
   private Composite wParametersComp;
   private Composite wDataflowComp;
   private Composite wSparkComp;
+  private Composite wFlinkComp;
 
   // Connection properties
   //
@@ -105,6 +108,26 @@ public class BeamJobConfigDialog {
   private TextVar wSparkBundleSize;
   private ComboVar wSparkStorageLevel;
 
+  private TextVar wFlinkMaster;
+  private TextVar wFlinkParallelism;
+  private TextVar wFlinkCheckpointingInterval;
+  private ComboVar wFlinkCheckpointingMode;
+  private TextVar wFlinkCheckpointTimeoutMillis;
+  private TextVar wFlinkMinPauseBetweenCheckpoints;
+  private TextVar wFlinkNumberOfExecutionRetries;
+  private TextVar wFlinkExecutionRetryDelay;
+  private TextVar wFlinkObjectReuse;
+  private TextVar wFlinkStateBackend;
+  private TextVar wFlinkEnableMetrics;
+  private TextVar wFlinkExternalizedCheckpointsEnabled;
+  private TextVar wFlinkRetainExternalizedCheckpointsOnCancellation;
+  private TextVar wFlinkMaxBundleSize;
+  private TextVar wFlinkMaxBundleTimeMills;
+  private TextVar wFlinkShutdownSourcesOnFinalWatermark;
+  private TextVar wFlinkLatencyTrackingInterval;
+  private TextVar wFlinkAutoWatermarkInterval;
+  private ComboVar wFlinkExecutionModeForBatch;
+  
   private Button wOK;
   private Button wCancel;
   
@@ -112,10 +135,10 @@ public class BeamJobConfigDialog {
 
   private PropsUI props;
 
-  private int middle;
   private int margin;
 
   private boolean ok;
+  
 
 
   public BeamJobConfigDialog( Shell parent, BeamJobConfig config ) {
@@ -136,7 +159,7 @@ public class BeamJobConfigDialog {
     props.setLook( shell );
     shell.setImage( GUIResource.getInstance().getImageSlave() );
 
-    middle = props.getMiddlePct();
+    int middle = props.getMiddlePct();
     margin = Const.MARGIN + 2;
 
     FormLayout formLayout = new FormLayout();
@@ -187,6 +210,7 @@ public class BeamJobConfigDialog {
     wGcpDiskSizeGb.addSelectionListener( selAdapter );
     wGcpRegion.addSelectionListener( selAdapter );
     wGcpZone.addSelectionListener( selAdapter );
+
     wSparkMaster.addSelectionListener( selAdapter );
     wSparkDeployFolder.addSelectionListener( selAdapter );
     wSparkBatchIntervalMillis.addSelectionListener( selAdapter );
@@ -197,6 +221,26 @@ public class BeamJobConfigDialog {
     wSparkReadTimePercentage.addSelectionListener( selAdapter );
     wSparkBundleSize.addSelectionListener( selAdapter );
     wSparkStorageLevel.addSelectionListener( selAdapter );
+
+    wFlinkMaster.addSelectionListener( selAdapter );
+    wFlinkParallelism.addSelectionListener( selAdapter );
+    wFlinkCheckpointingInterval.addSelectionListener( selAdapter );
+    wFlinkCheckpointingMode.addSelectionListener( selAdapter );
+    wFlinkCheckpointTimeoutMillis.addSelectionListener( selAdapter );
+    wFlinkMinPauseBetweenCheckpoints.addSelectionListener( selAdapter );
+    wFlinkNumberOfExecutionRetries.addSelectionListener( selAdapter );
+    wFlinkExecutionRetryDelay.addSelectionListener( selAdapter );
+    wFlinkObjectReuse.addSelectionListener( selAdapter );
+    wFlinkStateBackend.addSelectionListener( selAdapter );
+    wFlinkEnableMetrics.addSelectionListener( selAdapter );
+    wFlinkExternalizedCheckpointsEnabled.addSelectionListener( selAdapter );
+    wFlinkRetainExternalizedCheckpointsOnCancellation.addSelectionListener( selAdapter );
+    wFlinkMaxBundleSize.addSelectionListener( selAdapter );
+    wFlinkMaxBundleTimeMills.addSelectionListener( selAdapter );
+    wFlinkShutdownSourcesOnFinalWatermark.addSelectionListener( selAdapter );
+    wFlinkLatencyTrackingInterval.addSelectionListener( selAdapter );
+    wFlinkAutoWatermarkInterval.addSelectionListener( selAdapter );
+    wFlinkExecutionModeForBatch.addSelectionListener( selAdapter );
 
     // Detect X or ALT-F4 or something that kills this window...
     shell.addShellListener( new ShellAdapter() {
@@ -220,6 +264,8 @@ public class BeamJobConfigDialog {
   }
 
   private void addFormWidgets() {
+
+    int middle = Const.MIDDLE_PCT;
 
     // The name of the Beam Job Configuration
     //
@@ -289,20 +335,23 @@ public class BeamJobConfigDialog {
     fdTabFolder.top = new FormAttachment( lastControl, margin*2 );
     fdTabFolder.bottom = new FormAttachment( wOK, -margin*2 );
     wTabFolder.setLayoutData( fdTabFolder );
-
-
+    
     addGeneralTab();
     addParametersTab();
     addDataflowTab();
     addSparkTab();
+    addFlinkTab();
 
     wTabFolder.setSelection( 0 );
 
   }
 
   private void addGeneralTab() {
+
+    int middle = Const.MIDDLE_PCT;
+
     wGeneralTab = new CTabItem( wTabFolder, SWT.NONE );
-    wGeneralTab .setText( "General" );
+    wGeneralTab .setText( "  General  " );
 
     wGeneralSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wGeneralSComp.setLayout( new FillLayout() );
@@ -424,8 +473,11 @@ public class BeamJobConfigDialog {
   }
 
   private void addDataflowTab() {
+
+    int middle = Const.MIDDLE_PCT;
+
     wDataflowTab = new CTabItem( wTabFolder, SWT.NONE );
-    wDataflowTab .setText( "Google Cloud Platform Dataflow" );
+    wDataflowTab .setText( "  Dataflow  " );
 
     wDataflowSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wDataflowSComp.setLayout( new FillLayout() );
@@ -689,8 +741,11 @@ public class BeamJobConfigDialog {
   }
 
   private void addSparkTab() {
+
+    int middle = 65;
+
     wSparkTab = new CTabItem( wTabFolder, SWT.NONE );
-    wSparkTab .setText( "Apache Spark" );
+    wSparkTab .setText( "  Spark  " );
 
     wSparkSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wSparkSComp.setLayout( new FillLayout() );
@@ -934,6 +989,375 @@ public class BeamJobConfigDialog {
     wSparkTab.setControl( wSparkSComp );
   }
 
+  private void addFlinkTab() {
+
+    int middle = 65;
+
+    wFlinkTab = new CTabItem( wTabFolder, SWT.NONE );
+    wFlinkTab .setText( "  Flink  " );
+
+    wFlinkSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
+    wFlinkSComp.setLayout( new FillLayout() );
+
+    wFlinkComp = new Composite( wFlinkSComp, SWT.NONE );
+    props.setLook( wFlinkComp );
+
+    FormLayout fileLayout = new FormLayout();
+    fileLayout.marginWidth = 3;
+    fileLayout.marginHeight = 3;
+    wFlinkComp.setLayout( fileLayout );
+
+    // Flink master
+    //
+    Label wlFlinkMaster = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkMaster );
+    wlFlinkMaster.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkMaster.Label" ) );
+    FormData fdlFlinkMaster = new FormData();
+    fdlFlinkMaster.top = new FormAttachment( 0, 0 );
+    fdlFlinkMaster.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkMaster.right = new FormAttachment( middle, -margin );
+    wlFlinkMaster.setLayoutData( fdlFlinkMaster );
+    wFlinkMaster = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkMaster );
+    FormData fdFlinkMaster = new FormData();
+    fdFlinkMaster.top = new FormAttachment( wlFlinkMaster, 0, SWT.CENTER );
+    fdFlinkMaster.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkMaster.right = new FormAttachment( 95, 0 );
+    wFlinkMaster.setLayoutData( fdFlinkMaster );
+    Control lastControl = wFlinkMaster;
+
+    Label wlFlinkParallelism = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkParallelism );
+    wlFlinkParallelism.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkParallelism.Label" ) );
+    FormData fdlFlinkParallelism = new FormData();
+    fdlFlinkParallelism.top = new FormAttachment( lastControl, margin );
+    fdlFlinkParallelism.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkParallelism.right = new FormAttachment( middle, -margin );
+    wlFlinkParallelism.setLayoutData( fdlFlinkParallelism );
+    wFlinkParallelism = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkParallelism );
+    FormData fdFlinkParallelism = new FormData();
+    fdFlinkParallelism.top = new FormAttachment( wlFlinkParallelism, 0, SWT.CENTER );
+    fdFlinkParallelism.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkParallelism.right = new FormAttachment( 95, 0 );
+    wFlinkParallelism.setLayoutData( fdFlinkParallelism );
+    lastControl = wFlinkParallelism;
+
+    Label wlFlinkCheckpointingInterval = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkCheckpointingInterval );
+    wlFlinkCheckpointingInterval.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkCheckpointingInterval.Label" ) );
+    FormData fdlFlinkCheckpointingInterval = new FormData();
+    fdlFlinkCheckpointingInterval.top = new FormAttachment( lastControl, margin );
+    fdlFlinkCheckpointingInterval.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkCheckpointingInterval.right = new FormAttachment( middle, -margin );
+    wlFlinkCheckpointingInterval.setLayoutData( fdlFlinkCheckpointingInterval );
+    wFlinkCheckpointingInterval = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkCheckpointingInterval );
+    FormData fdFlinkCheckpointingInterval = new FormData();
+    fdFlinkCheckpointingInterval.top = new FormAttachment( wlFlinkCheckpointingInterval, 0, SWT.CENTER );
+    fdFlinkCheckpointingInterval.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkCheckpointingInterval.right = new FormAttachment( 95, 0 );
+    wFlinkCheckpointingInterval.setLayoutData( fdFlinkCheckpointingInterval );
+    lastControl = wFlinkCheckpointingInterval;
+
+    Label wlFlinkCheckpointingMode = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkCheckpointingMode );
+    wlFlinkCheckpointingMode.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkCheckpointingMode.Label" ) );
+    FormData fdlFlinkCheckpointingMode = new FormData();
+    fdlFlinkCheckpointingMode.top = new FormAttachment( lastControl, margin );
+    fdlFlinkCheckpointingMode.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkCheckpointingMode.right = new FormAttachment( middle, -margin );
+    wlFlinkCheckpointingMode.setLayoutData( fdlFlinkCheckpointingMode );
+    wFlinkCheckpointingMode = new ComboVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    wFlinkCheckpointingMode.setItems( new String[] { "EXACTLY_ONCE", "AT_LEAST_ONCE" } );
+    props.setLook( wFlinkCheckpointingMode );
+    FormData fdFlinkCheckpointingMode = new FormData();
+    fdFlinkCheckpointingMode.top = new FormAttachment( wlFlinkCheckpointingMode, 0, SWT.CENTER );
+    fdFlinkCheckpointingMode.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkCheckpointingMode.right = new FormAttachment( 95, 0 );
+    wFlinkCheckpointingMode.setLayoutData( fdFlinkCheckpointingMode );
+    lastControl = wFlinkCheckpointingMode;
+
+    Label wlFlinkCheckpointTimeoutMillis = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkCheckpointTimeoutMillis );
+    wlFlinkCheckpointTimeoutMillis.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkCheckpointTimeoutMillis.Label" ) );
+    FormData fdlFlinkCheckpointTimeoutMillis = new FormData();
+    fdlFlinkCheckpointTimeoutMillis.top = new FormAttachment( lastControl, margin );
+    fdlFlinkCheckpointTimeoutMillis.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkCheckpointTimeoutMillis.right = new FormAttachment( middle, -margin );
+    wlFlinkCheckpointTimeoutMillis.setLayoutData( fdlFlinkCheckpointTimeoutMillis );
+    wFlinkCheckpointTimeoutMillis = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkCheckpointTimeoutMillis );
+    FormData fdFlinkCheckpointTimeoutMillis = new FormData();
+    fdFlinkCheckpointTimeoutMillis.top = new FormAttachment( wlFlinkCheckpointTimeoutMillis, 0, SWT.CENTER );
+    fdFlinkCheckpointTimeoutMillis.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkCheckpointTimeoutMillis.right = new FormAttachment( 95, 0 );
+    wFlinkCheckpointTimeoutMillis.setLayoutData( fdFlinkCheckpointTimeoutMillis );
+    lastControl = wFlinkCheckpointTimeoutMillis;
+
+    Label wlFlinkMinPauseBetweenCheckpoints = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkMinPauseBetweenCheckpoints );
+    wlFlinkMinPauseBetweenCheckpoints.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkMinPauseBetweenCheckpoints.Label" ) );
+    FormData fdlFlinkMinPauseBetweenCheckpoints = new FormData();
+    fdlFlinkMinPauseBetweenCheckpoints.top = new FormAttachment( lastControl, margin );
+    fdlFlinkMinPauseBetweenCheckpoints.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkMinPauseBetweenCheckpoints.right = new FormAttachment( middle, -margin );
+    wlFlinkMinPauseBetweenCheckpoints.setLayoutData( fdlFlinkMinPauseBetweenCheckpoints );
+    wFlinkMinPauseBetweenCheckpoints = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkMinPauseBetweenCheckpoints );
+    FormData fdFlinkMinPauseBetweenCheckpoints = new FormData();
+    fdFlinkMinPauseBetweenCheckpoints.top = new FormAttachment( wlFlinkMinPauseBetweenCheckpoints, 0, SWT.CENTER );
+    fdFlinkMinPauseBetweenCheckpoints.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkMinPauseBetweenCheckpoints.right = new FormAttachment( 95, 0 );
+    wFlinkMinPauseBetweenCheckpoints.setLayoutData( fdFlinkMinPauseBetweenCheckpoints );
+    lastControl = wFlinkMinPauseBetweenCheckpoints;
+
+    Label wlFlinkNumberOfExecutionRetries = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkNumberOfExecutionRetries );
+    wlFlinkNumberOfExecutionRetries.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkNumberOfExecutionRetries.Label" ) );
+    FormData fdlFlinkNumberOfExecutionRetries = new FormData();
+    fdlFlinkNumberOfExecutionRetries.top = new FormAttachment( lastControl, margin );
+    fdlFlinkNumberOfExecutionRetries.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkNumberOfExecutionRetries.right = new FormAttachment( middle, -margin );
+    wlFlinkNumberOfExecutionRetries.setLayoutData( fdlFlinkNumberOfExecutionRetries );
+    wFlinkNumberOfExecutionRetries = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkNumberOfExecutionRetries );
+    FormData fdFlinkNumberOfExecutionRetries = new FormData();
+    fdFlinkNumberOfExecutionRetries.top = new FormAttachment( wlFlinkNumberOfExecutionRetries, 0, SWT.CENTER );
+    fdFlinkNumberOfExecutionRetries.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkNumberOfExecutionRetries.right = new FormAttachment( 95, 0 );
+    wFlinkNumberOfExecutionRetries.setLayoutData( fdFlinkNumberOfExecutionRetries );
+    lastControl = wFlinkNumberOfExecutionRetries;
+
+    Label wlFlinkExecutionRetryDelay = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkExecutionRetryDelay );
+    wlFlinkExecutionRetryDelay.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkExecutionRetryDelay.Label" ) );
+    FormData fdlFlinkExecutionRetryDelay = new FormData();
+    fdlFlinkExecutionRetryDelay.top = new FormAttachment( lastControl, margin );
+    fdlFlinkExecutionRetryDelay.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkExecutionRetryDelay.right = new FormAttachment( middle, -margin );
+    wlFlinkExecutionRetryDelay.setLayoutData( fdlFlinkExecutionRetryDelay );
+    wFlinkExecutionRetryDelay = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkExecutionRetryDelay );
+    FormData fdFlinkExecutionRetryDelay = new FormData();
+    fdFlinkExecutionRetryDelay.top = new FormAttachment( wlFlinkExecutionRetryDelay, 0, SWT.CENTER );
+    fdFlinkExecutionRetryDelay.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkExecutionRetryDelay.right = new FormAttachment( 95, 0 );
+    wFlinkExecutionRetryDelay.setLayoutData( fdFlinkExecutionRetryDelay );
+    lastControl = wFlinkExecutionRetryDelay;
+
+    Label wlFlinkObjectReuse = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkObjectReuse );
+    wlFlinkObjectReuse.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkObjectReuse.Label" ) );
+    FormData fdlFlinkObjectReuse = new FormData();
+    fdlFlinkObjectReuse.top = new FormAttachment( lastControl, margin );
+    fdlFlinkObjectReuse.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkObjectReuse.right = new FormAttachment( middle, -margin );
+    wlFlinkObjectReuse.setLayoutData( fdlFlinkObjectReuse );
+    wFlinkObjectReuse = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkObjectReuse );
+    FormData fdFlinkObjectReuse = new FormData();
+    fdFlinkObjectReuse.top = new FormAttachment( wlFlinkObjectReuse, 0, SWT.CENTER );
+    fdFlinkObjectReuse.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkObjectReuse.right = new FormAttachment( 95, 0 );
+    wFlinkObjectReuse.setLayoutData( fdFlinkObjectReuse );
+    lastControl = wFlinkObjectReuse;
+
+
+    Label wlFlinkStateBackend = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkStateBackend );
+    wlFlinkStateBackend.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkStateBackend.Label" ) );
+    FormData fdlFlinkStateBackend = new FormData();
+    fdlFlinkStateBackend.top = new FormAttachment( lastControl, margin );
+    fdlFlinkStateBackend.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkStateBackend.right = new FormAttachment( middle, -margin );
+    wlFlinkStateBackend.setLayoutData( fdlFlinkStateBackend );
+    wFlinkStateBackend = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkStateBackend );
+    FormData fdFlinkStateBackend = new FormData();
+    fdFlinkStateBackend.top = new FormAttachment( wlFlinkStateBackend, 0, SWT.CENTER );
+    fdFlinkStateBackend.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkStateBackend.right = new FormAttachment( 95, 0 );
+    wFlinkStateBackend.setLayoutData( fdFlinkStateBackend );
+    lastControl = wFlinkStateBackend;
+    // TODO: figure out what to do here.
+    wlFlinkStateBackend.setEnabled( false );
+    wFlinkStateBackend.setEnabled( false );
+
+    Label wlFlinkEnableMetrics = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkEnableMetrics );
+    wlFlinkEnableMetrics.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkEnableMetrics.Label" ) );
+    FormData fdlFlinkEnableMetrics = new FormData();
+    fdlFlinkEnableMetrics.top = new FormAttachment( lastControl, margin );
+    fdlFlinkEnableMetrics.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkEnableMetrics.right = new FormAttachment( middle, -margin );
+    wlFlinkEnableMetrics.setLayoutData( fdlFlinkEnableMetrics );
+    wFlinkEnableMetrics = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkEnableMetrics );
+    FormData fdFlinkEnableMetrics = new FormData();
+    fdFlinkEnableMetrics.top = new FormAttachment( wlFlinkEnableMetrics, 0, SWT.CENTER );
+    fdFlinkEnableMetrics.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkEnableMetrics.right = new FormAttachment( 95, 0 );
+    wFlinkEnableMetrics.setLayoutData( fdFlinkEnableMetrics );
+    lastControl = wFlinkEnableMetrics;
+
+    Label wlFlinkExternalizedCheckpointsEnabled = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkExternalizedCheckpointsEnabled );
+    wlFlinkExternalizedCheckpointsEnabled.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkExternalizedCheckpointsEnabled.Label" ) );
+    FormData fdlFlinkExternalizedCheckpointsEnabled = new FormData();
+    fdlFlinkExternalizedCheckpointsEnabled.top = new FormAttachment( lastControl, margin );
+    fdlFlinkExternalizedCheckpointsEnabled.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkExternalizedCheckpointsEnabled.right = new FormAttachment( middle, -margin );
+    wlFlinkExternalizedCheckpointsEnabled.setLayoutData( fdlFlinkExternalizedCheckpointsEnabled );
+    wFlinkExternalizedCheckpointsEnabled = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkExternalizedCheckpointsEnabled );
+    FormData fdFlinkExternalizedCheckpointsEnabled = new FormData();
+    fdFlinkExternalizedCheckpointsEnabled.top = new FormAttachment( wlFlinkExternalizedCheckpointsEnabled, 0, SWT.CENTER );
+    fdFlinkExternalizedCheckpointsEnabled.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkExternalizedCheckpointsEnabled.right = new FormAttachment( 95, 0 );
+    wFlinkExternalizedCheckpointsEnabled.setLayoutData( fdFlinkExternalizedCheckpointsEnabled );
+    lastControl = wFlinkExternalizedCheckpointsEnabled;
+
+    Label wlFlinkRetainExternalizedCheckpointsOnCancellation = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkRetainExternalizedCheckpointsOnCancellation );
+    wlFlinkRetainExternalizedCheckpointsOnCancellation.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkRetainExternalizedCheckpointsOnCancellation.Label" ) );
+    FormData fdlFlinkRetainExternalizedCheckpointsOnCancellation = new FormData();
+    fdlFlinkRetainExternalizedCheckpointsOnCancellation.top = new FormAttachment( lastControl, margin );
+    fdlFlinkRetainExternalizedCheckpointsOnCancellation.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkRetainExternalizedCheckpointsOnCancellation.right = new FormAttachment( middle, -margin );
+    wlFlinkRetainExternalizedCheckpointsOnCancellation.setLayoutData( fdlFlinkRetainExternalizedCheckpointsOnCancellation );
+    wFlinkRetainExternalizedCheckpointsOnCancellation = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkRetainExternalizedCheckpointsOnCancellation );
+    FormData fdFlinkRetainExternalizedCheckpointsOnCancellation = new FormData();
+    fdFlinkRetainExternalizedCheckpointsOnCancellation.top = new FormAttachment( wlFlinkRetainExternalizedCheckpointsOnCancellation, 0, SWT.CENTER );
+    fdFlinkRetainExternalizedCheckpointsOnCancellation.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkRetainExternalizedCheckpointsOnCancellation.right = new FormAttachment( 95, 0 );
+    wFlinkRetainExternalizedCheckpointsOnCancellation.setLayoutData( fdFlinkRetainExternalizedCheckpointsOnCancellation );
+    lastControl = wFlinkRetainExternalizedCheckpointsOnCancellation;
+
+    Label wlFlinkMaxBundleSize = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkMaxBundleSize );
+    wlFlinkMaxBundleSize.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkMaxBundleSize.Label" ) );
+    FormData fdlFlinkMaxBundleSize = new FormData();
+    fdlFlinkMaxBundleSize.top = new FormAttachment( lastControl, margin );
+    fdlFlinkMaxBundleSize.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkMaxBundleSize.right = new FormAttachment( middle, -margin );
+    wlFlinkMaxBundleSize.setLayoutData( fdlFlinkMaxBundleSize );
+    wFlinkMaxBundleSize = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkMaxBundleSize );
+    FormData fdFlinkMaxBundleSize = new FormData();
+    fdFlinkMaxBundleSize.top = new FormAttachment( wlFlinkMaxBundleSize, 0, SWT.CENTER );
+    fdFlinkMaxBundleSize.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkMaxBundleSize.right = new FormAttachment( 95, 0 );
+    wFlinkMaxBundleSize.setLayoutData( fdFlinkMaxBundleSize );
+    lastControl = wFlinkMaxBundleSize;
+
+    Label wlFlinkMaxBundleTimeMills = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkMaxBundleTimeMills );
+    wlFlinkMaxBundleTimeMills.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkMaxBundleTimeMills.Label" ) );
+    FormData fdlFlinkMaxBundleTimeMills = new FormData();
+    fdlFlinkMaxBundleTimeMills.top = new FormAttachment( lastControl, margin );
+    fdlFlinkMaxBundleTimeMills.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkMaxBundleTimeMills.right = new FormAttachment( middle, -margin );
+    wlFlinkMaxBundleTimeMills.setLayoutData( fdlFlinkMaxBundleTimeMills );
+    wFlinkMaxBundleTimeMills = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkMaxBundleTimeMills );
+    FormData fdFlinkMaxBundleTimeMills = new FormData();
+    fdFlinkMaxBundleTimeMills.top = new FormAttachment( wlFlinkMaxBundleTimeMills, 0, SWT.CENTER );
+    fdFlinkMaxBundleTimeMills.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkMaxBundleTimeMills.right = new FormAttachment( 95, 0 );
+    wFlinkMaxBundleTimeMills.setLayoutData( fdFlinkMaxBundleTimeMills );
+    lastControl = wFlinkMaxBundleTimeMills;
+
+    Label wlFlinkShutdownSourcesOnFinalWatermark = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkShutdownSourcesOnFinalWatermark );
+    wlFlinkShutdownSourcesOnFinalWatermark.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkShutdownSourcesOnFinalWatermark.Label" ) );
+    FormData fdlFlinkShutdownSourcesOnFinalWatermark = new FormData();
+    fdlFlinkShutdownSourcesOnFinalWatermark.top = new FormAttachment( lastControl, margin );
+    fdlFlinkShutdownSourcesOnFinalWatermark.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkShutdownSourcesOnFinalWatermark.right = new FormAttachment( middle, -margin );
+    wlFlinkShutdownSourcesOnFinalWatermark.setLayoutData( fdlFlinkShutdownSourcesOnFinalWatermark );
+    wFlinkShutdownSourcesOnFinalWatermark = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkShutdownSourcesOnFinalWatermark );
+    FormData fdFlinkShutdownSourcesOnFinalWatermark = new FormData();
+    fdFlinkShutdownSourcesOnFinalWatermark.top = new FormAttachment( wlFlinkShutdownSourcesOnFinalWatermark, 0, SWT.CENTER );
+    fdFlinkShutdownSourcesOnFinalWatermark.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkShutdownSourcesOnFinalWatermark.right = new FormAttachment( 95, 0 );
+    wFlinkShutdownSourcesOnFinalWatermark.setLayoutData( fdFlinkShutdownSourcesOnFinalWatermark );
+    lastControl = wFlinkShutdownSourcesOnFinalWatermark;
+
+    Label wlFlinkLatencyTrackingInterval = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkLatencyTrackingInterval );
+    wlFlinkLatencyTrackingInterval.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkLatencyTrackingInterval.Label" ) );
+    FormData fdlFlinkLatencyTrackingInterval = new FormData();
+    fdlFlinkLatencyTrackingInterval.top = new FormAttachment( lastControl, margin );
+    fdlFlinkLatencyTrackingInterval.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkLatencyTrackingInterval.right = new FormAttachment( middle, -margin );
+    wlFlinkLatencyTrackingInterval.setLayoutData( fdlFlinkLatencyTrackingInterval );
+    wFlinkLatencyTrackingInterval = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkLatencyTrackingInterval );
+    FormData fdFlinkLatencyTrackingInterval = new FormData();
+    fdFlinkLatencyTrackingInterval.top = new FormAttachment( wlFlinkLatencyTrackingInterval, 0, SWT.CENTER );
+    fdFlinkLatencyTrackingInterval.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkLatencyTrackingInterval.right = new FormAttachment( 95, 0 );
+    wFlinkLatencyTrackingInterval.setLayoutData( fdFlinkLatencyTrackingInterval );
+    lastControl = wFlinkLatencyTrackingInterval;
+
+    Label wlFlinkAutoWatermarkInterval = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkAutoWatermarkInterval );
+    wlFlinkAutoWatermarkInterval.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkAutoWatermarkInterval.Label" ) );
+    FormData fdlFlinkAutoWatermarkInterval = new FormData();
+    fdlFlinkAutoWatermarkInterval.top = new FormAttachment( lastControl, margin );
+    fdlFlinkAutoWatermarkInterval.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkAutoWatermarkInterval.right = new FormAttachment( middle, -margin );
+    wlFlinkAutoWatermarkInterval.setLayoutData( fdlFlinkAutoWatermarkInterval );
+    wFlinkAutoWatermarkInterval = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkAutoWatermarkInterval );
+    FormData fdFlinkAutoWatermarkInterval = new FormData();
+    fdFlinkAutoWatermarkInterval.top = new FormAttachment( wlFlinkAutoWatermarkInterval, 0, SWT.CENTER );
+    fdFlinkAutoWatermarkInterval.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkAutoWatermarkInterval.right = new FormAttachment( 95, 0 );
+    wFlinkAutoWatermarkInterval.setLayoutData( fdFlinkAutoWatermarkInterval );
+    lastControl = wFlinkAutoWatermarkInterval;
+
+    Label wlFlinkExecutionModeForBatch = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkExecutionModeForBatch );
+    wlFlinkExecutionModeForBatch.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkExecutionModeForBatch.Label" ) );
+    FormData fdlFlinkExecutionModeForBatch = new FormData();
+    fdlFlinkExecutionModeForBatch.top = new FormAttachment( lastControl, margin );
+    fdlFlinkExecutionModeForBatch.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkExecutionModeForBatch.right = new FormAttachment( middle, -margin );
+    wlFlinkExecutionModeForBatch.setLayoutData( fdlFlinkExecutionModeForBatch );
+    wFlinkExecutionModeForBatch = new ComboVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkExecutionModeForBatch );
+    wFlinkExecutionModeForBatch.setItems( new String[] { "PIPELINED", "PIPELINED_FORCED", "BATCH", "BATCH_FORCED" } );
+    FormData fdFlinkExecutionModeForBatch = new FormData();
+    fdFlinkExecutionModeForBatch.top = new FormAttachment( wlFlinkExecutionModeForBatch, 0, SWT.CENTER );
+    fdFlinkExecutionModeForBatch.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkExecutionModeForBatch.right = new FormAttachment( 95, 0 );
+    wFlinkExecutionModeForBatch.setLayoutData( fdFlinkExecutionModeForBatch );
+    lastControl = wFlinkExecutionModeForBatch;
+
+
+    FormData fdFlinkComp = new FormData();
+    fdFlinkComp.left = new FormAttachment( 0, 0 );
+    fdFlinkComp.top = new FormAttachment( 0, 0 );
+    fdFlinkComp.right = new FormAttachment( 100, 0 );
+    fdFlinkComp.bottom = new FormAttachment( 100, 0 );
+    wFlinkComp.setLayoutData( fdFlinkComp );
+
+    wFlinkComp.pack();
+    Rectangle bounds = wFlinkComp.getBounds();
+
+    wFlinkSComp.setContent( wFlinkComp );
+    wFlinkSComp.setExpandHorizontal( true );
+    wFlinkSComp.setExpandVertical( true );
+    wFlinkSComp.setMinWidth( bounds.width );
+    wFlinkSComp.setMinHeight( bounds.height );
+
+    wFlinkTab.setControl( wFlinkSComp );
+  }
+
 
 
   public void dispose() {
@@ -999,6 +1423,27 @@ public class BeamJobConfigDialog {
     wSparkReadTimePercentage.setText(Const.NVL(config.getSparkReadTimePercentage(), ""));
     wSparkBundleSize.setText(Const.NVL(config.getSparkBundleSize(), ""));
     wSparkStorageLevel.setText(Const.NVL(config.getSparkStorageLevel(), ""));
+
+    // Flink
+    wFlinkMaster.setText( Const.NVL(config.getFlinkMaster(), "") );
+    wFlinkParallelism.setText( Const.NVL(config.getFlinkParallelism(), "") );
+    wFlinkCheckpointingInterval.setText( Const.NVL(config.getFlinkCheckpointingInterval(), "") );
+    wFlinkCheckpointingMode.setText( Const.NVL(config.getFlinkCheckpointingMode(), "") );
+    wFlinkCheckpointTimeoutMillis.setText( Const.NVL(config.getFlinkCheckpointTimeoutMillis(), "") );
+    wFlinkMinPauseBetweenCheckpoints.setText( Const.NVL(config.getFlinkMinPauseBetweenCheckpoints(), "") );
+    wFlinkNumberOfExecutionRetries.setText( Const.NVL(config.getFlinkNumberOfExecutionRetries(), "") );
+    wFlinkExecutionRetryDelay.setText( Const.NVL(config.getFlinkExecutionRetryDelay(), "") );
+    wFlinkObjectReuse.setText( Const.NVL(config.getFlinkObjectReuse(), "") );
+    wFlinkStateBackend.setText( Const.NVL(config.getFlinkStateBackend(), "") );
+    wFlinkEnableMetrics.setText( Const.NVL(config.getFlinkEnableMetrics(), "") );
+    wFlinkExternalizedCheckpointsEnabled.setText( Const.NVL(config.getFlinkExternalizedCheckpointsEnabled(), "") );
+    wFlinkRetainExternalizedCheckpointsOnCancellation.setText( Const.NVL(config.getFlinkRetainExternalizedCheckpointsOnCancellation(), "") );
+    wFlinkMaxBundleSize.setText( Const.NVL(config.getFlinkMaxBundleSize(), "") );
+    wFlinkMaxBundleTimeMills.setText( Const.NVL(config.getFlinkMaxBundleTimeMills(), "") );
+    wFlinkShutdownSourcesOnFinalWatermark.setText( Const.NVL(config.getFlinkShutdownSourcesOnFinalWatermark(), "") );
+    wFlinkLatencyTrackingInterval.setText( Const.NVL(config.getFlinkLatencyTrackingInterval(), "") );
+    wFlinkAutoWatermarkInterval.setText( Const.NVL(config.getFlinkAutoWatermarkInterval(), "") );
+    wFlinkExecutionModeForBatch.setText( Const.NVL(config.getFlinkExecutionModeForBatch(), "") );
 
     // Parameters
     //
@@ -1096,6 +1541,26 @@ public class BeamJobConfigDialog {
     cfg.setSparkReadTimePercentage( wSparkReadTimePercentage.getText() );
     cfg.setSparkBundleSize( wSparkBundleSize.getText() );
     cfg.setSparkStorageLevel( wSparkStorageLevel.getText() );
+
+    cfg.setFlinkMaster(wFlinkMaster.getText());
+    cfg.setFlinkParallelism(wFlinkParallelism.getText());
+    cfg.setFlinkCheckpointingInterval(wFlinkCheckpointingInterval.getText());
+    cfg.setFlinkCheckpointingMode(wFlinkCheckpointingMode.getText());
+    cfg.setFlinkCheckpointTimeoutMillis(wFlinkCheckpointTimeoutMillis.getText());
+    cfg.setFlinkMinPauseBetweenCheckpoints( wFlinkMinPauseBetweenCheckpoints.getText() );
+    cfg.setFlinkNumberOfExecutionRetries( wFlinkNumberOfExecutionRetries.getText() );
+    cfg.setFlinkExecutionRetryDelay( wFlinkExecutionRetryDelay.getText() );
+    cfg.setFlinkObjectReuse( wFlinkObjectReuse.getText() );
+    cfg.setFlinkStateBackend( wFlinkStateBackend.getText() );
+    cfg.setFlinkEnableMetrics( wFlinkEnableMetrics.getText() );
+    cfg.setFlinkExternalizedCheckpointsEnabled( wFlinkExternalizedCheckpointsEnabled.getText() );
+    cfg.setFlinkRetainExternalizedCheckpointsOnCancellation( wFlinkRetainExternalizedCheckpointsOnCancellation.getText() );
+    cfg.setFlinkMaxBundleSize( wFlinkMaxBundleSize.getText() );
+    cfg.setFlinkMaxBundleTimeMills( wFlinkMaxBundleTimeMills.getText() );
+    cfg.setFlinkShutdownSourcesOnFinalWatermark( wFlinkShutdownSourcesOnFinalWatermark.getText() );;
+    cfg.setFlinkLatencyTrackingInterval( wFlinkLatencyTrackingInterval.getText() );
+    cfg.setFlinkAutoWatermarkInterval( wFlinkAutoWatermarkInterval.getText() );
+    cfg.setFlinkExecutionModeForBatch( wFlinkExecutionModeForBatch.getText() );
 
     cfg.getParameters().clear();
     for (int i=0;i<wParameters.nrNonEmpty();i++) {
