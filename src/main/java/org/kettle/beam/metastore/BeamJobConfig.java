@@ -125,44 +125,63 @@ public class BeamJobConfig {
   //
   // Flink options
   //
+  @MetaStoreAttribute
   private String flinkMaster;
 
+  @MetaStoreAttribute
   private String flinkParallelism;
 
+  @MetaStoreAttribute
   private String flinkCheckpointingInterval;
 
+  @MetaStoreAttribute
   private String flinkCheckpointingMode;
 
+  @MetaStoreAttribute
   private String flinkCheckpointTimeoutMillis;
 
+  @MetaStoreAttribute
   private String flinkMinPauseBetweenCheckpoints;
 
+  @MetaStoreAttribute
   private String flinkNumberOfExecutionRetries;
 
+  @MetaStoreAttribute
   private String flinkExecutionRetryDelay;
 
+  @MetaStoreAttribute
   private String flinkObjectReuse;
 
+  @MetaStoreAttribute
   private String flinkStateBackend;
 
+  @MetaStoreAttribute
   private String flinkEnableMetrics;
 
+  @MetaStoreAttribute
   private String flinkExternalizedCheckpointsEnabled;
 
+  @MetaStoreAttribute
   private String flinkRetainExternalizedCheckpointsOnCancellation;
 
+  @MetaStoreAttribute
   private String flinkMaxBundleSize;
 
+  @MetaStoreAttribute
   private String flinkMaxBundleTimeMills;
 
+  @MetaStoreAttribute
   private String flinkShutdownSourcesOnFinalWatermark;
 
+  @MetaStoreAttribute
   private String flinkLatencyTrackingInterval;
 
+  @MetaStoreAttribute
   private String flinkAutoWatermarkInterval;
 
+  @MetaStoreAttribute
   private String flinkExecutionModeForBatch;
-  
+
 
   public BeamJobConfig() {
     parameters = new ArrayList<>();
