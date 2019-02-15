@@ -64,7 +64,6 @@ You can use the variables to make your transformations completely generic.  For 
 
 ## More information
 
-http://diethardsteiner.github.io/2018/12/01/Kettle-Beam.html
-
+http://diethardsteiner.github.io/pdi/2018/12/01/Kettle-Beam.html
 
 
