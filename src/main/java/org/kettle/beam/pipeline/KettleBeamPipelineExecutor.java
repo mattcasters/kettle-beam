@@ -359,7 +359,8 @@ public class KettleBeamPipelineExecutor {
 
   private void configureStandardOptions( BeamJobConfig config, String transformationName, PipelineOptions pipelineOptions, VariableSpace space ) {
     if ( StringUtils.isNotEmpty( transformationName ) ) {
-      String sanitizedName = transformationName.replace( " ", "_" );
+      String sanitizedName = transformationName.replaceAll( "[^-A-Za-z0-9]", "" )
+        ;
       pipelineOptions.setJobName( sanitizedName );
     }
     if ( StringUtils.isNotEmpty( config.getUserAgent() ) ) {
