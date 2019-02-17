@@ -151,7 +151,7 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
             } catch ( Exception e ) {
               spoon.getDisplay().asyncExec( new Runnable() {
                 @Override public void run() {
-                  new ErrorDialog( spoon.getShell(), "Error", "There was an error building or executing the pipeline", e );
+                  new ErrorDialog( spoon.getShell(), "Error", "There was an error building or executing the pipeline. Use the 'Details' button for more information: "+e.getMessage(), e );
                 }
               } );
             }
