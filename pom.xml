@@ -81,21 +81,6 @@
       <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
-      <groupId>com.google.cloud</groupId>
-      <artifactId>google-cloud-storage</artifactId>
-      <version>1.53.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>27.0-jre</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.auto.service</groupId>
-      <artifactId>auto-service</artifactId>
-      <version>1.0-rc4</version>
-    </dependency>
-    <dependency>
       <groupId>kettle-beam</groupId>
       <artifactId>kettle-beam-core</artifactId>
       <version>${kettle-beam-version}</version>
@@ -120,7 +105,26 @@
       <artifactId>beam-sdks-java-io-kafka</artifactId>
       <version>${apache-beam-version}</version>
     </dependency>
-
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>1.53.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>27.0-jre</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.beam</groupId>
+      <artifactId>beam-vendor-guava-20_0</artifactId>
+      <version>0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.auto.service</groupId>
+      <artifactId>auto-service</artifactId>
+      <version>1.0-rc4</version>
+    </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-io-hdfs</artifactId>
@@ -318,7 +322,11 @@
         <artifactId>google-cloud-bigquery</artifactId>
         <version>1.55.0</version>
       </dependency>
-
+      <dependency>
+        <groupId>org.apache.beam</groupId>
+        <artifactId>beam-vendor-guava-20_0</artifactId>
+        <version>0.1</version>
+      </dependency>
       <dependency>
         <groupId>kettle-beam</groupId>
         <artifactId>kettle-beam-core</artifactId>
