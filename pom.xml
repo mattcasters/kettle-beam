@@ -81,11 +81,6 @@
       <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
-      <groupId>kettle-beam</groupId>
-      <artifactId>kettle-beam-core</artifactId>
-      <version>${kettle-beam-version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-extensions-join-library</artifactId>
       <version>${apache-beam-version}</version>
@@ -144,6 +139,11 @@
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-bigquery</artifactId>
       <version>1.55.0</version>
+    </dependency>
+    <dependency>
+      <groupId>kettle-beam</groupId>
+      <artifactId>kettle-beam-core</artifactId>
+      <version>${kettle-beam-version}</version>
     </dependency>
 
     <dependency>

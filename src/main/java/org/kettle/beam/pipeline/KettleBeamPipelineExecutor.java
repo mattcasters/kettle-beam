@@ -393,7 +393,10 @@ public class KettleBeamPipelineExecutor {
 
   private void configureDataFlowOptions( BeamJobConfig config, DataflowPipelineOptions options, VariableSpace space ) throws IOException {
 
-    options.setFilesToStage( BeamConst.findLibraryFilesToStage( null, space.environmentSubstitute( config.getPluginsToStage() ), true, true ) );
+    List<String> files = BeamConst.findLibraryFilesToStage( null, space.environmentSubstitute( config.getPluginsToStage() ), true, true );
+    files.removeIf( s-> s.contains( "commons-logging" ) || s.contains( "log4j" ) );
+
+    options.setFilesToStage( files );
     options.setProject( space.environmentSubstitute( config.getGcpProjectId() ) );
     options.setAppName( space.environmentSubstitute( config.getGcpAppName() ) );
     options.setStagingLocation( space.environmentSubstitute( config.getGcpStagingLocation() ) );
