@@ -21,6 +21,9 @@
         <menuitem id="beam-create-beamjob" label="Create a Beam job conf" command="beamHelper.createBeamJobConfig()"/>
         <menuitem id="beam-edit-beamjob" label="Edit a Beam job config" command="beamHelper.editBeamJobConfig()"/>
         <menuitem id="beam-delete-beamjob" label="Delete a Beam job config" command="beamHelper.deleteBeamJobConfig()"/>
+        <menuseparator/>
+        <menuitem id="beam-generate-fat-jar" label="Generate a Spark/Flink fat JAR" command="beamHelper.generateFatJar()"/>
+        <menuitem id="beam-export-metastore" label="Export current metastore" command="beamHelper.exportMetaStore()"/>
 
       </menupopup>
     </menu>

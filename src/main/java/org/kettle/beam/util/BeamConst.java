@@ -154,15 +154,19 @@ public class BeamConst {
     //
     for ( String pluginFolder : pluginFoldersSet ) {
       File pluginsFolder = new File( base.toString() + "/plugins/" + pluginFolder );
-      Collection<File> pluginFiles = FileUtils.listFiles( pluginsFolder, new String[] { "jar" }, true );
-      if ( pluginFiles != null ) {
-        for ( File file : pluginFiles ) {
-          String shortName = file.getName();
-          if ( !uniqueNames.contains( shortName ) ) {
-            uniqueNames.add( shortName );
-            libraries.add( file.getCanonicalPath() );
+      if (pluginsFolder.exists()) {
+        Collection<File> pluginFiles = FileUtils.listFiles( pluginsFolder, new String[] { "jar" }, true );
+        if ( pluginFiles != null ) {
+          for ( File file : pluginFiles ) {
+            String shortName = file.getName();
+            if ( !uniqueNames.contains( shortName ) ) {
+              uniqueNames.add( shortName );
+              libraries.add( file.getCanonicalPath() );
+            }
           }
         }
+      } else {
+        System.out.println("Warning: couldn't find plugins folder: "+pluginsFolder);
       }
     }
 
@@ -172,16 +176,22 @@ public class BeamConst {
 
       File libFolder = new File( base.toString() + "/lib" );
 
-      Collection<File> files = FileUtils.listFiles( libFolder, new String[] { "jar" }, true );
-      if ( files != null ) {
-        for ( File file : files ) {
-          String shortName = file.getName();
-          if ( !uniqueNames.contains( shortName ) ) {
-            uniqueNames.add( shortName );
-            libraries.add( file.getCanonicalPath() );
-            // System.out.println( "Adding library : " + file.getAbsolutePath() );
+      if (libFolder.exists()) {
+
+        Collection<File> files = FileUtils.listFiles( libFolder, new String[] { "jar" }, true );
+        if ( files != null ) {
+          for ( File file : files ) {
+            String shortName = file.getName();
+            if ( !uniqueNames.contains( shortName ) ) {
+              uniqueNames.add( shortName );
+              libraries.add( file.getCanonicalPath() );
+              // System.out.println( "Adding library : " + file.getAbsolutePath() );
+            }
           }
         }
+      } else {
+        System.out.println("Warning: couldn't find kettle lib folder: "+libFolder);
+
       }
     }
 

@@ -41,9 +41,14 @@ import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.swt.widgets.Shell;
+import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.metastore.BeamJobConfigDialog;
 import org.kettle.beam.metastore.FileDefinition;
@@ -52,13 +57,16 @@ import org.kettle.beam.metastore.JobParameter;
 import org.kettle.beam.metastore.RunnerType;
 import org.kettle.beam.pipeline.KettleBeamPipelineExecutor;
 import org.kettle.beam.pipeline.TransMetaPipelineConverter;
+import org.kettle.beam.pipeline.fatjar.FatJarBuilder;
 import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.ProgressMonitorAdapter;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.parameters.UnknownParamException;
 import org.pentaho.di.core.plugins.KettleURLClassLoader;
 import org.pentaho.di.core.variables.VariableSpace;
+import org.pentaho.di.core.variables.Variables;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.ui.core.dialog.EnterSelectionDialog;
@@ -66,12 +74,15 @@ import org.pentaho.di.ui.core.dialog.ErrorDialog;
 import org.pentaho.di.ui.spoon.ISpoonMenuController;
 import org.pentaho.di.ui.spoon.Spoon;
 import org.pentaho.di.ui.spoon.trans.TransGraph;
+import org.pentaho.metastore.api.IMetaStore;
 import org.pentaho.metastore.persist.MetaStoreFactory;
 import org.pentaho.metastore.util.PentahoDefaults;
 import org.pentaho.ui.xul.dom.Document;
 import org.pentaho.ui.xul.impl.AbstractXulEventHandler;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -427,5 +438,68 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
     }
   }
 
+  public void generateFatJar() {
+
+    final Shell shell = Spoon.getInstance().getShell();
+
+    // TODO: Ask the user about these 2 next lines...
+    //
+    final String filename = "/tmp/kettle-beam-fat.jar";
+    final String pluginFolders = "kettle-beam,kettle-json-plugin,kettle-json-plugin,Neo4JOutput";
+
+    try {
+      IRunnableWithProgress op = new IRunnableWithProgress() {
+        public void run( IProgressMonitor monitor ) throws InvocationTargetException, InterruptedException {
+          try {
+
+            VariableSpace space = Variables.getADefaultVariableSpace();
+            List<String> files = BeamConst.findLibraryFilesToStage( null, pluginFolders, true, true );
+            files.removeIf( s -> s.contains( "commons-logging" ) || s.contains( "log4j" ) || s.contains("xml-apis") );
+
+            FatJarBuilder fatJarBuilder = new FatJarBuilder( filename, files );
+            fatJarBuilder.buildTargetJar();
+
+          } catch ( Exception e ) {
+            throw new InvocationTargetException( e, "Error building fat jar: "+e.getMessage());
+          }
+        }
+      };
+
+      ProgressMonitorDialog pmd = new ProgressMonitorDialog( shell );
+      pmd.run( true, true, op );
+
+      MessageBox box = new MessageBox( shell, SWT.CLOSE | SWT.ICON_INFORMATION );
+      box.setText( "Fat jar created" );
+      box.setMessage( "A fat jar was successfully created : "+filename+Const.CR+"Included plugin folders: "+pluginFolders );
+      box.open();
+
+    } catch(Exception e) {
+      new ErrorDialog( shell, "Error", "Error creating fat jar", e );
+    }
+
+  }
+
+  public void exportMetaStore() {
+    final Shell shell = Spoon.getInstance().getShell();
+    final IMetaStore metaStore = Spoon.getInstance().getMetaStore();
+    final String filename = "/tmp/metastore.json";
+
+    try {
+      SerializableMetaStore sms = new SerializableMetaStore( metaStore );
+      FileOutputStream fos = new FileOutputStream( filename );
+      fos.write( sms.toJson().getBytes( "UTF-8" ));
+      fos.flush();
+      fos.close();
+
+      MessageBox box = new MessageBox( shell, SWT.CLOSE | SWT.ICON_INFORMATION );
+      box.setText( "Metastore exported" );
+      box.setMessage( "All current metastore entries were exported to "+filename);
+      box.open();
+
+    } catch(Exception e) {
+      new ErrorDialog( shell, "Error", "Error exporting metastore json", e );
+    }
+
+  }
 
 }

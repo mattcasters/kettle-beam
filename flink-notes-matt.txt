@@ -1,0 +1,26 @@
+
+# This is how I'm running on Flink
+# Go to the place where you installed flink, say $HOME/flink-1.7.2/
+# Place this script there.
+# NOTE: Files like metastore.json, the .ktr or the fat jar can be also stored in hdfs://
+#       File name resolution is done using HDFS.
+#       Make sure to configure your local environment for HDFS in that case,
+#       set HADOOP_CONF_DIR for example
+#
+# Put the fat jar (for now generated with Spoon) in $HOME/software/
+# Put your MetaStore export (for now exported with Spoon) in $HOME/metadata
+#
+# One argument: The transformation ktr
+#
+
+TRANS=$1
+
+bin/flink run \
+  --class org.kettle.beam.pipeline.flink.MainFlink \
+  --parallelism 1 \
+  ~/software/kettle-beam-fat.jar \
+  "${TRANS}" \
+  file:///home/kettle/metadata/metastore.json \
+  "Flink server" \
+  org.kettle.beam.steps.io.BeamInputMeta,org.kettle.beam.steps.bq.BeamBQOutputMeta,org.kettle.beam.steps.pubsub.BeamPublishMeta,org.kettle.beam.steps.pubsub.BeamSubscribeMeta,org.kettle.beam.steps.window.BeamTimestampMeta,org.kettle.beam.steps.io.BeamOutputMeta,org.kettle.beam.steps.window.BeamWindowMeta,org.kettle.beam.steps.bq.BeamBQInputMeta \
+  org.kettle.beam.xp.RunBeamTransExecutionPoint

@@ -1,4 +1,4 @@
-package org.kettle.beam.pipeline.spark;
+  package org.kettle.beam.pipeline.flink;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -11,6 +11,7 @@ import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.pipeline.KettleBeamPipelineExecutor;
 import org.kettle.beam.pipeline.main.MainBeam;
 import org.kettle.beam.util.BeamConst;
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.plugins.PluginInterface;
@@ -27,8 +28,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MainSpark {
+public class MainFlink {
   public static void main( String[] args ) {
-    MainBeam.mainMethod(args, "Apache Spark");
+    MainBeam.mainMethod(args, "Apache Flink");
   }
 }
