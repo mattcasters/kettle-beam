@@ -3,6 +3,7 @@ package org.kettle.beam.carte;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -23,7 +24,8 @@ import org.pentaho.di.www.WebResult;
     )
 public class RegisterBeamMetrics extends BaseHttpServlet implements CartePluginInterface {
 
-  private static final long serialVersionUID = -3954291362486792603L;
+  private static final long serialVersionUIDL = 348324987293472947L;
+
   public static final String CONTEXT_PATH = "/kettle/registerBeamMetrics";
   
   public RegisterBeamMetrics() {
@@ -52,29 +54,25 @@ public class RegisterBeamMetrics extends BaseHttpServlet implements CartePluginI
     }
 
     // The Object ID
+    //
     String carteObjectId = request.getParameter("id"); // the carte object id
 
-    // Data type: "input", "output", "read", "written", "errors", "rejected", ...
+    // Transformation name
     //
-    String type = request.getParameter("type");
-
-    // The
-    //
-    String hostname = request.getParameter("hostname"); // the server on which the mapper or reducer runs
-
-    // The
-    String port = request.getParameter("port"); // the name port
-    String user = request.getParameter("user"); // the user to connect to the remote server with
-    String pass = request.getParameter("pass"); // the password to connect to the remote server with
     String trans = request.getParameter("trans"); // the name of the transformation
-    String taskId = request.getParameter("taskId"); // the Id of the task on the node
-    String jobId = request.getParameter("jobId"); // the Id of the hadoop job
-    boolean update = "Y".equalsIgnoreCase(request.getParameter("update")); // update of information?
-    
+
+    // Internal Job ID
+    //
+    String internalJobId = request.getParameter("internalJobId"); // the Id of the Spark/Flink job
+
+    // Update date
+    //
+    Date updateDate = new Date();
+
     PrintWriter out = response.getWriter();
     BufferedReader in = request.getReader();
     
-    WebResult webResult = new WebResult(WebResult.STRING_OK, "registeration success", "");
+    WebResult webResult = new WebResult(WebResult.STRING_OK, "registration success", "");
     
     try {
       
@@ -88,8 +86,8 @@ public class RegisterBeamMetrics extends BaseHttpServlet implements CartePluginI
       
       SlaveServerTransStatus transStatus = SlaveServerTransStatus.fromXML(xml.toString());
       
-      NodeRegistrationQueue registry = NodeRegistrationQueue.getInstance();
-      NodeRegistrationEntry entry = new NodeRegistrationEntry(jobId, taskId, hostname, port, EntryType.valueOf(type), user, pass, trans, carteObjectId, transStatus, update);
+      MetricsRegistrationQueue registry = MetricsRegistrationQueue.getInstance();
+      BeamMetricsEntry entry = new BeamMetricsEntry(carteObjectId, trans, internalJobId, updateDate, transStatus);
       registry.addNodeRegistryEntry(entry);
       
       response.setContentType("text/xml");
