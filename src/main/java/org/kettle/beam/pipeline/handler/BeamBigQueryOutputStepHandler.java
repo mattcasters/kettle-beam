@@ -56,6 +56,9 @@ public class BeamBigQueryOutputStepHandler implements BeamStepHandler {
       transMeta.environmentSubstitute( beamOutputMeta.getProjectId() ),
       transMeta.environmentSubstitute( beamOutputMeta.getDatasetId() ),
       transMeta.environmentSubstitute( beamOutputMeta.getTableId() ),
+      beamOutputMeta.isCreatingIfNeeded(),
+      beamOutputMeta.isTruncatingTable(),
+      beamOutputMeta.isFailingIfNotEmpty(),
       JsonRowMeta.toJson(rowMeta),
       stepPluginClasses,
       xpPluginClasses

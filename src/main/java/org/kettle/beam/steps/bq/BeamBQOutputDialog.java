@@ -43,6 +43,9 @@ public class BeamBQOutputDialog extends BaseStepDialog implements StepDialogInte
   private TextVar wProjectId;
   private TextVar wDatasetId;
   private TextVar wTableId;
+  private Button wCreateIfNeeded;
+  private Button wTruncateTable;
+  private Button wFailIfNotEmpty;
 
   public BeamBQOutputDialog( Shell parent, Object in, TransMeta transMeta, String sname ) {
     super( parent, (BaseStepMeta) in, transMeta, sname );
@@ -139,6 +142,59 @@ public class BeamBQOutputDialog extends BaseStepDialog implements StepDialogInte
     wTableId.setLayoutData( fdTableId );
     lastControl = wTableId;
 
+    Label wlCreateIfNeeded = new Label( shell, SWT.RIGHT );
+    wlCreateIfNeeded.setText( BaseMessages.getString( PKG, "BeamBQOutputDialog.CreateIfNeeded" ) );
+    props.setLook( wlCreateIfNeeded );
+    FormData fdlCreateIfNeeded = new FormData();
+    fdlCreateIfNeeded.left = new FormAttachment( 0, 0 );
+    fdlCreateIfNeeded.top = new FormAttachment( lastControl, margin );
+    fdlCreateIfNeeded.right = new FormAttachment( middle, -margin );
+    wlCreateIfNeeded.setLayoutData( fdlCreateIfNeeded );
+    wCreateIfNeeded = new Button( shell, SWT.CHECK | SWT.LEFT );
+    props.setLook( wCreateIfNeeded );
+    FormData fdCreateIfNeeded = new FormData();
+    fdCreateIfNeeded.left = new FormAttachment( middle, 0 );
+    fdCreateIfNeeded.top = new FormAttachment( wlCreateIfNeeded, 0, SWT.CENTER );
+    fdCreateIfNeeded.right = new FormAttachment( 100, 0 );
+    wCreateIfNeeded.setLayoutData( fdCreateIfNeeded );
+    lastControl = wCreateIfNeeded;
+
+    Label wlTruncateTable = new Label( shell, SWT.RIGHT );
+    wlTruncateTable.setText( BaseMessages.getString( PKG, "BeamBQOutputDialog.TruncateTable" ) );
+    props.setLook( wlTruncateTable );
+    FormData fdlTruncateTable = new FormData();
+    fdlTruncateTable.left = new FormAttachment( 0, 0 );
+    fdlTruncateTable.top = new FormAttachment( lastControl, margin );
+    fdlTruncateTable.right = new FormAttachment( middle, -margin );
+    wlTruncateTable.setLayoutData( fdlTruncateTable );
+    wTruncateTable = new Button( shell,  SWT.CHECK | SWT.LEFT );
+    props.setLook( wTruncateTable );
+    FormData fdTruncateTable = new FormData();
+    fdTruncateTable.left = new FormAttachment( middle, 0 );
+    fdTruncateTable.top = new FormAttachment( wlTruncateTable, 0, SWT.CENTER );
+    fdTruncateTable.right = new FormAttachment( 100, 0 );
+    wTruncateTable.setLayoutData( fdTruncateTable );
+    lastControl = wTruncateTable;
+
+    Label wlFailIfNotEmpty = new Label( shell, SWT.RIGHT );
+    wlFailIfNotEmpty.setText( BaseMessages.getString( PKG, "BeamBQOutputDialog.FailIfNotEmpty" ) );
+    props.setLook( wlFailIfNotEmpty );
+    FormData fdlFailIfNotEmpty = new FormData();
+    fdlFailIfNotEmpty.left = new FormAttachment( 0, 0 );
+    fdlFailIfNotEmpty.top = new FormAttachment( lastControl, margin );
+    fdlFailIfNotEmpty.right = new FormAttachment( middle, -margin );
+    wlFailIfNotEmpty.setLayoutData( fdlFailIfNotEmpty );
+    wFailIfNotEmpty = new Button( shell,  SWT.CHECK | SWT.LEFT );
+    props.setLook( wFailIfNotEmpty );
+    FormData fdFailIfNotEmpty = new FormData();
+    fdFailIfNotEmpty.left = new FormAttachment( middle, 0 );
+    fdFailIfNotEmpty.top = new FormAttachment( wlFailIfNotEmpty, 0, SWT.CENTER );
+    fdFailIfNotEmpty.right = new FormAttachment( 100, 0 );
+    wFailIfNotEmpty.setLayoutData( fdFailIfNotEmpty );
+    lastControl = wFailIfNotEmpty;
+
+
+
     wOK = new Button( shell, SWT.PUSH );
     wOK.setText( BaseMessages.getString( PKG, "System.Button.OK" ) );
 
@@ -202,7 +258,9 @@ public class BeamBQOutputDialog extends BaseStepDialog implements StepDialogInte
     wProjectId.setText(Const.NVL(input.getProjectId(), ""));
     wDatasetId.setText(Const.NVL(input.getDatasetId(), ""));
     wTableId.setText(Const.NVL(input.getTableId(), ""));
-
+    wCreateIfNeeded.setSelection( input.isCreatingIfNeeded() );
+    wTruncateTable.setSelection( input.isTruncatingTable() );
+    wFailIfNotEmpty.setSelection( input.isFailingIfNotEmpty() );
     wStepname.selectAll();
     wStepname.setFocus();
   }
@@ -229,7 +287,9 @@ public class BeamBQOutputDialog extends BaseStepDialog implements StepDialogInte
     in.setProjectId( wProjectId.getText() );
     in.setDatasetId( wDatasetId.getText() );
     in.setTableId( wTableId.getText() );
-
+    in.setCreatingIfNeeded( wCreateIfNeeded.getSelection() );
+    in.setTruncatingTable( wTruncateTable.getSelection() );
+    in.setFailingIfNotEmpty( wFailIfNotEmpty.getSelection() );
     input.setChanged();
   }
 }
