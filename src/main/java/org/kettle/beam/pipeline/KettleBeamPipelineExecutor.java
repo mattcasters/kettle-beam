@@ -264,6 +264,8 @@ public class KettleBeamPipelineExecutor {
       logChannel.logBasic( "  ----------------- End of Beam job " + pipeline.getOptions().getJobName() + " -----------------------" );
 
       return pipelineResult;
+    } catch(Exception e) {
+      throw new KettleException( "Error building/executing pipeline", e );
     } finally {
       Thread.currentThread().setContextClassLoader( oldContextClassLoader );
     }
