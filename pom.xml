@@ -22,7 +22,7 @@
     <pentaho-kettle.version>8.2.0.0-342</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
-    <apache-beam-version>2.10.0</apache-beam-version>
+    <apache-beam-version>2.11.0</apache-beam-version>
     <kettle-beam-version>0.6.0-SNAPSHOT</kettle-beam-version>
   </properties>
 
@@ -121,11 +121,6 @@
       <version>1.0-rc4</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.beam</groupId>
-      <artifactId>beam-sdks-java-io-hdfs</artifactId>
-      <version>0.6.0</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.11</artifactId>
       <version>2.4.0</version>
@@ -192,7 +187,7 @@
             <configuration>
               <outputDirectory>${project.build.directory}/lib</outputDirectory>
               <excludeScope>provided</excludeScope>
-              <excludeArtifactIds>junit,mockito-all,jackson-core,jackson-annotations,jackson-databind,xercesImpl,xml-apis</excludeArtifactIds>
+              <excludeArtifactIds>junit,mockito-all,jackson-core,jackson-annotations,jackson-databind,xercesImpl,xml-apis,slf4j-api,slf4j-log4j2</excludeArtifactIds>
             </configuration>
           </execution>
         </executions>
@@ -286,11 +281,6 @@
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-sdks-java-io-kafka</artifactId>
         <version>${apache-beam-version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.beam</groupId>
-        <artifactId>beam-sdks-java-io-hdfs</artifactId>
-        <version>0.6.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.cloud</groupId>
