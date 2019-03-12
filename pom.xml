@@ -187,7 +187,7 @@
             <configuration>
               <outputDirectory>${project.build.directory}/lib</outputDirectory>
               <excludeScope>provided</excludeScope>
-              <excludeArtifactIds>junit,mockito-all,jackson-core,jackson-annotations,jackson-databind,xercesImpl,xml-apis,slf4j-api,slf4j-log4j2</excludeArtifactIds>
+              <excludeArtifactIds>junit,mockito-all,jackson-core,jackson-annotations,jackson-databind,xercesImpl,xml-apis,slf4j-api,slf4j-log4j12</excludeArtifactIds>
             </configuration>
           </execution>
         </executions>
