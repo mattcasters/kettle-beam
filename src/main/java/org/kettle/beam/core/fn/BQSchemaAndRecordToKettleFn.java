@@ -39,6 +39,7 @@ public class BQSchemaAndRecordToKettleFn implements SerializableFunction<SchemaA
   private static final Logger LOG = LoggerFactory.getLogger( BQSchemaAndRecordToKettleFn.class );
 
   private transient RowMetaInterface rowMeta;
+  private transient SimpleDateFormat simpleDateTimeFormat;
   private transient SimpleDateFormat simpleDateFormat;
 
   public BQSchemaAndRecordToKettleFn( String stepname, String rowMetaJson, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
@@ -95,7 +96,9 @@ public class BQSchemaAndRecordToKettleFn implements SerializableFunction<SchemaA
           }
         }
 
-        simpleDateFormat = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss" );
+        simpleDateTimeFormat = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss" );
+        simpleDateTimeFormat.setLenient( true );
+        simpleDateFormat = new SimpleDateFormat( "yyyy-MM-dd" );
         simpleDateFormat.setLenient( true );
         Metrics.counter( "init", stepname ).inc();
       }
@@ -126,7 +129,11 @@ public class BQSchemaAndRecordToKettleFn implements SerializableFunction<SchemaA
               // We get a Long back
               //
               String datetimeString = ((Utf8) srcData).toString();
-              row[index] = simpleDateFormat.parse( datetimeString );
+              if (datetimeString.length()==10) {
+                row[index] = simpleDateFormat.parse( datetimeString );
+              } else {
+                row[ index ] = simpleDateTimeFormat.parse( datetimeString );
+              }
               break;
             default:
               throw new RuntimeException("Conversion from Avro JSON to Kettle is not yet supported for Kettle data type '"+valueMeta.getTypeDesc()+"'");
