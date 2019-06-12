@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.pentaho</groupId>
     <artifactId>pentaho-ce-jar-parent-pom</artifactId>
-    <version>8.1-SNAPSHOT</version>
+    <version>8.2.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>kettle-beam</artifactId>
   <name>${project.artifactId}</name>
@@ -22,8 +22,8 @@
     <pentaho-kettle.version>8.2.0.0-342</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
-    <apache-beam-version>2.11.0</apache-beam-version>
-    <kettle-beam-version>0.6.0-SNAPSHOT</kettle-beam-version>
+    <apache-beam-version>2.13.0</apache-beam-version>
+    <kettle-beam-version>1.0.0-SNAPSHOT</kettle-beam-version>
   </properties>
 
   <repositories>
@@ -134,11 +134,6 @@
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-bigquery</artifactId>
       <version>1.55.0</version>
-    </dependency>
-    <dependency>
-      <groupId>kettle-beam</groupId>
-      <artifactId>kettle-beam-core</artifactId>
-      <version>${kettle-beam-version}</version>
     </dependency>
 
     <dependency>
@@ -317,11 +312,6 @@
         <artifactId>beam-vendor-guava-20_0</artifactId>
         <version>0.1</version>
       </dependency>
-      <dependency>
-        <groupId>kettle-beam</groupId>
-        <artifactId>kettle-beam-core</artifactId>
-        <version>${kettle-beam-version}</version>
-      </dependency>
 
       <dependency>
         <groupId>junit</groupId>
@@ -334,5 +324,5 @@
 
 
   <groupId>kettle-beam</groupId>
-  <version>0.6.0-SNAPSHOT</version>
+  <version>1.0.0-SNAPSHOT</version>
 </project>

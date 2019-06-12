@@ -1,5 +1,9 @@
 package org.kettle.beam.pipeline;
 
+import org.apache.beam.runners.dataflow.DataflowRunner;
+import org.apache.beam.runners.direct.DirectRunner;
+import org.apache.beam.runners.flink.FlinkRunner;
+import org.apache.beam.runners.spark.SparkRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.options.PipelineOptions;
@@ -13,6 +17,8 @@ import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.coder.KettleRowCoder;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.core.util.KettleBeamUtil;
+import org.kettle.beam.metastore.BeamJobConfig;
+import org.kettle.beam.metastore.RunnerType;
 import org.kettle.beam.pipeline.handler.BeamBigQueryInputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamBigQueryOutputStepHandler;
 import org.kettle.beam.pipeline.handler.BeamGenericStepHandler;
@@ -64,6 +70,7 @@ public class TransMetaPipelineConverter {
   private List<String> xpPluginClasses;
   private Map<String, BeamStepHandler> stepHandlers;
   private BeamStepHandler genericStepHandler;
+  private BeamJobConfig beamJobConfig;
 
   public TransMetaPipelineConverter() {
     this.stepHandlers = new HashMap<>();
@@ -71,23 +78,25 @@ public class TransMetaPipelineConverter {
     this.xpPluginClasses = new ArrayList<>(  );
   }
 
-  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, String pluginsToStage ) throws MetaStoreException, KettleException {
+  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, String pluginsToStage, BeamJobConfig beamJobConfig ) throws MetaStoreException, KettleException {
     this();
     this.transMeta = transMeta;
     this.metaStore = new SerializableMetaStore( metaStore );
     this.metaStoreJson = this.metaStore.toJson();
+    this.beamJobConfig = beamJobConfig;
 
     addClassesFromPluginsToStage( pluginsToStage );
     addDefaultStepHandlers();
   }
 
-  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, List<String> stepPluginClasses, List<String> xpPluginClasses ) throws MetaStoreException {
+  public TransMetaPipelineConverter( TransMeta transMeta, IMetaStore metaStore, List<String> stepPluginClasses, List<String> xpPluginClasses, BeamJobConfig beamJobConfig ) throws MetaStoreException {
     this();
     this.transMeta = transMeta;
     this.metaStore = new SerializableMetaStore( metaStore );
     this.metaStoreJson = this.metaStore.toJson();
     this.stepPluginClasses = stepPluginClasses;
     this.xpPluginClasses = xpPluginClasses;
+    this.beamJobConfig = beamJobConfig;
 
     addDefaultStepHandlers();
   }
@@ -109,19 +118,19 @@ public class TransMetaPipelineConverter {
   public void addDefaultStepHandlers() throws MetaStoreException {
     // Add the step handlers for the special cases, functionality which Beams handles specifically
     //
-    stepHandlers.put( BeamConst.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_OUTPUT_PLUGIN_ID, new BeamOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_PUBLISH_PLUGIN_ID, new BeamPublisherStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_SUBSCRIBE_PLUGIN_ID, new BeamSubscriberStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID, new BeamBigQueryInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_CONSUME_PLUGIN_ID, new BeamKafkaInputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_PRODUCE_PLUGIN_ID, new BeamKafkaOutputStepHandler( metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
-    genericStepHandler = new BeamGenericStepHandler( metaStore, metaStoreJson, transMeta, stepPluginClasses, xpPluginClasses );
+    stepHandlers.put( BeamConst.STRING_BEAM_INPUT_PLUGIN_ID, new BeamInputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_OUTPUT_PLUGIN_ID, new BeamOutputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_PUBLISH_PLUGIN_ID, new BeamPublisherStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_SUBSCRIBE_PLUGIN_ID, new BeamSubscriberStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_MERGE_JOIN_PLUGIN_ID, new BeamMergeJoinStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_MEMORY_GROUP_BY_PLUGIN_ID, new BeamGroupByStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_WINDOW_PLUGIN_ID, new BeamWindowStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_TIMESTAMP_PLUGIN_ID, new BeamTimestampStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_BIGQUERY_INPUT_PLUGIN_ID, new BeamBigQueryInputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_CONSUME_PLUGIN_ID, new BeamKafkaInputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_PRODUCE_PLUGIN_ID, new BeamKafkaOutputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    genericStepHandler = new BeamGenericStepHandler( beamJobConfig, metaStore, metaStoreJson, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   public static List<String> findAnnotatedClasses( String folder, String annotationClassName ) throws KettleException {
@@ -166,12 +175,15 @@ public class TransMetaPipelineConverter {
     return classnames;
   }
 
-  public Pipeline createPipeline( Class<? extends PipelineRunner<?>> runnerClass, PipelineOptions pipelineOptions ) throws Exception {
+  public Pipeline createPipeline( PipelineOptions pipelineOptions ) throws Exception {
 
     LogChannelInterface log = LogChannel.GENERAL;
 
     // Create a new Pipeline
     //
+    RunnerType runnerType = RunnerType.getRunnerTypeByName( beamJobConfig.getRunnerTypeName() );
+    Class<? extends PipelineRunner<?>> runnerClass = getPipelineRunnerClass(runnerType);
+
     pipelineOptions.setRunner( runnerClass );
     Pipeline pipeline = Pipeline.create( pipelineOptions );
 
@@ -196,6 +208,20 @@ public class TransMetaPipelineConverter {
     handleBeamOutputSteps( log, stepCollectionMap, pipeline );
 
     return pipeline;
+  }
+
+  public static Class<? extends PipelineRunner<?>> getPipelineRunnerClass( RunnerType runnerType ) throws KettleException {
+    if (runnerType==null) {
+      throw new KettleException( "Please specify a valid runner type");
+    }
+    switch(runnerType) {
+      case Direct: return DirectRunner.class;
+      case Flink: return FlinkRunner.class;
+      case Spark: return SparkRunner.class;
+      case DataFlow: return DataflowRunner.class;
+      default:
+        throw new KettleException( "Unsupported runner type: "+runnerType.name() );
+    }
   }
 
   private void handleBeamInputSteps( LogChannelInterface log, Map<String, PCollection<KettleRow>> stepCollectionMap, Pipeline pipeline ) throws KettleException, IOException {

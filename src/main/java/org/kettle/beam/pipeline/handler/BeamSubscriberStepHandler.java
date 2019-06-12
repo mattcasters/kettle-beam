@@ -1,15 +1,12 @@
 package org.kettle.beam.pipeline.handler;
 
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.gcp.pubsub.PubsubIO;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.KettleRow;
-import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamSubscribeTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
-import org.kettle.beam.metastore.FileDefinition;
-import org.kettle.beam.steps.io.BeamInputMeta;
+import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.steps.pubsub.BeamSubscribeMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -21,26 +18,10 @@ import org.pentaho.metastore.api.IMetaStore;
 import java.util.List;
 import java.util.Map;
 
-public class BeamSubscriberStepHandler implements BeamStepHandler {
+public class BeamSubscriberStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
-
-  public BeamSubscriberStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-  }
-
-  public boolean isInput() {
-    return true;
-  }
-
-  public boolean isOutput() {
-    return false;
+  public BeamSubscriberStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, true, false, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   @Override public void handleStep( LogChannelInterface log, StepMeta stepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
@@ -56,15 +37,15 @@ public class BeamSubscriberStepHandler implements BeamStepHandler {
 
     // Verify some things:
     //
-    if ( StringUtils.isEmpty(inputMeta.getTopic())) {
-      throw new KettleException( "Please specify a topic to read from in Beam Pub/Sub Subscribe step '"+stepMeta.getName()+"'" );
+    if ( StringUtils.isEmpty( inputMeta.getTopic() ) ) {
+      throw new KettleException( "Please specify a topic to read from in Beam Pub/Sub Subscribe step '" + stepMeta.getName() + "'" );
     }
 
     BeamSubscribeTransform subscribeTransform = new BeamSubscribeTransform(
       stepMeta.getName(),
       stepMeta.getName(),
-      transMeta.environmentSubstitute(inputMeta.getSubscription()),
-      transMeta.environmentSubstitute(inputMeta.getTopic()),
+      transMeta.environmentSubstitute( inputMeta.getSubscription() ),
+      transMeta.environmentSubstitute( inputMeta.getTopic() ),
       inputMeta.getMessageType(),
       rowMetaJson,
       stepPluginClasses,

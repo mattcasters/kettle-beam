@@ -14,6 +14,7 @@ import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.fn.WindowInfoFn;
 import org.kettle.beam.core.util.JsonRowMeta;
+import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.steps.window.BeamWindowMeta;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
@@ -26,26 +27,10 @@ import org.pentaho.metastore.api.IMetaStore;
 import java.util.List;
 import java.util.Map;
 
-public class BeamWindowStepHandler implements BeamStepHandler {
+public class BeamWindowStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
-
-  public BeamWindowStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-  }
-
-  public boolean isInput() {
-    return false;
-  }
-
-  public boolean isOutput() {
-    return false;
+  public BeamWindowStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, false, false, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   @Override public void handleStep( LogChannelInterface log, StepMeta stepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
@@ -122,7 +107,7 @@ public class BeamWindowStepHandler implements BeamStepHandler {
         xpPluginClasses
       );
 
-      stepPCollection = stepPCollection.apply( ParDo.of(windowInfoFn) );
+      stepPCollection = stepPCollection.apply( ParDo.of( windowInfoFn ) );
     }
 
     // Save this in the map

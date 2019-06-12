@@ -7,6 +7,7 @@ import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.transform.BeamBQOutputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
+import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
 import org.kettle.beam.steps.bq.BeamBQOutputMeta;
@@ -23,26 +24,10 @@ import org.pentaho.metastore.api.IMetaStore;
 import java.util.List;
 import java.util.Map;
 
-public class BeamBigQueryOutputStepHandler implements BeamStepHandler {
+public class BeamBigQueryOutputStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
-
-  public BeamBigQueryOutputStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-  }
-
-  public boolean isInput() {
-    return false;
-  }
-
-  public boolean isOutput() {
-    return true;
+  public BeamBigQueryOutputStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, false, true, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   @Override public void handleStep( LogChannelInterface log, StepMeta beamOutputStepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,

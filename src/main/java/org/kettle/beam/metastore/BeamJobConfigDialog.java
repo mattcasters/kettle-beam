@@ -74,6 +74,7 @@ public class BeamJobConfigDialog {
   private TextVar wUserAgent;
   private TextVar wTempLocation;
   private TextVar wPluginsToStage;
+  private TextVar wStreamingKettleStepsFlushInterval;
 
   // Parameters
 
@@ -96,6 +97,7 @@ public class BeamJobConfigDialog {
 
   // Spark settings
 
+  private Button wSparkLocal;
   private TextVar wSparkMaster;
   private TextVar wSparkDeployFolder;
   private TextVar wSparkBatchIntervalMillis;
@@ -108,6 +110,9 @@ public class BeamJobConfigDialog {
   private TextVar wSparkBundleSize;
   private ComboVar wSparkStorageLevel;
 
+  // Flink settings
+  
+  private Button wFlinkLocal;
   private TextVar wFlinkMaster;
   private TextVar wFlinkParallelism;
   private TextVar wFlinkCheckpointingInterval;
@@ -138,7 +143,8 @@ public class BeamJobConfigDialog {
   private int margin;
 
   private boolean ok;
-  
+  private Label wlFlinkMaster;
+  private Label wlSparkMaster;
 
 
   public BeamJobConfigDialog( Shell parent, BeamJobConfig config ) {
@@ -198,6 +204,7 @@ public class BeamJobConfigDialog {
     wUserAgent.addSelectionListener( selAdapter );
     wTempLocation.addSelectionListener( selAdapter );
     wPluginsToStage.addSelectionListener( selAdapter );
+    wStreamingKettleStepsFlushInterval.addSelectionListener( selAdapter );
     wGcpProjectId.addSelectionListener( selAdapter );
     wGcpAppName.addSelectionListener( selAdapter );
     wGcpStagingLocation.addSelectionListener( selAdapter );
@@ -211,6 +218,7 @@ public class BeamJobConfigDialog {
     wGcpRegion.addSelectionListener( selAdapter );
     wGcpZone.addSelectionListener( selAdapter );
 
+    wSparkLocal.addSelectionListener( selAdapter );
     wSparkMaster.addSelectionListener( selAdapter );
     wSparkDeployFolder.addSelectionListener( selAdapter );
     wSparkBatchIntervalMillis.addSelectionListener( selAdapter );
@@ -222,6 +230,7 @@ public class BeamJobConfigDialog {
     wSparkBundleSize.addSelectionListener( selAdapter );
     wSparkStorageLevel.addSelectionListener( selAdapter );
 
+    wFlinkLocal.addSelectionListener( selAdapter );
     wFlinkMaster.addSelectionListener( selAdapter );
     wFlinkParallelism.addSelectionListener( selAdapter );
     wFlinkCheckpointingInterval.addSelectionListener( selAdapter );
@@ -420,6 +429,25 @@ public class BeamJobConfigDialog {
     fdPluginsToStage.right = new FormAttachment( 95, 0 );
     wPluginsToStage.setLayoutData( fdPluginsToStage );
     lastControl = wPluginsToStage;
+
+    // Streaming Kettle Steps Flush Interval
+    //
+    Label wlStreamingKettleStepsFlushInterval = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlStreamingKettleStepsFlushInterval );
+    wlStreamingKettleStepsFlushInterval.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.StreamingKettleStepsFlushInterval.Label" ) );
+    FormData fdlStreamingKettleStepsFlushInterval = new FormData();
+    fdlStreamingKettleStepsFlushInterval.top = new FormAttachment( lastControl, margin );
+    fdlStreamingKettleStepsFlushInterval.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlStreamingKettleStepsFlushInterval.right = new FormAttachment( middle, -margin );
+    wlStreamingKettleStepsFlushInterval.setLayoutData( fdlStreamingKettleStepsFlushInterval );
+    wStreamingKettleStepsFlushInterval = new TextVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wStreamingKettleStepsFlushInterval );
+    FormData fdStreamingKettleStepsFlushInterval = new FormData();
+    fdStreamingKettleStepsFlushInterval.top = new FormAttachment( wlStreamingKettleStepsFlushInterval, 0, SWT.CENTER );
+    fdStreamingKettleStepsFlushInterval.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdStreamingKettleStepsFlushInterval.right = new FormAttachment( 95, 0 );
+    wStreamingKettleStepsFlushInterval.setLayoutData( fdStreamingKettleStepsFlushInterval );
+    lastControl = wStreamingKettleStepsFlushInterval;
     
     FormData fdGeneralComp = new FormData();
     fdGeneralComp.left = new FormAttachment( 0, 0 );
@@ -758,13 +786,34 @@ public class BeamJobConfigDialog {
     fileLayout.marginHeight = 3;
     wSparkComp.setLayout( fileLayout );
 
+    // Spark local processing?
+    //
+    Label wlSparkLocal = new Label( wSparkComp, SWT.RIGHT );
+    props.setLook( wlSparkLocal );
+    wlSparkLocal.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkLocal.Label" ) );
+    FormData fdlSparkLocal = new FormData();
+    fdlSparkLocal.top = new FormAttachment( 0, 0 );
+    fdlSparkLocal.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlSparkLocal.right = new FormAttachment( middle, -margin );
+    wlSparkLocal.setLayoutData( fdlSparkLocal );
+    wSparkLocal = new Button( wSparkComp, SWT.CHECK | SWT.LEFT );
+    props.setLook( wSparkLocal );
+    FormData fdSparkLocal = new FormData();
+    fdSparkLocal.top = new FormAttachment( wlSparkLocal, 0, SWT.CENTER );
+    fdSparkLocal.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdSparkLocal.right = new FormAttachment( 95, 0 );
+    wSparkLocal.setLayoutData( fdSparkLocal );
+    Control lastControl = wSparkLocal;
+
+    wSparkLocal.addListener( SWT.Selection, e-> { enableFields(); } );
+
     // Spark master
     //
-    Label wlSparkMaster = new Label( wSparkComp, SWT.RIGHT );
+    wlSparkMaster = new Label( wSparkComp, SWT.RIGHT );
     props.setLook( wlSparkMaster );
     wlSparkMaster.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.SparkMaster.Label" ) );
     FormData fdlSparkMaster = new FormData();
-    fdlSparkMaster.top = new FormAttachment( 0, 0 );
+    fdlSparkMaster.top = new FormAttachment( lastControl, margin );
     fdlSparkMaster.left = new FormAttachment( 0, -margin ); // First one in the left top corner
     fdlSparkMaster.right = new FormAttachment( middle, -margin );
     wlSparkMaster.setLayoutData( fdlSparkMaster );
@@ -775,7 +824,7 @@ public class BeamJobConfigDialog {
     fdSparkMaster.left = new FormAttachment( middle, 0 ); // To the right of the label
     fdSparkMaster.right = new FormAttachment( 95, 0 );
     wSparkMaster.setLayoutData( fdSparkMaster );
-    Control lastControl = wSparkMaster;
+    lastControl = wSparkMaster;
 
     // Folder to deploy Spark submit artifacts in
     //
@@ -1007,13 +1056,34 @@ public class BeamJobConfigDialog {
     fileLayout.marginHeight = 3;
     wFlinkComp.setLayout( fileLayout );
 
+    // Flink local processing?
+    //
+    Label wlFlinkLocal = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkLocal );
+    wlFlinkLocal.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkLocal.Label" ) );
+    FormData fdlFlinkLocal = new FormData();
+    fdlFlinkLocal.top = new FormAttachment( 0, 0 );
+    fdlFlinkLocal.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkLocal.right = new FormAttachment( middle, -margin );
+    wlFlinkLocal.setLayoutData( fdlFlinkLocal );
+    wFlinkLocal = new Button( wFlinkComp, SWT.CHECK | SWT.LEFT );
+    props.setLook( wFlinkLocal );
+    FormData fdFlinkLocal = new FormData();
+    fdFlinkLocal.top = new FormAttachment( wlFlinkLocal, 0, SWT.CENTER );
+    fdFlinkLocal.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkLocal.right = new FormAttachment( 95, 0 );
+    wFlinkLocal.setLayoutData( fdFlinkLocal );
+    Control lastControl = wFlinkLocal;
+
+    wFlinkLocal.addListener( SWT.Selection, e-> { enableFields(); } );
+
     // Flink master
     //
-    Label wlFlinkMaster = new Label( wFlinkComp, SWT.RIGHT );
+    wlFlinkMaster = new Label( wFlinkComp, SWT.RIGHT );
     props.setLook( wlFlinkMaster );
     wlFlinkMaster.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkMaster.Label" ) );
     FormData fdlFlinkMaster = new FormData();
-    fdlFlinkMaster.top = new FormAttachment( 0, 0 );
+    fdlFlinkMaster.top = new FormAttachment( lastControl, margin );
     fdlFlinkMaster.left = new FormAttachment( 0, -margin ); // First one in the left top corner
     fdlFlinkMaster.right = new FormAttachment( middle, -margin );
     wlFlinkMaster.setLayoutData( fdlFlinkMaster );
@@ -1024,8 +1094,8 @@ public class BeamJobConfigDialog {
     fdFlinkMaster.left = new FormAttachment( middle, 0 ); // To the right of the label
     fdFlinkMaster.right = new FormAttachment( 95, 0 );
     wFlinkMaster.setLayoutData( fdFlinkMaster );
-    Control lastControl = wFlinkMaster;
-
+    lastControl = wFlinkMaster;
+    
     Label wlFlinkParallelism = new Label( wFlinkComp, SWT.RIGHT );
     props.setLook( wlFlinkParallelism );
     wlFlinkParallelism.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkParallelism.Label" ) );
@@ -1358,6 +1428,15 @@ public class BeamJobConfigDialog {
     wFlinkTab.setControl( wFlinkSComp );
   }
 
+  private void enableFields() {
+
+    wlSparkMaster.setEnabled( !wSparkLocal.getSelection() );
+    wSparkMaster.setEnabled( !wSparkLocal.getSelection() );
+
+
+    wlFlinkMaster.setEnabled( !wFlinkLocal.getSelection() );
+    wFlinkMaster.setEnabled( !wFlinkLocal.getSelection() );
+  }
 
 
   public void dispose() {
@@ -1374,6 +1453,7 @@ public class BeamJobConfigDialog {
     wUserAgent.setText( Const.NVL(config.getUserAgent(), "") );
     wTempLocation.setText( Const.NVL(config.getTempLocation(), "") );
     wPluginsToStage.setText( Const.NVL(config.getPluginsToStage(), "") );
+    wStreamingKettleStepsFlushInterval.setText(Const.NVL(config.getStreamingKettleStepsFlushInterval(), ""));
 
     // GCP
     /*
@@ -1412,6 +1492,7 @@ public class BeamJobConfigDialog {
     wGcpZone.setText(Const.NVL(config.getGcpZone(), ""));
 
     // Spark
+    wSparkLocal.setSelection(config.isSparkLocal());
     wSparkMaster.setText(Const.NVL(config.getSparkMaster(), ""));
     wSparkDeployFolder.setText(Const.NVL(config.getSparkDeployFolder(), ""));
     wSparkBatchIntervalMillis.setText(Const.NVL(config.getSparkBatchIntervalMillis(), ""));
@@ -1425,6 +1506,7 @@ public class BeamJobConfigDialog {
     wSparkStorageLevel.setText(Const.NVL(config.getSparkStorageLevel(), ""));
 
     // Flink
+    wFlinkLocal.setSelection( config.isFlinkLocal() );
     wFlinkMaster.setText( Const.NVL(config.getFlinkMaster(), "") );
     wFlinkParallelism.setText( Const.NVL(config.getFlinkParallelism(), "") );
     wFlinkCheckpointingInterval.setText( Const.NVL(config.getFlinkCheckpointingInterval(), "") );
@@ -1456,12 +1538,7 @@ public class BeamJobConfigDialog {
     wParameters.setRowNums();
     wParameters.optWidth( true );
 
-    if (StringUtils.isNotEmpty(config.getGcpProjectId())) {
-      wTabFolder.setSelection( 2 );
-    }
-    if (StringUtils.isNotEmpty(config.getSparkMaster())) {
-      wTabFolder.setSelection( 3 );
-    }
+    enableFields();
 
     wName.selectAll();
     wName.setFocus();
@@ -1492,11 +1569,12 @@ public class BeamJobConfigDialog {
     cfg.setRunnerTypeName( wRunner.getText() );
     cfg.setUserAgent( wUserAgent.getText() );
     cfg.setTempLocation( wTempLocation.getText() );
+    cfg.setPluginsToStage( wPluginsToStage.getText() );
+    cfg.setStreamingKettleStepsFlushInterval( wStreamingKettleStepsFlushInterval.getText() );
 
     cfg.setGcpProjectId( wGcpProjectId.getText() );
     cfg.setGcpAppName( wGcpAppName.getText() );
     cfg.setGcpStagingLocation( wGcpStagingLocation.getText() );
-    cfg.setPluginsToStage( wPluginsToStage.getText() );
     cfg.setGcpInitialNumberOfWorkers( wGcpInitialNumberOfWorkers.getText() );
     cfg.setGcpMaximumNumberOfWokers( wGcpMaximumNumberOfWorkers.getText() );
     cfg.setGcpStreaming( wGcpStreaming.getSelection() );
@@ -1530,6 +1608,7 @@ public class BeamJobConfigDialog {
     }
     cfg.setGcpRegion( regionCode );
 
+    cfg.setSparkLocal( wSparkLocal.getSelection() );
     cfg.setSparkMaster( wSparkMaster.getText() );
     cfg.setSparkDeployFolder( wSparkDeployFolder.getText() );
     cfg.setSparkBatchIntervalMillis( wSparkBatchIntervalMillis.getText() );
@@ -1542,6 +1621,7 @@ public class BeamJobConfigDialog {
     cfg.setSparkBundleSize( wSparkBundleSize.getText() );
     cfg.setSparkStorageLevel( wSparkStorageLevel.getText() );
 
+    cfg.setFlinkLocal(wFlinkLocal.getSelection());
     cfg.setFlinkMaster(wFlinkMaster.getText());
     cfg.setFlinkParallelism(wFlinkParallelism.getText());
     cfg.setFlinkCheckpointingInterval(wFlinkCheckpointingInterval.getText());

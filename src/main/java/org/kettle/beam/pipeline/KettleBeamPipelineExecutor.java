@@ -92,7 +92,13 @@ public class KettleBeamPipelineExecutor {
 
   public PipelineResult execute( boolean server ) throws KettleException {
 
+    if (StringUtils.isEmpty(jobConfig.getRunnerTypeName())) {
+      throw new KettleException( "Please specify a runner type" );
+    }
     RunnerType runnerType = RunnerType.getRunnerTypeByName( transMeta.environmentSubstitute( jobConfig.getRunnerTypeName() ) );
+    if (runnerType==null) {
+      throw new KettleException( "Runner type '"+jobConfig.getRunnerTypeName()+"' is not recognized");
+    }
     switch ( runnerType ) {
       case Direct:
       case Flink:
@@ -298,20 +304,17 @@ public class KettleBeamPipelineExecutor {
         throw new KettleException( "You need to specify a runner type, one of : " + RunnerType.values().toString() );
       }
       PipelineOptions pipelineOptions = null;
-      Class<? extends PipelineRunner<?>> pipelineRunnerClass = null;
       VariableSpace space = transMeta;
 
       RunnerType runnerType = RunnerType.getRunnerTypeByName( transMeta.environmentSubstitute( config.getRunnerTypeName() ) );
       switch ( runnerType ) {
         case Direct:
           pipelineOptions = PipelineOptionsFactory.create();
-          pipelineRunnerClass = DirectRunner.class;
           break;
         case DataFlow:
           DataflowPipelineOptions dfOptions = PipelineOptionsFactory.as( DataflowPipelineOptions.class );
           configureDataFlowOptions( config, dfOptions, space );
           pipelineOptions = dfOptions;
-          pipelineRunnerClass = DataflowRunner.class;
           break;
         case Spark:
           SparkPipelineOptions sparkOptions;
@@ -324,13 +327,11 @@ public class KettleBeamPipelineExecutor {
           }
           configureSparkOptions( config, sparkOptions, space, transMeta.getName() );
           pipelineOptions = sparkOptions;
-          pipelineRunnerClass = SparkRunner.class;
           break;
         case Flink:
           FlinkPipelineOptions flinkOptions = PipelineOptionsFactory.as( FlinkPipelineOptions.class );
           configureFlinkOptions( config, flinkOptions, space );
           pipelineOptions = flinkOptions;
-          pipelineRunnerClass = FlinkRunner.class;
           break;
         default:
           throw new KettleException( "Sorry, this isn't implemented yet" );
@@ -342,11 +343,11 @@ public class KettleBeamPipelineExecutor {
 
       TransMetaPipelineConverter converter;
       if (stepPluginClasses!=null && xpPluginClasses!=null) {
-        converter = new TransMetaPipelineConverter( transMeta, metaStore, stepPluginClasses, xpPluginClasses );
+        converter = new TransMetaPipelineConverter( transMeta, metaStore, stepPluginClasses, xpPluginClasses, jobConfig );
       } else {
-        converter = new TransMetaPipelineConverter( transMeta, metaStore, config.getPluginsToStage() );
+        converter = new TransMetaPipelineConverter( transMeta, metaStore, config.getPluginsToStage(), jobConfig );
       }
-      Pipeline pipeline = converter.createPipeline( pipelineRunnerClass, pipelineOptions );
+      Pipeline pipeline = converter.createPipeline( pipelineOptions );
 
       // Also set the pipeline options...
       //

@@ -3,15 +3,14 @@ package org.kettle.beam.pipeline.handler;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.extensions.joinlibrary.Join;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.fn.AssemblerFn;
 import org.kettle.beam.core.fn.KettleKeyValueFn;
-import org.kettle.beam.core.transform.GroupByTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
+import org.kettle.beam.metastore.BeamJobConfig;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -21,8 +20,6 @@ import org.pentaho.di.core.row.RowMetaInterface;
 import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
-import org.pentaho.di.trans.steps.groupby.GroupByMeta;
-import org.pentaho.di.trans.steps.memgroupby.MemoryGroupByMeta;
 import org.pentaho.di.trans.steps.mergejoin.MergeJoinMeta;
 import org.pentaho.metastore.api.IMetaStore;
 
@@ -31,18 +28,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class BeamMergeJoinStepHandler implements BeamStepHandler {
+public class BeamMergeJoinStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
-
-  public BeamMergeJoinStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
+  public BeamMergeJoinStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, false, false, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   public boolean isInput() {
@@ -55,7 +44,7 @@ public class BeamMergeJoinStepHandler implements BeamStepHandler {
 
   @Override public void handleStep( LogChannelInterface log, StepMeta stepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
                                     Pipeline pipeline, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
-                                    PCollection<KettleRow> input  ) throws KettleException {
+                                    PCollection<KettleRow> input ) throws KettleException {
 
     MergeJoinMeta meta = (MergeJoinMeta) stepMeta.getStepMetaInterface();
 

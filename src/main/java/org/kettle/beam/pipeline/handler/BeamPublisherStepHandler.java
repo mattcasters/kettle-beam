@@ -4,13 +4,9 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.KettleRow;
-import org.kettle.beam.core.transform.BeamInputTransform;
-import org.kettle.beam.core.transform.BeamOutputTransform;
 import org.kettle.beam.core.transform.BeamPublishTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
-import org.kettle.beam.metastore.FileDefinition;
-import org.kettle.beam.steps.io.BeamInputMeta;
-import org.kettle.beam.steps.io.BeamOutputMeta;
+import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.steps.pubsub.BeamPublishMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -22,38 +18,22 @@ import org.pentaho.metastore.api.IMetaStore;
 import java.util.List;
 import java.util.Map;
 
-public class BeamPublisherStepHandler implements BeamStepHandler {
+public class BeamPublisherStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
-
-  public BeamPublisherStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-  }
-
-  public boolean isInput() {
-    return false;
-  }
-
-  public boolean isOutput() {
-    return true;
+  public BeamPublisherStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, false, true, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   @Override public void handleStep( LogChannelInterface log, StepMeta stepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
                                     Pipeline pipeline, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
-                                    PCollection<KettleRow> input  ) throws KettleException {
+                                    PCollection<KettleRow> input ) throws KettleException {
 
     BeamPublishMeta publishMeta = (BeamPublishMeta) stepMeta.getStepMetaInterface();
 
     // some validation
     //
-    if ( StringUtils.isEmpty(publishMeta.getTopic())) {
-      throw new KettleException( "Please specify a topic to publish to in Beam Pub/Sub Publish step '"+stepMeta.getName()+"'" );
+    if ( StringUtils.isEmpty( publishMeta.getTopic() ) ) {
+      throw new KettleException( "Please specify a topic to publish to in Beam Pub/Sub Publish step '" + stepMeta.getName() + "'" );
     }
 
     BeamPublishTransform beamOutputTransform = new BeamPublishTransform(
@@ -61,7 +41,7 @@ public class BeamPublisherStepHandler implements BeamStepHandler {
       transMeta.environmentSubstitute( publishMeta.getTopic() ),
       publishMeta.getMessageType(),
       publishMeta.getMessageField(),
-      JsonRowMeta.toJson(rowMeta),
+      JsonRowMeta.toJson( rowMeta ),
       stepPluginClasses,
       xpPluginClasses
     );

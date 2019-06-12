@@ -3,18 +3,13 @@ package org.kettle.beam.pipeline.handler;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.values.PCollection;
 import org.kettle.beam.core.KettleRow;
-import org.kettle.beam.core.transform.BeamBQOutputTransform;
 import org.kettle.beam.core.transform.BeamKafkaOutputTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
-import org.kettle.beam.metastore.FieldDefinition;
-import org.kettle.beam.metastore.FileDefinition;
-import org.kettle.beam.steps.bq.BeamBQOutputMeta;
+import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.steps.kafka.BeamProduceMeta;
 import org.pentaho.di.core.exception.KettleException;
-import org.pentaho.di.core.exception.KettleStepException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.row.RowMetaInterface;
-import org.pentaho.di.core.row.ValueMetaInterface;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.metastore.api.IMetaStore;
@@ -22,31 +17,15 @@ import org.pentaho.metastore.api.IMetaStore;
 import java.util.List;
 import java.util.Map;
 
-public class BeamKafkaOutputStepHandler implements BeamStepHandler {
+public class BeamKafkaOutputStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
-
-  public BeamKafkaOutputStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-  }
-
-  public boolean isInput() {
-    return false;
-  }
-
-  public boolean isOutput() {
-    return true;
+  public BeamKafkaOutputStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, false, true, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   @Override public void handleStep( LogChannelInterface log, StepMeta beamOutputStepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
                                     Pipeline pipeline, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
-                                    PCollection<KettleRow> input  ) throws KettleException {
+                                    PCollection<KettleRow> input ) throws KettleException {
 
     BeamProduceMeta beamProduceMeta = (BeamProduceMeta) beamOutputStepMeta.getStepMetaInterface();
 
@@ -56,7 +35,7 @@ public class BeamKafkaOutputStepHandler implements BeamStepHandler {
       transMeta.environmentSubstitute( beamProduceMeta.getTopic() ),
       transMeta.environmentSubstitute( beamProduceMeta.getKeyField() ),
       transMeta.environmentSubstitute( beamProduceMeta.getMessageField() ),
-      JsonRowMeta.toJson(rowMeta),
+      JsonRowMeta.toJson( rowMeta ),
       stepPluginClasses,
       xpPluginClasses
     );

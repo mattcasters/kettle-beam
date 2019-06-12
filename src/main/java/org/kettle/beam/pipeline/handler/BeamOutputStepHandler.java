@@ -4,12 +4,11 @@ import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.KettleRow;
-import org.kettle.beam.core.transform.BeamInputTransform;
 import org.kettle.beam.core.transform.BeamOutputTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
+import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.metastore.FieldDefinition;
 import org.kettle.beam.metastore.FileDefinition;
-import org.kettle.beam.steps.io.BeamInputMeta;
 import org.kettle.beam.steps.io.BeamOutputMeta;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleStepException;
@@ -23,31 +22,15 @@ import org.pentaho.metastore.api.IMetaStore;
 import java.util.List;
 import java.util.Map;
 
-public class BeamOutputStepHandler implements BeamStepHandler {
+public class BeamOutputStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
-
-  public BeamOutputStepHandler( IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-  }
-
-  public boolean isInput() {
-    return false;
-  }
-
-  public boolean isOutput() {
-    return true;
+  public BeamOutputStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, false, true, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
   }
 
   @Override public void handleStep( LogChannelInterface log, StepMeta beamOutputStepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
                                     Pipeline pipeline, RowMetaInterface rowMeta, List<StepMeta> previousSteps,
-                                    PCollection<KettleRow> input  ) throws KettleException {
+                                    PCollection<KettleRow> input ) throws KettleException {
 
     BeamOutputMeta beamOutputMeta = (BeamOutputMeta) beamOutputStepMeta.getStepMetaInterface();
     FileDefinition outputFileDefinition;
@@ -80,7 +63,7 @@ public class BeamOutputStepHandler implements BeamStepHandler {
       transMeta.environmentSubstitute( outputFileDefinition.getSeparator() ),
       transMeta.environmentSubstitute( outputFileDefinition.getEnclosure() ),
       beamOutputMeta.isWindowed(),
-      JsonRowMeta.toJson(rowMeta),
+      JsonRowMeta.toJson( rowMeta ),
       stepPluginClasses,
       xpPluginClasses
     );

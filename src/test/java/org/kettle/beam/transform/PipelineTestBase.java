@@ -14,6 +14,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.kettle.beam.core.BeamDefaults;
 import org.kettle.beam.core.BeamKettle;
+import org.kettle.beam.metastore.BeamJobConfig;
+import org.kettle.beam.metastore.RunnerType;
 import org.kettle.beam.pipeline.TransMetaPipelineConverter;
 import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.trans.TransMeta;
@@ -59,9 +61,13 @@ public class PipelineTestBase {
     pipelineOptions.setJobName( transMeta.getName() );
     pipelineOptions.setUserAgent( BeamConst.STRING_KETTLE_BEAM );
 
+    BeamJobConfig jobConfig = new BeamJobConfig();
+    jobConfig.setName("Direct runner test");
+    jobConfig.setRunnerTypeName( RunnerType.Direct.name() );
+
     // No extra plugins to load : null option
-    TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, metaStore, (String) null );
-    Pipeline pipeline = converter.createPipeline( DirectRunner.class, pipelineOptions );
+    TransMetaPipelineConverter converter = new TransMetaPipelineConverter( transMeta, metaStore, (String) null, jobConfig );
+    Pipeline pipeline = converter.createPipeline( pipelineOptions );
 
     PipelineResult pipelineResult = pipeline.run();
     pipelineResult.waitUntilFinish();

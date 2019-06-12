@@ -42,6 +42,9 @@ public class BeamJobConfig {
   @MetaStoreAttribute
   private List<JobParameter> parameters;
 
+  @MetaStoreAttribute
+  private String streamingKettleStepsFlushInterval;
+
 
   //
   // Dataflow specific options
@@ -87,7 +90,8 @@ public class BeamJobConfig {
   //
   // Spark specific options
   //
-
+  @MetaStoreAttribute
+  private boolean sparkLocal;
 
   @MetaStoreAttribute
   private String sparkMaster;
@@ -125,6 +129,9 @@ public class BeamJobConfig {
   //
   // Flink options
   //
+  @MetaStoreAttribute
+  private boolean flinkLocal;
+
   @MetaStoreAttribute
   private String flinkMaster;
 
@@ -348,6 +355,22 @@ public class BeamJobConfig {
   }
 
   /**
+   * Gets streamingKettleStepsFlushInterval
+   *
+   * @return value of streamingKettleStepsFlushInterval
+   */
+  public String getStreamingKettleStepsFlushInterval() {
+    return streamingKettleStepsFlushInterval;
+  }
+
+  /**
+   * @param streamingKettleStepsFlushInterval The streamingKettleStepsFlushInterval to set
+   */
+  public void setStreamingKettleStepsFlushInterval( String streamingKettleStepsFlushInterval ) {
+    this.streamingKettleStepsFlushInterval = streamingKettleStepsFlushInterval;
+  }
+
+  /**
    * Gets gcpInitialNumberOfWorkers
    *
    * @return value of gcpInitialNumberOfWorkers
@@ -489,6 +512,22 @@ public class BeamJobConfig {
    */
   public void setGcpZone( String gcpZone ) {
     this.gcpZone = gcpZone;
+  }
+
+  /**
+   * Gets sparkLocal
+   *
+   * @return value of sparkLocal
+   */
+  public boolean isSparkLocal() {
+    return sparkLocal;
+  }
+
+  /**
+   * @param sparkLocal The sparkLocal to set
+   */
+  public void setSparkLocal( boolean sparkLocal ) {
+    this.sparkLocal = sparkLocal;
   }
 
   /**
@@ -665,6 +704,22 @@ public class BeamJobConfig {
    */
   public void setSparkDeployFolder( String sparkDeployFolder ) {
     this.sparkDeployFolder = sparkDeployFolder;
+  }
+
+  /**
+   * Gets flinkLocal
+   *
+   * @return value of flinkLocal
+   */
+  public boolean isFlinkLocal() {
+    return flinkLocal;
+  }
+
+  /**
+   * @param flinkLocal The flinkLocal to set
+   */
+  public void setFlinkLocal( boolean flinkLocal ) {
+    this.flinkLocal = flinkLocal;
   }
 
   /**

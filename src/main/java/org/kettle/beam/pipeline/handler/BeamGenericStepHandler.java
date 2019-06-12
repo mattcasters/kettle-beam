@@ -21,6 +21,8 @@ import org.kettle.beam.core.shared.VariableValue;
 import org.kettle.beam.core.transform.StepTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
+import org.kettle.beam.metastore.BeamJobConfig;
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.row.RowMetaInterface;
@@ -37,28 +39,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class BeamGenericStepHandler implements BeamStepHandler {
+public class BeamGenericStepHandler extends BeamBaseStepHandler implements BeamStepHandler {
 
-  private IMetaStore metaStore;
   private String metaStoreJson;
-  private TransMeta transMeta;
-  private List<String> stepPluginClasses;
-  private List<String> xpPluginClasses;
 
-  public BeamGenericStepHandler( IMetaStore metaStore, String metaStoreJson, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
-    this.metaStore = metaStore;
+  public BeamGenericStepHandler( BeamJobConfig beamJobConfig, IMetaStore metaStore, String metaStoreJson, TransMeta transMeta, List<String> stepPluginClasses, List<String> xpPluginClasses ) {
+    super( beamJobConfig, false, false, metaStore, transMeta, stepPluginClasses, xpPluginClasses );
     this.metaStoreJson = metaStoreJson;
-    this.transMeta = transMeta;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-  }
-
-  public boolean isInput() {
-    return false;
-  }
-
-  public boolean isOutput() {
-    return false;
   }
 
   @Override public void handleStep( LogChannelInterface log, StepMeta stepMeta, Map<String, PCollection<KettleRow>> stepCollectionMap,
@@ -68,7 +55,7 @@ public class BeamGenericStepHandler implements BeamStepHandler {
     // If we have no previous step, it's an input step.  We need to start from pipeline
     //
     boolean inputStep = input == null;
-    boolean reduceParallelism = checkStepCopiesForReducedParallelism(stepMeta);
+    boolean reduceParallelism = checkStepCopiesForReducedParallelism( stepMeta );
 
     String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
 
@@ -105,9 +92,15 @@ public class BeamGenericStepHandler implements BeamStepHandler {
       }
     }
 
+    // For streaming pipelines we need to flush the rows in the buffer of a generic step (Table Output, Neo4j Output, ...)
+    // This is what the BeamJobConfig option "Streaming Kettle Steps Flush Interval" is for...
+    // Without a valid value we default to -1 to disable flushing.
+    //
+    int flushIntervalSeconds = Const.toInt(beamJobConfig.getStreamingKettleStepsFlushInterval(), -1);
+
     // Send all the information on their way to the right nodes
     //
-    StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses, transMeta.getSizeRowset(),
+    StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses, transMeta.getSizeRowset(), flushIntervalSeconds,
       stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), inputStep,
       targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
 
@@ -127,16 +120,16 @@ public class BeamGenericStepHandler implements BeamStepHandler {
       //
       String tupleId = KettleBeamUtil.createMainInputTupleId( stepMeta.getName() );
       stepCollectionMap.put( tupleId, input );
-    } else if (reduceParallelism) {
+    } else if ( reduceParallelism ) {
 
       // group across all fields to get down to a single thread...
       //
-      input = input.apply(WithKeys.of((Void) null))
-        .setCoder( KvCoder.of( VoidCoder.of(), input.getCoder()))
-        .apply(GroupByKey.create())
-        .apply(Values.create())
-        .apply(Flatten.iterables())
-        ;
+      input = input.apply( WithKeys.of( (Void) null ) )
+        .setCoder( KvCoder.of( VoidCoder.of(), input.getCoder() ) )
+        .apply( GroupByKey.create() )
+        .apply( Values.create() )
+        .apply( Flatten.iterables() )
+      ;
     }
 
     // Apply the step transform to the previous io step PCollection(s)
@@ -166,15 +159,15 @@ public class BeamGenericStepHandler implements BeamStepHandler {
   }
 
   private boolean checkStepCopiesForReducedParallelism( StepMeta stepMeta ) {
-    if (stepMeta.getCopiesString()==null) {
+    if ( stepMeta.getCopiesString() == null ) {
       return false;
     }
     String copiesString = stepMeta.getCopiesString();
 
     String[] keyWords = new String[] { "BEAM_SINGLE", "SINGLE_BEAM", "BEAM_OUTPUT", "OUTPUT" };
 
-    for (String keyWord : keyWords) {
-      if (copiesString.equalsIgnoreCase( keyWord )) {
+    for ( String keyWord : keyWords ) {
+      if ( copiesString.equalsIgnoreCase( keyWord ) ) {
         return true;
       }
     }

@@ -16,7 +16,7 @@ public enum RunnerType {
   }
 
   /**
-   * Find the runner type by name.  If not found, return the Direct runner.
+   * Find the runner type by name.  If not found or if the name is null, return null.
    *
    * @param name
    * @return
@@ -30,7 +30,7 @@ public enum RunnerType {
         return type;
       }
     }
-    return Direct;
+    return null;
   }
 
 }
