@@ -68,6 +68,11 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
 
     log.logBasic( "Executing transformation " + transMeta.getName() + " on Beam Job Config " + beamJobConfigName );
 
+    // Disable any unit test (data sets) logic
+    // TODO: find a generic way of doing this. Can the "data sets" plugin detect the Run Config?
+    //
+    transMeta.setVariable( "__UnitTest_Run__", "N" );
+
     try {
       // Load the job config.
       //
@@ -126,7 +131,7 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
     // Correct the logging channel in the executor...
     //
     executor.setLogChannel( trans.getLogChannel() );
-    executor.setLoggingMetrics( false );
+    executor.setLoggingMetrics( true );
 
     // Set all the steps running
     //
