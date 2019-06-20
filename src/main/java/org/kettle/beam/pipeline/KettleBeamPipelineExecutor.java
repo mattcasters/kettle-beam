@@ -144,7 +144,13 @@ public class KettleBeamPipelineExecutor {
       //
       // Find the list of jar files to stage...
       //
-      List<String> libraryFilesToStage = BeamConst.findLibraryFilesToStage( null, transMeta.environmentSubstitute( jobConfig.getPluginsToStage() ), true, true );
+      List<String> libraryFilesToStage;
+      if (StringUtils.isNotEmpty(jobConfig.getFatJar())) {
+        libraryFilesToStage = new ArrayList<>(  );
+        libraryFilesToStage.add(jobConfig.getFatJar());
+      } else {
+        libraryFilesToStage = BeamConst.findLibraryFilesToStage( null, transMeta.environmentSubstitute( jobConfig.getPluginsToStage() ), true, true );
+      }
 
       String shortFatJarFilename = "kettle-beam-fat.jar";
       String fatJarFilename = deployFolder + shortFatJarFilename;
@@ -232,6 +238,10 @@ public class KettleBeamPipelineExecutor {
 
       final Pipeline pipeline = getPipeline( transMeta, jobConfig );
 
+      logChannel.logBasic( "Creation of Apache Beam pipeline is complete. Starting execution..." );
+
+      // This next command can block on certain runners...
+      //
       PipelineResult pipelineResult = pipeline.run();
 
       Timer timer = new Timer();
@@ -396,8 +406,14 @@ public class KettleBeamPipelineExecutor {
 
   private void configureDataFlowOptions( BeamJobConfig config, DataflowPipelineOptions options, VariableSpace space ) throws IOException {
 
-    List<String> files = BeamConst.findLibraryFilesToStage( null, space.environmentSubstitute( config.getPluginsToStage() ), true, true );
-    files.removeIf( s-> s.contains( "commons-logging" ) || s.contains( "log4j" ) );
+    List<String> files;
+    if (StringUtils.isNotEmpty(config.getFatJar())) {
+      files = new ArrayList<>(  );
+      files.add(config.getFatJar());
+    } else {
+      files = BeamConst.findLibraryFilesToStage( null, space.environmentSubstitute( config.getPluginsToStage() ), true, true );
+      files.removeIf( s-> s.contains( "commons-logging" ) || s.contains( "log4j" ) );
+    }
 
     options.setFilesToStage( files );
     options.setProject( space.environmentSubstitute( config.getGcpProjectId() ) );

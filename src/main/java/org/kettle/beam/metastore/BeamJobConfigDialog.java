@@ -9,6 +9,7 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.ShellAdapter;
 import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.FormAttachment;
@@ -18,18 +19,25 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
+import org.kettle.beam.pipeline.TransMetaPipelineConverter;
+import org.kettle.beam.pipeline.fatjar.FatJarBuilder;
 import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Props;
+import org.pentaho.di.core.annotations.Step;
+import org.pentaho.di.core.extension.ExtensionPoint;
 import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.variables.Variables;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.ui.core.PropsUI;
+import org.pentaho.di.ui.core.dialog.ErrorDialog;
 import org.pentaho.di.ui.core.gui.GUIResource;
 import org.pentaho.di.ui.core.gui.WindowProperty;
 import org.pentaho.di.ui.core.widget.ColumnInfo;
@@ -37,6 +45,13 @@ import org.pentaho.di.ui.core.widget.ComboVar;
 import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class BeamJobConfigDialog {
 
@@ -73,8 +88,11 @@ public class BeamJobConfigDialog {
   private ComboVar wRunner;
   private TextVar wUserAgent;
   private TextVar wTempLocation;
-  private TextVar wPluginsToStage;
   private TextVar wStreamingKettleStepsFlushInterval;
+  private TextVar wPluginsToStage;
+  private TextVar wStepPluginClasses;
+  private TextVar wXpPluginClasses;
+  private TextVar wFatJar;
 
   // Parameters
 
@@ -204,6 +222,9 @@ public class BeamJobConfigDialog {
     wUserAgent.addSelectionListener( selAdapter );
     wTempLocation.addSelectionListener( selAdapter );
     wPluginsToStage.addSelectionListener( selAdapter );
+    wStepPluginClasses.addSelectionListener( selAdapter );
+    wXpPluginClasses.addSelectionListener( selAdapter );
+    wFatJar.addSelectionListener( selAdapter );
     wStreamingKettleStepsFlushInterval.addSelectionListener( selAdapter );
     wGcpProjectId.addSelectionListener( selAdapter );
     wGcpAppName.addSelectionListener( selAdapter );
@@ -430,6 +451,89 @@ public class BeamJobConfigDialog {
     wPluginsToStage.setLayoutData( fdPluginsToStage );
     lastControl = wPluginsToStage;
 
+    // StepPluginClasses
+    //
+    Label wlStepPluginClasses = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlStepPluginClasses );
+    wlStepPluginClasses.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.StepPluginClasses.Label" ) );
+    FormData fdlStepPluginClasses = new FormData();
+    fdlStepPluginClasses.top = new FormAttachment( lastControl, margin );
+    fdlStepPluginClasses.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlStepPluginClasses.right = new FormAttachment( middle, -margin );
+    wlStepPluginClasses.setLayoutData( fdlStepPluginClasses );
+    Button wbStepPluginClasses = new Button( wGeneralComp, SWT.PUSH );
+    wStepPluginClasses = new TextVar( space, wGeneralComp, SWT.MULTI | SWT.LEFT | SWT.BORDER | SWT.V_SCROLL | SWT.WRAP );
+    props.setLook( wStepPluginClasses );
+    FormData fdStepPluginClasses = new FormData();
+    fdStepPluginClasses.top = new FormAttachment( lastControl, margin );
+    fdStepPluginClasses.bottom = new FormAttachment( lastControl, 200 );
+    fdStepPluginClasses.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdStepPluginClasses.right = new FormAttachment( 95, 0 );
+    wStepPluginClasses.setLayoutData( fdStepPluginClasses );
+    wbStepPluginClasses.setText(BaseMessages.getString( PKG, "BeamJobConfigDialog.StepPluginClasses.Button") );
+    FormData fdbStepPluginClasses = new FormData();
+    fdbStepPluginClasses.top = new FormAttachment( lastControl, margin );
+    fdbStepPluginClasses.left = new FormAttachment( wStepPluginClasses, margin );
+    fdbStepPluginClasses.right = new FormAttachment( 100, 0 );
+    wbStepPluginClasses.setLayoutData( fdbStepPluginClasses );
+    wbStepPluginClasses.addListener( SWT.Selection, this::findStepClasses );
+    lastControl = wStepPluginClasses;
+
+    // XpPluginClasses
+    //
+    Label wlXpPluginClasses = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlXpPluginClasses );
+    wlXpPluginClasses.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.XpPluginClasses.Label" ) );
+    FormData fdlXpPluginClasses = new FormData();
+    fdlXpPluginClasses.top = new FormAttachment( lastControl, margin );
+    fdlXpPluginClasses.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlXpPluginClasses.right = new FormAttachment( middle, -margin );
+    wlXpPluginClasses.setLayoutData( fdlXpPluginClasses );
+    Button wbXpPluginClasses = new Button( wGeneralComp, SWT.PUSH );
+    wXpPluginClasses = new TextVar( space, wGeneralComp, SWT.MULTI | SWT.LEFT | SWT.BORDER | SWT.V_SCROLL | SWT.WRAP );
+    props.setLook( wXpPluginClasses );
+    FormData fdXpPluginClasses = new FormData();
+    fdXpPluginClasses.top = new FormAttachment( lastControl, margin );
+    fdXpPluginClasses.bottom = new FormAttachment( lastControl, 300 );
+    fdXpPluginClasses.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdXpPluginClasses.right = new FormAttachment( 95, 0 );
+    wXpPluginClasses.setLayoutData( fdXpPluginClasses );
+    wbXpPluginClasses.setText(BaseMessages.getString( PKG, "BeamJobConfigDialog.XpPluginClasses.Button") );
+    FormData fdbXpPluginClasses = new FormData();
+    fdbXpPluginClasses.top = new FormAttachment( lastControl, margin );
+    fdbXpPluginClasses.left = new FormAttachment( wXpPluginClasses, margin );
+    fdbXpPluginClasses.right = new FormAttachment( 100, 0 );
+    wbXpPluginClasses.setLayoutData( fdbXpPluginClasses );
+    wbXpPluginClasses.addListener( SWT.Selection, this::findXpClasses );
+    lastControl = wXpPluginClasses;
+
+    // FatJar
+    //
+    Label wlFatJar = new Label( wGeneralComp, SWT.RIGHT );
+    props.setLook( wlFatJar );
+    wlFatJar.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FatJar.Label" ) );
+    FormData fdlFatJar = new FormData();
+    fdlFatJar.top = new FormAttachment( lastControl, margin );
+    fdlFatJar.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFatJar.right = new FormAttachment( middle, -margin );
+    wlFatJar.setLayoutData( fdlFatJar );
+    wFatJar = new TextVar( space, wGeneralComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFatJar );
+    FormData fdFatJar = new FormData();
+    fdFatJar.top = new FormAttachment( wlFatJar, 0, SWT.CENTER );
+    fdFatJar.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFatJar.right = new FormAttachment( 95, 0 );
+    wFatJar.setLayoutData( fdFatJar );
+    Button wbFatJar = new Button( wGeneralComp, SWT.PUSH );
+    wbFatJar.setText(BaseMessages.getString( PKG, "BeamJobConfigDialog.FatJar.Button") );
+    FormData fdbFatJar = new FormData();
+    fdbFatJar.top = new FormAttachment( lastControl, margin );
+    fdbFatJar.left = new FormAttachment( wFatJar, margin );
+    fdbFatJar.right = new FormAttachment( 100, 0 );
+    wbFatJar.setLayoutData( fdbFatJar );
+    wbFatJar.addListener( SWT.Selection, this::buildFatJar );
+    lastControl = wFatJar;
+
     // Streaming Kettle Steps Flush Interval
     //
     Label wlStreamingKettleStepsFlushInterval = new Label( wGeneralComp, SWT.RIGHT );
@@ -466,6 +570,104 @@ public class BeamJobConfigDialog {
     wGeneralSComp.setMinHeight( bounds.height );
 
     wGeneralTab.setControl( wGeneralSComp );
+  }
+
+  private void buildFatJar( Event event ) {
+    try {
+      VariableSpace space = Variables.getADefaultVariableSpace();
+
+      BeamJobConfig jobConfig = new BeamJobConfig();
+      getInfo( jobConfig );
+
+      FileDialog dialog = new FileDialog(shell, SWT.SAVE);
+      dialog.setText( "Select the location of the Kettle+Beam+Plugins fat jar" );
+      dialog.setFilterNames(new String[] { "Jar files (*.jar)", "All Files (*.*)" });
+      dialog.setFilterExtensions(new String[] { "*.jar", "*.*" }); // Windows
+      if (StringUtils.isNotEmpty( jobConfig.getFatJar() )) {
+        dialog.setFileName( space.environmentSubstitute(jobConfig.getFatJar()) );
+      }
+      String filename = dialog.open();
+      if (StringUtils.isEmpty( filename )) {
+        return;
+      }
+
+      List<String> files = BeamConst.findLibraryFilesToStage( null, jobConfig.getPluginsToStage(), true, true );
+      files.removeIf( s -> s.contains( "commons-logging" ) || s.contains( "log4j" ) || s.contains("xml-apis") );
+
+      FatJarBuilder fatJarBuilder = new FatJarBuilder( filename, files );
+      Cursor waitCursor = new Cursor(shell.getDisplay(), SWT.CURSOR_WAIT);
+      Cursor regularCursor = shell.getCursor();
+
+      try {
+        shell.setCursor( waitCursor );
+        fatJarBuilder.buildTargetJar();
+      } finally {
+        shell.setCursor( regularCursor );
+        waitCursor.dispose();
+      }
+
+      // All went well, insert the filename...
+      //
+      wFatJar.setText( filename );
+
+    } catch ( Exception e ) {
+      new ErrorDialog( shell, "Error", "Error building fat jar: "+e.getMessage(), e);
+    }
+  }
+
+  private void findStepClasses( Event event ) {
+    String stepPluginClasses = findPluginClasses( Step.class.getName() );
+    if (stepPluginClasses!=null) {
+      wStepPluginClasses.setText( stepPluginClasses );
+    }
+  }
+
+  private void findXpClasses( Event event ) {
+    String xpPluginClasses = findPluginClasses( ExtensionPoint.class.getName() );
+    if (xpPluginClasses!=null) {
+      wXpPluginClasses.setText( xpPluginClasses );
+    }
+  }
+
+  private String findPluginClasses( String pluginClassName) {
+    BeamJobConfig jobConfig = new BeamJobConfig();
+    getInfo( jobConfig );
+
+    String plugins = jobConfig.getPluginsToStage();
+    if (StringUtils.isNotEmpty( plugins )) {
+
+      Set<String> classes = new HashSet<>();
+      String[] pluginFolders = plugins.split(",");
+      for (String pluginFolder : pluginFolders) {
+        try {
+          List<String> stepClasses = TransMetaPipelineConverter.findAnnotatedClasses( pluginFolder, pluginClassName );
+          for (String stepClass : stepClasses) {
+            classes.add( stepClass );
+          }
+        } catch(Exception e) {
+          new ErrorDialog(shell, "Error", "Error find plugin classes of annotation type '"+pluginClassName+"' in folder '"+pluginFolder+"' : ", e);
+        }
+      }
+
+      // OK, we now have all the classes...
+      // Let's sort by name and add them in the dialog comma separated...
+      //
+      List<String> classesList = new ArrayList<>(  );
+      classesList.addAll( classes );
+      Collections.sort(classesList);
+
+      StringBuffer all = new StringBuffer(  );
+      for (String pluginClass : classesList) {
+        if (all.length()>0) {
+          all.append( "," );
+        }
+        all.append(pluginClass);
+      }
+
+      return all.toString();
+    }
+
+    return null;
   }
 
   private void addParametersTab() {
@@ -1453,6 +1655,9 @@ public class BeamJobConfigDialog {
     wUserAgent.setText( Const.NVL(config.getUserAgent(), "") );
     wTempLocation.setText( Const.NVL(config.getTempLocation(), "") );
     wPluginsToStage.setText( Const.NVL(config.getPluginsToStage(), "") );
+    wStepPluginClasses.setText( Const.NVL(config.getStepPluginClasses(), "") );
+    wXpPluginClasses.setText( Const.NVL(config.getXpPluginClasses(), "") );
+    wFatJar.setText( Const.NVL(config.getFatJar(), "") );
     wStreamingKettleStepsFlushInterval.setText(Const.NVL(config.getStreamingKettleStepsFlushInterval(), ""));
 
     // GCP
@@ -1570,8 +1775,10 @@ public class BeamJobConfigDialog {
     cfg.setUserAgent( wUserAgent.getText() );
     cfg.setTempLocation( wTempLocation.getText() );
     cfg.setPluginsToStage( wPluginsToStage.getText() );
+    cfg.setStepPluginClasses( (wStepPluginClasses.getText()) );
+    cfg.setXpPluginClasses( (wXpPluginClasses.getText()) );
     cfg.setStreamingKettleStepsFlushInterval( wStreamingKettleStepsFlushInterval.getText() );
-
+    cfg.setFatJar( wFatJar.getText() );
     cfg.setGcpProjectId( wGcpProjectId.getText() );
     cfg.setGcpAppName( wGcpAppName.getText() );
     cfg.setGcpStagingLocation( wGcpStagingLocation.getText() );

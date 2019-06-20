@@ -1,11 +1,5 @@
 package org.kettle.beam.metastore;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.beam.sdk.options.Default;
-import org.apache.beam.sdk.options.Description;
-import org.apache.flink.api.common.ExecutionMode;
-import org.apache.flink.runtime.state.StateBackend;
-import org.apache.flink.streaming.api.CheckpointingMode;
 import org.pentaho.metastore.persist.MetaStoreAttribute;
 import org.pentaho.metastore.persist.MetaStoreElementType;
 
@@ -40,10 +34,19 @@ public class BeamJobConfig {
   private String pluginsToStage;
 
   @MetaStoreAttribute
+  private String stepPluginClasses;
+
+  @MetaStoreAttribute
+  private String xpPluginClasses;
+
+  @MetaStoreAttribute
   private List<JobParameter> parameters;
 
   @MetaStoreAttribute
   private String streamingKettleStepsFlushInterval;
+
+  @MetaStoreAttribute
+  private String fatJar;
 
 
   //
@@ -355,6 +358,38 @@ public class BeamJobConfig {
   }
 
   /**
+   * Gets stepPluginClasses
+   *
+   * @return value of stepPluginClasses
+   */
+  public String getStepPluginClasses() {
+    return stepPluginClasses;
+  }
+
+  /**
+   * @param stepPluginClasses The stepPluginClasses to set
+   */
+  public void setStepPluginClasses( String stepPluginClasses ) {
+    this.stepPluginClasses = stepPluginClasses;
+  }
+
+  /**
+   * Gets xpPluginClasses
+   *
+   * @return value of xpPluginClasses
+   */
+  public String getXpPluginClasses() {
+    return xpPluginClasses;
+  }
+
+  /**
+   * @param xpPluginClasses The xpPluginClasses to set
+   */
+  public void setXpPluginClasses( String xpPluginClasses ) {
+    this.xpPluginClasses = xpPluginClasses;
+  }
+
+  /**
    * Gets streamingKettleStepsFlushInterval
    *
    * @return value of streamingKettleStepsFlushInterval
@@ -368,6 +403,22 @@ public class BeamJobConfig {
    */
   public void setStreamingKettleStepsFlushInterval( String streamingKettleStepsFlushInterval ) {
     this.streamingKettleStepsFlushInterval = streamingKettleStepsFlushInterval;
+  }
+
+  /**
+   * Gets fatJar
+   *
+   * @return value of fatJar
+   */
+  public String getFatJar() {
+    return fatJar;
+  }
+
+  /**
+   * @param fatJar The fatJar to set
+   */
+  public void setFatJar( String fatJar ) {
+    this.fatJar = fatJar;
   }
 
   /**
