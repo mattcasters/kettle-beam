@@ -82,7 +82,7 @@ public class WindowInfoFn extends DoFn<KettleRow, KettleRow> {
 
       Instant instant = window.maxTimestamp();
 
-      Object[] outputRow = RowDataUtil.createResizedCopy( kettleRow.getRow(), inputRowMeta.size() );
+      Object[] outputRow = RowDataUtil.createResizedCopy( kettleRow.getRow(), inputRowMeta.size()+3 );
 
       int fieldIndex = inputRowMeta.size();
 
