@@ -205,6 +205,8 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
     private transient Counter initCounter;
     private transient Counter readCounter;
     private transient Counter writtenCounter;
+    private transient Counter startBundleCounter;
+    private transient Counter flushBufferCounter;
 
     private transient SingleThreadedTransExecutor executor;
 
@@ -249,6 +251,10 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
     @StartBundle
     public void startBundle(StartBundleContext startBundleContext) {
       rowBuffer = new ArrayList<>();
+      if (startBundleCounter==null) {
+        startBundleCounter = Metrics.counter( "startBundle", stepname );
+      }
+      startBundleCounter.inc();
       if ("ScriptValueMod".equals(stepPluginId) && trans!=null) {
         initialize=true;
       }
@@ -256,7 +262,9 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
 
     @Teardown
     public void tearDown() {
-
+      if (timer!=null) {
+        timer.cancel();
+      }
     }
 
     @ProcessElement
@@ -477,6 +485,7 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
           initCounter = Metrics.counter( "init", stepname );
           readCounter = Metrics.counter( "read", stepname );
           writtenCounter = Metrics.counter( "written", stepname );
+          flushBufferCounter = Metrics.counter( "flushBuffer", stepname );
 
           initCounter.inc();
 
@@ -545,6 +554,7 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
               }
             };
             timer = new Timer("Flush timer of step "+stepname);
+            timer.schedule( timerTask, 1000, 1000 );
           }
         }
 
@@ -567,7 +577,6 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
 
         if (rowBuffer.size()>=batchSize) {
           emptyRowBuffer( new StepProcessContext( context ) );
-          rowBuffer.clear();
         }
       } catch ( Exception e ) {
         numErrors.inc();
@@ -639,6 +648,8 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
           }
         }
 
+        flushBufferCounter.inc();
+        rowBuffer.clear();
         bufferStartTime.set(-1L);
         flushing.set(false);
       }
