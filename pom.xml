@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.pentaho</groupId>
     <artifactId>pentaho-ce-jar-parent-pom</artifactId>
-    <version>8.2.0.0-SNAPSHOT</version>
+    <version>8.2.0.7-719</version>
   </parent>
   <artifactId>kettle-beam</artifactId>
   <name>${project.artifactId}</name>
@@ -22,8 +22,9 @@
     <pentaho-kettle.version>8.2.0.0-342</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
-    <apache-beam-version>2.13.0</apache-beam-version>
+    <apache-beam-version>2.15.0</apache-beam-version>
     <kettle-beam-version>1.0.0-SNAPSHOT</kettle-beam-version>
+    <spark-version>2.4.3</spark-version>
   </properties>
 
   <repositories>
@@ -35,21 +36,25 @@
   </repositories>
 
   <dependencies>
+
     <dependency>
-      <groupId>pentaho-kettle</groupId>
-      <artifactId>kettle-core</artifactId>
-      <version>${pentaho-kettle.version}</version>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.9.9</version>
     </dependency>
     <dependency>
-      <groupId>pentaho-kettle</groupId>
-      <artifactId>kettle-engine</artifactId>
-      <version>${pentaho-kettle.version}</version>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.9.9.3</version>
     </dependency>
     <dependency>
-      <groupId>pentaho-kettle</groupId>
-      <artifactId>kettle-ui-swt</artifactId>
-      <version>${pentaho-kettle.version}</version>
+      <groupId>com.fasterxml.jackson.module</groupId>
+      <artifactId>jackson-module-scala_2.11</artifactId>
+      <version>2.9.9</version>
     </dependency>
+
+
+
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-core</artifactId>
@@ -73,11 +78,6 @@
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-runners-flink_2.11</artifactId>
-      <version>${apache-beam-version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.beam</groupId>
-      <artifactId>beam-runners-apex</artifactId>
       <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
@@ -123,17 +123,41 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_2.11</artifactId>
-      <version>2.4.0</version>
+      <version>${spark-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-streaming_2.11</artifactId>
-      <version>2.4.0</version>
+      <version>${spark-version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-bigquery</artifactId>
       <version>1.55.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>pentaho-kettle</groupId>
+      <artifactId>kettle-core</artifactId>
+      <version>${pentaho-kettle.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>pentaho-kettle</groupId>
+      <artifactId>kettle-engine</artifactId>
+      <version>${pentaho-kettle.version}</version>
+      <scope>provided</scope>
+     </dependency>
+    <dependency>
+      <groupId>pentaho-kettle</groupId>
+      <artifactId>kettle-ui-swt</artifactId>
+      <version>${pentaho-kettle.version}</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -193,44 +217,28 @@
 
   <dependencyManagement>
     <dependencies>
+
       <dependency>
-        <groupId>pentaho-kettle</groupId>
-        <artifactId>kettle-core</artifactId>
-        <version>${pentaho-kettle.version}</version>
-        <scope>provided</scope>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>2.9.9</version>
       </dependency>
       <dependency>
-        <groupId>pentaho-kettle</groupId>
-        <artifactId>kettle-engine</artifactId>
-        <version>${pentaho-kettle.version}</version>
-        <scope>provided</scope>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.9.9.3</version>
       </dependency>
       <dependency>
-        <groupId>pentaho-kettle</groupId>
-        <artifactId>kettle-ui-swt</artifactId>
-        <version>${pentaho-kettle.version}</version>
-        <scope>provided</scope>
+        <groupId>com.fasterxml.jackson.module</groupId>
+        <artifactId>jackson-module-scala_2.11</artifactId>
+        <version>2.9.9</version>
       </dependency>
+
+
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-sdks-java-core</artifactId>
         <version>${apache-beam-version}</version>
-
-        <exclusions>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId> <!-- Exclude Project-D from Project-B -->
-            <artifactId>jackson-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId> <!-- Exclude Project-D from Project-B -->
-            <artifactId>jackson-annotations</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.fasterxml.jackson.core</groupId> <!-- Exclude Project-D from Project-B -->
-            <artifactId>jackson-databind</artifactId>
-          </exclusion>
-        </exclusions>
-
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
@@ -250,11 +258,6 @@
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-runners-flink_2.11</artifactId>
-        <version>${apache-beam-version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.beam</groupId>
-        <artifactId>beam-runners-apex</artifactId>
         <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
@@ -295,12 +298,12 @@
       <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-core_2.12</artifactId>
-        <version>2.4.0</version>
+        <version>${spark-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-streaming_2.12</artifactId>
-        <version>2.4.0</version>
+        <version>${spark-version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.cloud</groupId>
@@ -311,6 +314,30 @@
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-vendor-guava-20_0</artifactId>
         <version>0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <version>1.0.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>pentaho-kettle</groupId>
+        <artifactId>kettle-core</artifactId>
+        <version>${pentaho-kettle.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>pentaho-kettle</groupId>
+        <artifactId>kettle-engine</artifactId>
+        <version>${pentaho-kettle.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>pentaho-kettle</groupId>
+        <artifactId>kettle-ui-swt</artifactId>
+        <version>${pentaho-kettle.version}</version>
+        <scope>provided</scope>
       </dependency>
 
       <dependency>
