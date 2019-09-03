@@ -10,6 +10,7 @@ import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.pipeline.KettleBeamPipelineExecutor;
 import org.kettle.beam.util.BeamConst;
+import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.core.plugins.PluginInterface;
@@ -36,8 +37,6 @@ public class MainBeam {
       System.out.println( "Transformation ktr / args[0] : " + args[ 0 ] );
       System.out.println( "MetaStore JSON     / args[1] : " + args[ 1 ] );
       System.out.println( "Beam Job Config    / args[2] : " + args[ 2 ] );
-      System.out.println( "Step plugins       / args[3] : " + args[ 3 ] );
-      System.out.println( "XP plugins         / args[4] : " + args[ 4 ] );
 
       // Read the transformation XML and MetaStore from Hadoop FS
       //
@@ -49,17 +48,16 @@ public class MainBeam {
       //
       String jobConfigName = args[ 2 ];
 
-      // Extra plugins to load from the fat jar file...
-      //
-      String stepPlugins = args[ 3 ];
-      String xpPlugins = args[ 4 ];
-
       // Inflate the metaStore...
       //
       IMetaStore metaStore = new SerializableMetaStore( metaStoreJson );
 
-      List<String> stepPluginsList = new ArrayList<>( Arrays.asList( stepPlugins.split( "," ) ) );
-      List<String> xpPluginsList = new ArrayList<>( Arrays.asList( xpPlugins.split( "," ) ) );
+      System.out.println( ">>>>>> Loading Kettle Beam Job Config '" + jobConfigName + "'" );
+      MetaStoreFactory<BeamJobConfig> configFactory = new MetaStoreFactory<>( BeamJobConfig.class, metaStore, PentahoDefaults.NAMESPACE );
+      BeamJobConfig jobConfig = configFactory.loadElement( jobConfigName );
+
+      List<String> stepPluginsList = new ArrayList<>( Arrays.asList( Const.NVL(jobConfig.getStepPluginClasses(), "").split( "," ) ) );
+      List<String> xpPluginsList = new ArrayList<>( Arrays.asList( Const.NVL(jobConfig.getXpPluginClasses(), "").split( "," ) ) );
 
       System.out.println( ">>>>>> Initializing Kettle runtime (" + stepPluginsList.size() + " step classes, " + xpPluginsList.size() + " XP classes)" );
 
@@ -69,9 +67,6 @@ public class MainBeam {
       TransMeta transMeta = new TransMeta( XMLHandler.loadXMLString( transMetaXml, TransMeta.XML_TAG ), null );
       transMeta.setMetaStore( metaStore );
 
-      System.out.println( ">>>>>> Loading Kettle Beam Job Config '" + jobConfigName + "'" );
-      MetaStoreFactory<BeamJobConfig> configFactory = new MetaStoreFactory<>( BeamJobConfig.class, metaStore, PentahoDefaults.NAMESPACE );
-      BeamJobConfig jobConfig = configFactory.loadElement( jobConfigName );
 
       String hadoopConfDir = System.getenv( "HADOOP_CONF_DIR" );
       System.out.println( ">>>>>> HADOOP_CONF_DIR='" + hadoopConfDir + "'" );

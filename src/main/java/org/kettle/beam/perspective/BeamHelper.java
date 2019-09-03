@@ -46,6 +46,8 @@ import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
@@ -61,7 +63,9 @@ import org.kettle.beam.pipeline.fatjar.FatJarBuilder;
 import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.ProgressMonitorAdapter;
+import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.extension.ExtensionPoint;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.core.parameters.UnknownParamException;
 import org.pentaho.di.core.plugins.KettleURLClassLoader;
@@ -442,37 +446,87 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
 
     final Shell shell = Spoon.getInstance().getShell();
 
-    // TODO: Ask the user about these 2 next lines...
+    // Ask the use for which Beam Job Config this is.
     //
-    final String filename = "/tmp/kettle-beam-fat.jar";
-    final String pluginFolders = "kettle-beam,kettle-json-plugin,kettle-json-plugin,Neo4JOutput";
+    MetaStoreFactory<BeamJobConfig> factory = new MetaStoreFactory<>( BeamJobConfig.class, spoon.getMetaStore(), PentahoDefaults.NAMESPACE );
+    VariableSpace space = Variables.getADefaultVariableSpace();
+    String pluginFolders;
+    String filename;
 
     try {
-      IRunnableWithProgress op = new IRunnableWithProgress() {
-        public void run( IProgressMonitor monitor ) throws InvocationTargetException, InterruptedException {
-          try {
+      List<String> elementNames = factory.getElementNames();
+      Collections.sort( elementNames );
+      String[] names = elementNames.toArray( new String[ 0 ] );
 
-            VariableSpace space = Variables.getADefaultVariableSpace();
-            List<String> files = BeamConst.findLibraryFilesToStage( null, pluginFolders, true, true );
-            files.removeIf( s -> s.contains( "commons-logging" ) || s.contains( "log4j" ) || s.contains("xml-apis") );
+      EnterSelectionDialog selectionDialog = new EnterSelectionDialog( spoon.getShell(), names,
+        BaseMessages.getString( PKG, "BeamHelper.SelectJobConfigForFatJar.Title" ),
+        BaseMessages.getString( PKG, "BeamHelper.SelectJobConfigForFatJar.Message" )
+      );
+      String choice = selectionDialog.open();
+      if ( choice != null ) {
 
-            FatJarBuilder fatJarBuilder = new FatJarBuilder( filename, files );
-            fatJarBuilder.buildTargetJar();
+        BeamJobConfig jobConfig = factory.loadElement( choice );
+        pluginFolders = jobConfig.getPluginsToStage();
 
-          } catch ( Exception e ) {
-            throw new InvocationTargetException( e, "Error building fat jar: "+e.getMessage());
-          }
+        FileDialog dialog = new FileDialog( shell, SWT.SAVE );
+        dialog.setText( "Select the location of the Kettle+Beam+Plugins fat jar" );
+        dialog.setFilterNames( new String[] { "Jar files (*.jar)", "All Files (*.*)" } );
+        dialog.setFilterExtensions( new String[] { "*.jar", "*.*" } ); // Windows
+        if ( StringUtils.isNotEmpty( jobConfig.getFatJar() ) ) {
+          dialog.setFileName( space.environmentSubstitute( jobConfig.getFatJar() ) );
         }
-      };
+        filename = dialog.open();
+        if ( StringUtils.isEmpty( filename ) ) {
+          return;
+        }
 
-      ProgressMonitorDialog pmd = new ProgressMonitorDialog( shell );
-      pmd.run( true, true, op );
+        IRunnableWithProgress op = new IRunnableWithProgress() {
+          public void run( IProgressMonitor monitor ) throws InvocationTargetException, InterruptedException {
+            try {
 
-      MessageBox box = new MessageBox( shell, SWT.CLOSE | SWT.ICON_INFORMATION );
-      box.setText( "Fat jar created" );
-      box.setMessage( "A fat jar was successfully created : "+filename+Const.CR+"Included plugin folders: "+pluginFolders );
-      box.open();
+              List<String> files = BeamConst.findLibraryFilesToStage( null, jobConfig.getPluginsToStage(), true, true );
+              files.removeIf( s -> s.contains( "commons-logging" ) || s.contains( "log4j" ) || s.contains( "xml-apis" ) );
 
+              // Find the plugin classes for the specified plugins...
+              //
+              String stepPluginClasses = FatJarBuilder.findPluginClasses( Step.class.getName(), pluginFolders );
+              if (StringUtils.isNotEmpty(jobConfig.getStepPluginClasses())) {
+                if (StringUtils.isEmpty( stepPluginClasses )) {
+                  stepPluginClasses="";
+                } else {
+                  stepPluginClasses+=",";
+                }
+                stepPluginClasses+=jobConfig.getStepPluginClasses();
+              }
+              String xpPluginClasses = FatJarBuilder.findPluginClasses( ExtensionPoint.class.getName(), pluginFolders );
+              if (StringUtils.isNotEmpty(jobConfig.getXpPluginClasses())) {
+                if (StringUtils.isEmpty( xpPluginClasses )) {
+                  xpPluginClasses="";
+                } else {
+                  xpPluginClasses+=",";
+                }
+                xpPluginClasses+=jobConfig.getStepPluginClasses();
+              }
+
+              FatJarBuilder fatJarBuilder = new FatJarBuilder( filename, files );
+              fatJarBuilder.setExtraStepPluginClasses( stepPluginClasses );
+              fatJarBuilder.setExtraXpPluginClasses( xpPluginClasses );
+              fatJarBuilder.buildTargetJar();
+
+            } catch ( Exception e ) {
+              throw new InvocationTargetException( e, "Error building fat jar: " + e.getMessage() );
+            }
+          }
+        };
+
+        ProgressMonitorDialog pmd = new ProgressMonitorDialog( shell );
+        pmd.run( true, true, op );
+
+        MessageBox box = new MessageBox( shell, SWT.CLOSE | SWT.ICON_INFORMATION );
+        box.setText( "Fat jar created" );
+        box.setMessage( "A fat jar was successfully created : " + filename + Const.CR + "Included plugin folders: " + pluginFolders );
+        box.open();
+      }
     } catch(Exception e) {
       new ErrorDialog( shell, "Error", "Error creating fat jar", e );
     }

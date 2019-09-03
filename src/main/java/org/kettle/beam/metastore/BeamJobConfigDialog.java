@@ -46,7 +46,6 @@ import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -129,7 +128,7 @@ public class BeamJobConfigDialog {
   private ComboVar wSparkStorageLevel;
 
   // Flink settings
-  
+
   private Button wFlinkLocal;
   private TextVar wFlinkMaster;
   private TextVar wFlinkParallelism;
@@ -150,10 +149,10 @@ public class BeamJobConfigDialog {
   private TextVar wFlinkLatencyTrackingInterval;
   private TextVar wFlinkAutoWatermarkInterval;
   private ComboVar wFlinkExecutionModeForBatch;
-  
+
   private Button wOK;
   private Button wCancel;
-  
+
   private VariableSpace space;
 
   private PropsUI props;
@@ -341,7 +340,7 @@ public class BeamJobConfigDialog {
     props.setLook( wlRunner );
     wlRunner.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.Runner.Label" ) );
     FormData fdlRunner = new FormData();
-    fdlRunner.top = new FormAttachment( lastControl, margin);
+    fdlRunner.top = new FormAttachment( lastControl, margin );
     fdlRunner.left = new FormAttachment( 0, -margin ); // First one in the left top corner
     fdlRunner.right = new FormAttachment( middle, -margin );
     wlRunner.setLayoutData( fdlRunner );
@@ -362,10 +361,10 @@ public class BeamJobConfigDialog {
     FormData fdTabFolder = new FormData();
     fdTabFolder.left = new FormAttachment( 0, 0 );
     fdTabFolder.right = new FormAttachment( 100, 0 );
-    fdTabFolder.top = new FormAttachment( lastControl, margin*2 );
-    fdTabFolder.bottom = new FormAttachment( wOK, -margin*2 );
+    fdTabFolder.top = new FormAttachment( lastControl, margin * 2 );
+    fdTabFolder.bottom = new FormAttachment( wOK, -margin * 2 );
     wTabFolder.setLayoutData( fdTabFolder );
-    
+
     addGeneralTab();
     addParametersTab();
     addDataflowTab();
@@ -381,7 +380,7 @@ public class BeamJobConfigDialog {
     int middle = Const.MIDDLE_PCT;
 
     wGeneralTab = new CTabItem( wTabFolder, SWT.NONE );
-    wGeneralTab .setText( "  General  " );
+    wGeneralTab.setText( "  General  " );
 
     wGeneralSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wGeneralSComp.setLayout( new FillLayout() );
@@ -470,7 +469,7 @@ public class BeamJobConfigDialog {
     fdStepPluginClasses.left = new FormAttachment( middle, 0 ); // To the right of the label
     fdStepPluginClasses.right = new FormAttachment( 95, 0 );
     wStepPluginClasses.setLayoutData( fdStepPluginClasses );
-    wbStepPluginClasses.setText(BaseMessages.getString( PKG, "BeamJobConfigDialog.StepPluginClasses.Button") );
+    wbStepPluginClasses.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.StepPluginClasses.Button" ) );
     FormData fdbStepPluginClasses = new FormData();
     fdbStepPluginClasses.top = new FormAttachment( lastControl, margin );
     fdbStepPluginClasses.left = new FormAttachment( wStepPluginClasses, margin );
@@ -498,7 +497,7 @@ public class BeamJobConfigDialog {
     fdXpPluginClasses.left = new FormAttachment( middle, 0 ); // To the right of the label
     fdXpPluginClasses.right = new FormAttachment( 95, 0 );
     wXpPluginClasses.setLayoutData( fdXpPluginClasses );
-    wbXpPluginClasses.setText(BaseMessages.getString( PKG, "BeamJobConfigDialog.XpPluginClasses.Button") );
+    wbXpPluginClasses.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.XpPluginClasses.Button" ) );
     FormData fdbXpPluginClasses = new FormData();
     fdbXpPluginClasses.top = new FormAttachment( lastControl, margin );
     fdbXpPluginClasses.left = new FormAttachment( wXpPluginClasses, margin );
@@ -525,7 +524,7 @@ public class BeamJobConfigDialog {
     fdFatJar.right = new FormAttachment( 95, 0 );
     wFatJar.setLayoutData( fdFatJar );
     Button wbFatJar = new Button( wGeneralComp, SWT.PUSH );
-    wbFatJar.setText(BaseMessages.getString( PKG, "BeamJobConfigDialog.FatJar.Button") );
+    wbFatJar.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FatJar.Button" ) );
     FormData fdbFatJar = new FormData();
     fdbFatJar.top = new FormAttachment( lastControl, margin );
     fdbFatJar.left = new FormAttachment( wFatJar, margin );
@@ -552,7 +551,7 @@ public class BeamJobConfigDialog {
     fdStreamingKettleStepsFlushInterval.right = new FormAttachment( 95, 0 );
     wStreamingKettleStepsFlushInterval.setLayoutData( fdStreamingKettleStepsFlushInterval );
     lastControl = wStreamingKettleStepsFlushInterval;
-    
+
     FormData fdGeneralComp = new FormData();
     fdGeneralComp.left = new FormAttachment( 0, 0 );
     fdGeneralComp.top = new FormAttachment( 0, 0 );
@@ -579,23 +578,47 @@ public class BeamJobConfigDialog {
       BeamJobConfig jobConfig = new BeamJobConfig();
       getInfo( jobConfig );
 
-      FileDialog dialog = new FileDialog(shell, SWT.SAVE);
+      FileDialog dialog = new FileDialog( shell, SWT.SAVE );
       dialog.setText( "Select the location of the Kettle+Beam+Plugins fat jar" );
-      dialog.setFilterNames(new String[] { "Jar files (*.jar)", "All Files (*.*)" });
-      dialog.setFilterExtensions(new String[] { "*.jar", "*.*" }); // Windows
-      if (StringUtils.isNotEmpty( jobConfig.getFatJar() )) {
-        dialog.setFileName( space.environmentSubstitute(jobConfig.getFatJar()) );
+      dialog.setFilterNames( new String[] { "Jar files (*.jar)", "All Files (*.*)" } );
+      dialog.setFilterExtensions( new String[] { "*.jar", "*.*" } ); // Windows
+      if ( StringUtils.isNotEmpty( jobConfig.getFatJar() ) ) {
+        dialog.setFileName( space.environmentSubstitute( jobConfig.getFatJar() ) );
       }
       String filename = dialog.open();
-      if (StringUtils.isEmpty( filename )) {
+      if ( StringUtils.isEmpty( filename ) ) {
         return;
       }
 
       List<String> files = BeamConst.findLibraryFilesToStage( null, jobConfig.getPluginsToStage(), true, true );
-      files.removeIf( s -> s.contains( "commons-logging" ) || s.contains( "log4j" ) || s.contains("xml-apis") );
+      files.removeIf( s -> s.contains( "commons-logging" ) || s.startsWith( "log4j" ) || s.contains( "xml-apis" ) );
+
+      // Find the plugin classes for the specified plugins...
+      //
+      String stepPluginClasses = findPluginClasses( Step.class.getName() );
+      if (StringUtils.isNotEmpty(jobConfig.getStepPluginClasses())) {
+        if (StringUtils.isEmpty( stepPluginClasses )) {
+          stepPluginClasses="";
+        } else {
+          stepPluginClasses+=",";
+        }
+        stepPluginClasses+=jobConfig.getStepPluginClasses();
+      }
+      String xpPluginClasses = findPluginClasses( ExtensionPoint.class.getName() );
+      if (StringUtils.isNotEmpty(jobConfig.getXpPluginClasses())) {
+        if (StringUtils.isEmpty( xpPluginClasses )) {
+          xpPluginClasses="";
+        } else {
+          xpPluginClasses+=",";
+        }
+        xpPluginClasses+=jobConfig.getStepPluginClasses();
+      }
+
 
       FatJarBuilder fatJarBuilder = new FatJarBuilder( filename, files );
-      Cursor waitCursor = new Cursor(shell.getDisplay(), SWT.CURSOR_WAIT);
+      fatJarBuilder.setExtraStepPluginClasses( stepPluginClasses );
+      fatJarBuilder.setExtraXpPluginClasses( xpPluginClasses );
+      Cursor waitCursor = new Cursor( shell.getDisplay(), SWT.CURSOR_WAIT );
       Cursor regularCursor = shell.getCursor();
 
       try {
@@ -611,76 +634,47 @@ public class BeamJobConfigDialog {
       wFatJar.setText( filename );
 
     } catch ( Exception e ) {
-      new ErrorDialog( shell, "Error", "Error building fat jar: "+e.getMessage(), e);
+      new ErrorDialog( shell, "Error", "Error building fat jar: " + e.getMessage(), e );
     }
   }
 
   private void findStepClasses( Event event ) {
     String stepPluginClasses = findPluginClasses( Step.class.getName() );
-    if (stepPluginClasses!=null) {
+    if ( stepPluginClasses != null ) {
       wStepPluginClasses.setText( stepPluginClasses );
     }
   }
 
   private void findXpClasses( Event event ) {
     String xpPluginClasses = findPluginClasses( ExtensionPoint.class.getName() );
-    if (xpPluginClasses!=null) {
+    if ( xpPluginClasses != null ) {
       wXpPluginClasses.setText( xpPluginClasses );
     }
   }
 
-  private String findPluginClasses( String pluginClassName) {
+  private String findPluginClasses( String pluginClassName ) {
     BeamJobConfig jobConfig = new BeamJobConfig();
     getInfo( jobConfig );
 
-    String plugins = jobConfig.getPluginsToStage();
-    if (StringUtils.isNotEmpty( plugins )) {
-
-      Set<String> classes = new HashSet<>();
-      String[] pluginFolders = plugins.split(",");
-      for (String pluginFolder : pluginFolders) {
-        try {
-          List<String> stepClasses = TransMetaPipelineConverter.findAnnotatedClasses( pluginFolder, pluginClassName );
-          for (String stepClass : stepClasses) {
-            classes.add( stepClass );
-          }
-        } catch(Exception e) {
-          new ErrorDialog(shell, "Error", "Error find plugin classes of annotation type '"+pluginClassName+"' in folder '"+pluginFolder+"' : ", e);
-        }
-      }
-
-      // OK, we now have all the classes...
-      // Let's sort by name and add them in the dialog comma separated...
-      //
-      List<String> classesList = new ArrayList<>(  );
-      classesList.addAll( classes );
-      Collections.sort(classesList);
-
-      StringBuffer all = new StringBuffer(  );
-      for (String pluginClass : classesList) {
-        if (all.length()>0) {
-          all.append( "," );
-        }
-        all.append(pluginClass);
-      }
-
-      return all.toString();
+    try {
+      return FatJarBuilder.findPluginClasses( pluginClassName, jobConfig.getPluginsToStage() );
+    } catch ( Exception e ) {
+      new ErrorDialog( shell, "Error", "Error find plugin classes of annotation type '" + pluginClassName, e );
+      return null;
     }
-
-    return null;
   }
 
   private void addParametersTab() {
     wParametersTab = new CTabItem( wTabFolder, SWT.NONE );
-    wParametersTab .setText( "Parameters" );
+    wParametersTab.setText( "Parameters" );
 
     wParametersComp = new Composite( wTabFolder, SWT.NO_BACKGROUND );
     props.setLook( wParametersComp );
-    wParametersComp.setLayout( new FormLayout(  ) );
+    wParametersComp.setLayout( new FormLayout() );
 
     ColumnInfo[] columnInfos = new ColumnInfo[] {
-      new ColumnInfo("Name", ColumnInfo.COLUMN_TYPE_TEXT, false, false),
-      new ColumnInfo("Value", ColumnInfo.COLUMN_TYPE_TEXT, false, false),
+      new ColumnInfo( "Name", ColumnInfo.COLUMN_TYPE_TEXT, false, false ),
+      new ColumnInfo( "Value", ColumnInfo.COLUMN_TYPE_TEXT, false, false ),
     };
 
     wParameters = new TableView( space, wParametersComp, SWT.BORDER, columnInfos, config.getParameters().size(), null, props );
@@ -688,14 +682,14 @@ public class BeamJobConfigDialog {
     FormData fdParameters = new FormData();
     fdParameters.left = new FormAttachment( 0, 0 );
     fdParameters.right = new FormAttachment( 100, 0 );
-    fdParameters.top = new FormAttachment( 0, 0);
+    fdParameters.top = new FormAttachment( 0, 0 );
     fdParameters.bottom = new FormAttachment( 100, 0 );
     wParameters.setLayoutData( fdParameters );
 
     FormData fdParametersComp = new FormData();
     fdParametersComp.left = new FormAttachment( 0, 0 );
     fdParametersComp.right = new FormAttachment( 100, 0 );
-    fdParametersComp.top = new FormAttachment( 0, 0);
+    fdParametersComp.top = new FormAttachment( 0, 0 );
     fdParametersComp.bottom = new FormAttachment( 100, 0 );
     wParametersComp.setLayoutData( fdParametersComp );
 
@@ -707,7 +701,7 @@ public class BeamJobConfigDialog {
     int middle = Const.MIDDLE_PCT;
 
     wDataflowTab = new CTabItem( wTabFolder, SWT.NONE );
-    wDataflowTab .setText( "  Dataflow  " );
+    wDataflowTab.setText( "  Dataflow  " );
 
     wDataflowSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wDataflowSComp.setLayout( new FillLayout() );
@@ -757,7 +751,7 @@ public class BeamJobConfigDialog {
     fdGcpAppName.right = new FormAttachment( 95, 0 );
     wGcpAppName.setLayoutData( fdGcpAppName );
     lastControl = wGcpAppName;
-    
+
     // Staging location
     //
     Label wlGcpStagingLocation = new Label( wDataflowComp, SWT.RIGHT );
@@ -905,7 +899,7 @@ public class BeamJobConfigDialog {
     wlGcpRegion.setLayoutData( fdlGcpRegion );
     wGcpRegion = new ComboVar( space, wDataflowComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
     props.setLook( wGcpRegion );
-    wGcpRegion.setItems(BeamConst.getGcpRegionDescriptions());
+    wGcpRegion.setItems( BeamConst.getGcpRegionDescriptions() );
     FormData fdGcpRegion = new FormData();
     fdGcpRegion.top = new FormAttachment( wlGcpRegion, 0, SWT.CENTER );
     fdGcpRegion.left = new FormAttachment( middle, 0 ); // To the right of the label
@@ -975,7 +969,7 @@ public class BeamJobConfigDialog {
     int middle = 65;
 
     wSparkTab = new CTabItem( wTabFolder, SWT.NONE );
-    wSparkTab .setText( "  Spark  " );
+    wSparkTab.setText( "  Spark  " );
 
     wSparkSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wSparkSComp.setLayout( new FillLayout() );
@@ -1007,7 +1001,9 @@ public class BeamJobConfigDialog {
     wSparkLocal.setLayoutData( fdSparkLocal );
     Control lastControl = wSparkLocal;
 
-    wSparkLocal.addListener( SWT.Selection, e-> { enableFields(); } );
+    wSparkLocal.addListener( SWT.Selection, e -> {
+      enableFields();
+    } );
 
     // Spark master
     //
@@ -1114,7 +1110,7 @@ public class BeamJobConfigDialog {
     fdlsparkEnableSparkMetricSinks.left = new FormAttachment( 0, -margin ); // First one in the left top corner
     fdlsparkEnableSparkMetricSinks.right = new FormAttachment( middle, -margin );
     wlsparkEnableSparkMetricSinks.setLayoutData( fdlsparkEnableSparkMetricSinks );
-    wsparkEnableSparkMetricSinks = new Button( wSparkComp, SWT.CHECK| SWT.LEFT | SWT.BORDER );
+    wsparkEnableSparkMetricSinks = new Button( wSparkComp, SWT.CHECK | SWT.LEFT | SWT.BORDER );
     props.setLook( wsparkEnableSparkMetricSinks );
     FormData fdsparkEnableSparkMetricSinks = new FormData();
     fdsparkEnableSparkMetricSinks.top = new FormAttachment( wlsparkEnableSparkMetricSinks, 0, SWT.CENTER );
@@ -1245,7 +1241,7 @@ public class BeamJobConfigDialog {
     int middle = 65;
 
     wFlinkTab = new CTabItem( wTabFolder, SWT.NONE );
-    wFlinkTab .setText( "  Flink  " );
+    wFlinkTab.setText( "  Flink  " );
 
     wFlinkSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );
     wFlinkSComp.setLayout( new FillLayout() );
@@ -1277,7 +1273,9 @@ public class BeamJobConfigDialog {
     wFlinkLocal.setLayoutData( fdFlinkLocal );
     Control lastControl = wFlinkLocal;
 
-    wFlinkLocal.addListener( SWT.Selection, e-> { enableFields(); } );
+    wFlinkLocal.addListener( SWT.Selection, e -> {
+      enableFields();
+    } );
 
     // Flink master
     //
@@ -1297,7 +1295,7 @@ public class BeamJobConfigDialog {
     fdFlinkMaster.right = new FormAttachment( 95, 0 );
     wFlinkMaster.setLayoutData( fdFlinkMaster );
     lastControl = wFlinkMaster;
-    
+
     Label wlFlinkParallelism = new Label( wFlinkComp, SWT.RIGHT );
     props.setLook( wlFlinkParallelism );
     wlFlinkParallelism.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkParallelism.Label" ) );
@@ -1651,94 +1649,94 @@ public class BeamJobConfigDialog {
     wDescription.setText( Const.NVL( config.getDescription(), "" ) );
 
     // General
-    wRunner.setText( Const.NVL(config.getRunnerTypeName(), "") );
-    wUserAgent.setText( Const.NVL(config.getUserAgent(), "") );
-    wTempLocation.setText( Const.NVL(config.getTempLocation(), "") );
-    wPluginsToStage.setText( Const.NVL(config.getPluginsToStage(), "") );
-    wStepPluginClasses.setText( Const.NVL(config.getStepPluginClasses(), "") );
-    wXpPluginClasses.setText( Const.NVL(config.getXpPluginClasses(), "") );
-    wFatJar.setText( Const.NVL(config.getFatJar(), "") );
-    wStreamingKettleStepsFlushInterval.setText(Const.NVL(config.getStreamingKettleStepsFlushInterval(), ""));
+    wRunner.setText( Const.NVL( config.getRunnerTypeName(), "" ) );
+    wUserAgent.setText( Const.NVL( config.getUserAgent(), "" ) );
+    wTempLocation.setText( Const.NVL( config.getTempLocation(), "" ) );
+    wPluginsToStage.setText( Const.NVL( config.getPluginsToStage(), "" ) );
+    wStepPluginClasses.setText( Const.NVL( config.getStepPluginClasses(), "" ) );
+    wXpPluginClasses.setText( Const.NVL( config.getXpPluginClasses(), "" ) );
+    wFatJar.setText( Const.NVL( config.getFatJar(), "" ) );
+    wStreamingKettleStepsFlushInterval.setText( Const.NVL( config.getStreamingKettleStepsFlushInterval(), "" ) );
 
     // GCP
     /*
      */
-    wGcpProjectId.setText( Const.NVL(config.getGcpProjectId(), "") );
-    wGcpAppName.setText( Const.NVL(config.getGcpAppName(), "") );
-    wGcpStagingLocation.setText( Const.NVL(config.getGcpStagingLocation(), "") );
+    wGcpProjectId.setText( Const.NVL( config.getGcpProjectId(), "" ) );
+    wGcpAppName.setText( Const.NVL( config.getGcpAppName(), "" ) );
+    wGcpStagingLocation.setText( Const.NVL( config.getGcpStagingLocation(), "" ) );
     String workerCode = config.getGcpWorkerMachineType();
     String workerDescription = "";
-    if (StringUtils.isNotEmpty( workerCode )) {
+    if ( StringUtils.isNotEmpty( workerCode ) ) {
       int index = Const.indexOfString( workerCode, BeamConst.getGcpWorkerMachineTypeCodes() );
-      if (index<0) {
+      if ( index < 0 ) {
         workerDescription = workerCode; // variable, manually entered in general
       } else {
-        workerDescription = BeamConst.getGcpWorkerMachineTypeDescriptions()[index];
+        workerDescription = BeamConst.getGcpWorkerMachineTypeDescriptions()[ index ];
       }
     }
-    wGcpWorkerMachineType.setText(workerDescription);
-    wGcpWorkerDiskType.setText(Const.NVL(config.getGcpWorkerDiskType(), ""));
-    wGcpDiskSizeGb.setText(Const.NVL(config.getGcpDiskSizeGb(), ""));
-    wGcpInitialNumberOfWorkers.setText( Const.NVL(config.getGcpInitialNumberOfWorkers(), "") );
-    wGcpMaximumNumberOfWorkers.setText( Const.NVL(config.getGcpMaximumNumberOfWokers(), "") );
-    wGcpAutoScalingAlgorithm.setText(Const.NVL(config.getGcpAutoScalingAlgorithm(), "") );
+    wGcpWorkerMachineType.setText( workerDescription );
+    wGcpWorkerDiskType.setText( Const.NVL( config.getGcpWorkerDiskType(), "" ) );
+    wGcpDiskSizeGb.setText( Const.NVL( config.getGcpDiskSizeGb(), "" ) );
+    wGcpInitialNumberOfWorkers.setText( Const.NVL( config.getGcpInitialNumberOfWorkers(), "" ) );
+    wGcpMaximumNumberOfWorkers.setText( Const.NVL( config.getGcpMaximumNumberOfWokers(), "" ) );
+    wGcpAutoScalingAlgorithm.setText( Const.NVL( config.getGcpAutoScalingAlgorithm(), "" ) );
     wGcpStreaming.setSelection( config.isGcpStreaming() );
     String regionCode = config.getGcpRegion();
     String regionDescription = "";
-    if (StringUtils.isNotEmpty( regionCode )) {
+    if ( StringUtils.isNotEmpty( regionCode ) ) {
       int index = Const.indexOfString( regionCode, BeamConst.getGcpRegionCodes() );
-      if (index<0) {
+      if ( index < 0 ) {
         regionDescription = regionCode; // variable, manually entered in general
       } else {
-        regionDescription = BeamConst.getGcpRegionDescriptions()[index];
+        regionDescription = BeamConst.getGcpRegionDescriptions()[ index ];
       }
     }
-    wGcpRegion.setText(regionDescription);
-    wGcpZone.setText(Const.NVL(config.getGcpZone(), ""));
+    wGcpRegion.setText( regionDescription );
+    wGcpZone.setText( Const.NVL( config.getGcpZone(), "" ) );
 
     // Spark
-    wSparkLocal.setSelection(config.isSparkLocal());
-    wSparkMaster.setText(Const.NVL(config.getSparkMaster(), ""));
-    wSparkDeployFolder.setText(Const.NVL(config.getSparkDeployFolder(), ""));
-    wSparkBatchIntervalMillis.setText(Const.NVL(config.getSparkBatchIntervalMillis(), ""));
-    wSparkCheckpointDir.setText(Const.NVL(config.getSparkCheckpointDir(), ""));
-    wSparkCheckpointDurationMillis.setText(Const.NVL(config.getSparkCheckpointDurationMillis(), ""));
-    wsparkEnableSparkMetricSinks.setSelection(config.isSparkEnableSparkMetricSinks());
-    wSparkMaxRecordsPerBatch.setText(Const.NVL(config.getSparkMaxRecordsPerBatch(), ""));
-    wSparkMinReadTimeMillis.setText(Const.NVL(config.getSparkMinReadTimeMillis(), ""));
-    wSparkReadTimePercentage.setText(Const.NVL(config.getSparkReadTimePercentage(), ""));
-    wSparkBundleSize.setText(Const.NVL(config.getSparkBundleSize(), ""));
-    wSparkStorageLevel.setText(Const.NVL(config.getSparkStorageLevel(), ""));
+    wSparkLocal.setSelection( config.isSparkLocal() );
+    wSparkMaster.setText( Const.NVL( config.getSparkMaster(), "" ) );
+    wSparkDeployFolder.setText( Const.NVL( config.getSparkDeployFolder(), "" ) );
+    wSparkBatchIntervalMillis.setText( Const.NVL( config.getSparkBatchIntervalMillis(), "" ) );
+    wSparkCheckpointDir.setText( Const.NVL( config.getSparkCheckpointDir(), "" ) );
+    wSparkCheckpointDurationMillis.setText( Const.NVL( config.getSparkCheckpointDurationMillis(), "" ) );
+    wsparkEnableSparkMetricSinks.setSelection( config.isSparkEnableSparkMetricSinks() );
+    wSparkMaxRecordsPerBatch.setText( Const.NVL( config.getSparkMaxRecordsPerBatch(), "" ) );
+    wSparkMinReadTimeMillis.setText( Const.NVL( config.getSparkMinReadTimeMillis(), "" ) );
+    wSparkReadTimePercentage.setText( Const.NVL( config.getSparkReadTimePercentage(), "" ) );
+    wSparkBundleSize.setText( Const.NVL( config.getSparkBundleSize(), "" ) );
+    wSparkStorageLevel.setText( Const.NVL( config.getSparkStorageLevel(), "" ) );
 
     // Flink
     wFlinkLocal.setSelection( config.isFlinkLocal() );
-    wFlinkMaster.setText( Const.NVL(config.getFlinkMaster(), "") );
-    wFlinkParallelism.setText( Const.NVL(config.getFlinkParallelism(), "") );
-    wFlinkCheckpointingInterval.setText( Const.NVL(config.getFlinkCheckpointingInterval(), "") );
-    wFlinkCheckpointingMode.setText( Const.NVL(config.getFlinkCheckpointingMode(), "") );
-    wFlinkCheckpointTimeoutMillis.setText( Const.NVL(config.getFlinkCheckpointTimeoutMillis(), "") );
-    wFlinkMinPauseBetweenCheckpoints.setText( Const.NVL(config.getFlinkMinPauseBetweenCheckpoints(), "") );
-    wFlinkNumberOfExecutionRetries.setText( Const.NVL(config.getFlinkNumberOfExecutionRetries(), "") );
-    wFlinkExecutionRetryDelay.setText( Const.NVL(config.getFlinkExecutionRetryDelay(), "") );
-    wFlinkObjectReuse.setText( Const.NVL(config.getFlinkObjectReuse(), "") );
-    wFlinkStateBackend.setText( Const.NVL(config.getFlinkStateBackend(), "") );
-    wFlinkEnableMetrics.setText( Const.NVL(config.getFlinkEnableMetrics(), "") );
-    wFlinkExternalizedCheckpointsEnabled.setText( Const.NVL(config.getFlinkExternalizedCheckpointsEnabled(), "") );
-    wFlinkRetainExternalizedCheckpointsOnCancellation.setText( Const.NVL(config.getFlinkRetainExternalizedCheckpointsOnCancellation(), "") );
-    wFlinkMaxBundleSize.setText( Const.NVL(config.getFlinkMaxBundleSize(), "") );
-    wFlinkMaxBundleTimeMills.setText( Const.NVL(config.getFlinkMaxBundleTimeMills(), "") );
-    wFlinkShutdownSourcesOnFinalWatermark.setText( Const.NVL(config.getFlinkShutdownSourcesOnFinalWatermark(), "") );
-    wFlinkLatencyTrackingInterval.setText( Const.NVL(config.getFlinkLatencyTrackingInterval(), "") );
-    wFlinkAutoWatermarkInterval.setText( Const.NVL(config.getFlinkAutoWatermarkInterval(), "") );
-    wFlinkExecutionModeForBatch.setText( Const.NVL(config.getFlinkExecutionModeForBatch(), "") );
+    wFlinkMaster.setText( Const.NVL( config.getFlinkMaster(), "" ) );
+    wFlinkParallelism.setText( Const.NVL( config.getFlinkParallelism(), "" ) );
+    wFlinkCheckpointingInterval.setText( Const.NVL( config.getFlinkCheckpointingInterval(), "" ) );
+    wFlinkCheckpointingMode.setText( Const.NVL( config.getFlinkCheckpointingMode(), "" ) );
+    wFlinkCheckpointTimeoutMillis.setText( Const.NVL( config.getFlinkCheckpointTimeoutMillis(), "" ) );
+    wFlinkMinPauseBetweenCheckpoints.setText( Const.NVL( config.getFlinkMinPauseBetweenCheckpoints(), "" ) );
+    wFlinkNumberOfExecutionRetries.setText( Const.NVL( config.getFlinkNumberOfExecutionRetries(), "" ) );
+    wFlinkExecutionRetryDelay.setText( Const.NVL( config.getFlinkExecutionRetryDelay(), "" ) );
+    wFlinkObjectReuse.setText( Const.NVL( config.getFlinkObjectReuse(), "" ) );
+    wFlinkStateBackend.setText( Const.NVL( config.getFlinkStateBackend(), "" ) );
+    wFlinkEnableMetrics.setText( Const.NVL( config.getFlinkEnableMetrics(), "" ) );
+    wFlinkExternalizedCheckpointsEnabled.setText( Const.NVL( config.getFlinkExternalizedCheckpointsEnabled(), "" ) );
+    wFlinkRetainExternalizedCheckpointsOnCancellation.setText( Const.NVL( config.getFlinkRetainExternalizedCheckpointsOnCancellation(), "" ) );
+    wFlinkMaxBundleSize.setText( Const.NVL( config.getFlinkMaxBundleSize(), "" ) );
+    wFlinkMaxBundleTimeMills.setText( Const.NVL( config.getFlinkMaxBundleTimeMills(), "" ) );
+    wFlinkShutdownSourcesOnFinalWatermark.setText( Const.NVL( config.getFlinkShutdownSourcesOnFinalWatermark(), "" ) );
+    wFlinkLatencyTrackingInterval.setText( Const.NVL( config.getFlinkLatencyTrackingInterval(), "" ) );
+    wFlinkAutoWatermarkInterval.setText( Const.NVL( config.getFlinkAutoWatermarkInterval(), "" ) );
+    wFlinkExecutionModeForBatch.setText( Const.NVL( config.getFlinkExecutionModeForBatch(), "" ) );
 
     // Parameters
     //
-    int rowNr=0;
-    for ( JobParameter parameter : config.getParameters()) {
+    int rowNr = 0;
+    for ( JobParameter parameter : config.getParameters() ) {
       TableItem item = wParameters.table.getItem( rowNr++ );
-      item.setText( 1, Const.NVL(parameter.getVariable(), "") );
-      item.setText( 2, Const.NVL(parameter.getValue(), "") );
+      item.setText( 1, Const.NVL( parameter.getVariable(), "" ) );
+      item.setText( 2, Const.NVL( parameter.getValue(), "" ) );
     }
     wParameters.setRowNums();
     wParameters.optWidth( true );
@@ -1775,8 +1773,8 @@ public class BeamJobConfigDialog {
     cfg.setUserAgent( wUserAgent.getText() );
     cfg.setTempLocation( wTempLocation.getText() );
     cfg.setPluginsToStage( wPluginsToStage.getText() );
-    cfg.setStepPluginClasses( (wStepPluginClasses.getText()) );
-    cfg.setXpPluginClasses( (wXpPluginClasses.getText()) );
+    cfg.setStepPluginClasses( ( wStepPluginClasses.getText() ) );
+    cfg.setXpPluginClasses( ( wXpPluginClasses.getText() ) );
     cfg.setStreamingKettleStepsFlushInterval( wStreamingKettleStepsFlushInterval.getText() );
     cfg.setFatJar( wFatJar.getText() );
     cfg.setGcpProjectId( wGcpProjectId.getText() );
@@ -1789,12 +1787,12 @@ public class BeamJobConfigDialog {
 
     String workerMachineDesciption = wGcpWorkerMachineType.getText();
     String workerMachineCode = null;
-    if (StringUtils.isNotEmpty( workerMachineDesciption )) {
+    if ( StringUtils.isNotEmpty( workerMachineDesciption ) ) {
       int index = Const.indexOfString( workerMachineDesciption, BeamConst.getGcpWorkerMachineTypeDescriptions() );
-      if (index<0) {
+      if ( index < 0 ) {
         workerMachineCode = workerMachineDesciption; // Variable or manually entered
       } else {
-        workerMachineCode = BeamConst.getGcpWorkerMachineTypeCodes()[index];
+        workerMachineCode = BeamConst.getGcpWorkerMachineTypeCodes()[ index ];
       }
     }
     cfg.setGcpWorkerMachineType( workerMachineCode );
@@ -1805,12 +1803,12 @@ public class BeamJobConfigDialog {
 
     String regionDesciption = wGcpRegion.getText();
     String regionCode = null;
-    if (StringUtils.isNotEmpty( regionDesciption )) {
+    if ( StringUtils.isNotEmpty( regionDesciption ) ) {
       int index = Const.indexOfString( regionDesciption, BeamConst.getGcpRegionDescriptions() );
-      if (index<0) {
+      if ( index < 0 ) {
         regionCode = regionDesciption; // Variable or manually entered
       } else {
-        regionCode = BeamConst.getGcpRegionCodes()[index];
+        regionCode = BeamConst.getGcpRegionCodes()[ index ];
       }
     }
     cfg.setGcpRegion( regionCode );
@@ -1828,12 +1826,12 @@ public class BeamJobConfigDialog {
     cfg.setSparkBundleSize( wSparkBundleSize.getText() );
     cfg.setSparkStorageLevel( wSparkStorageLevel.getText() );
 
-    cfg.setFlinkLocal(wFlinkLocal.getSelection());
-    cfg.setFlinkMaster(wFlinkMaster.getText());
-    cfg.setFlinkParallelism(wFlinkParallelism.getText());
-    cfg.setFlinkCheckpointingInterval(wFlinkCheckpointingInterval.getText());
-    cfg.setFlinkCheckpointingMode(wFlinkCheckpointingMode.getText());
-    cfg.setFlinkCheckpointTimeoutMillis(wFlinkCheckpointTimeoutMillis.getText());
+    cfg.setFlinkLocal( wFlinkLocal.getSelection() );
+    cfg.setFlinkMaster( wFlinkMaster.getText() );
+    cfg.setFlinkParallelism( wFlinkParallelism.getText() );
+    cfg.setFlinkCheckpointingInterval( wFlinkCheckpointingInterval.getText() );
+    cfg.setFlinkCheckpointingMode( wFlinkCheckpointingMode.getText() );
+    cfg.setFlinkCheckpointTimeoutMillis( wFlinkCheckpointTimeoutMillis.getText() );
     cfg.setFlinkMinPauseBetweenCheckpoints( wFlinkMinPauseBetweenCheckpoints.getText() );
     cfg.setFlinkNumberOfExecutionRetries( wFlinkNumberOfExecutionRetries.getText() );
     cfg.setFlinkExecutionRetryDelay( wFlinkExecutionRetryDelay.getText() );
@@ -1844,15 +1842,15 @@ public class BeamJobConfigDialog {
     cfg.setFlinkRetainExternalizedCheckpointsOnCancellation( wFlinkRetainExternalizedCheckpointsOnCancellation.getText() );
     cfg.setFlinkMaxBundleSize( wFlinkMaxBundleSize.getText() );
     cfg.setFlinkMaxBundleTimeMills( wFlinkMaxBundleTimeMills.getText() );
-    cfg.setFlinkShutdownSourcesOnFinalWatermark( wFlinkShutdownSourcesOnFinalWatermark.getText() );;
+    cfg.setFlinkShutdownSourcesOnFinalWatermark( wFlinkShutdownSourcesOnFinalWatermark.getText() ); ;
     cfg.setFlinkLatencyTrackingInterval( wFlinkLatencyTrackingInterval.getText() );
     cfg.setFlinkAutoWatermarkInterval( wFlinkAutoWatermarkInterval.getText() );
     cfg.setFlinkExecutionModeForBatch( wFlinkExecutionModeForBatch.getText() );
 
     cfg.getParameters().clear();
-    for (int i=0;i<wParameters.nrNonEmpty();i++) {
+    for ( int i = 0; i < wParameters.nrNonEmpty(); i++ ) {
       TableItem item = wParameters.getNonEmpty( i );
-      cfg.getParameters().add(new JobParameter( item.getText(1), item.getText(2) ));
+      cfg.getParameters().add( new JobParameter( item.getText( 1 ), item.getText( 2 ) ) );
     }
 
   }
