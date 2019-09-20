@@ -24,10 +24,10 @@ public class BeamMenuController extends AbstractXulEventHandler implements ISpoo
 
   private static final Class<?> PKG = BeamController.class;
 
-  private BeamController neo4jController;
+  private BeamController beamController;
 
-  public void setNeo4jController( BeamController gitController ) {
-    this.neo4jController = gitController;
+  public void setBeamController( BeamController beamController ) {
+    this.beamController = beamController;
   }
 
 

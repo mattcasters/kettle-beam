@@ -81,17 +81,17 @@ public class BeamPerspective extends AbstractXulEventHandler implements SpoonPer
 
       container.addEventHandler( this );
 
-      addAdminTab();
+      // addAdminTab();
 
       /*
        * To make compatible with webSpoon
        * Create a temporary parent for the UI and then call layout().
        * A different parent will be assigned to the UI in SpoonPerspectiveManager.PerspectiveManager.performInit().
-       */
       SwtDeck deck = (SwtDeck) Spoon.getInstance().getXulDomContainer().getDocumentRoot().getElementById( "canvas-deck" );
       box = deck.createVBoxCard();
       getUI().setParent( (Composite) box.getManagedObject() );
       getUI().layout();
+       */
 
     } catch ( Exception e ) {
       logger.logError( "Error initializing perspective", e );

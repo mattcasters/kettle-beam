@@ -34,10 +34,10 @@ public class BeamSpoonPlugin implements SpoonPluginInterface, SpoonLifecycleList
   private static final Class<?> PKG = BeamSpoonPlugin.class;
   private ResourceBundle resourceBundle = new XulSpoonResourceBundle( PKG );
 
-  private BeamPerspective perspective;
+  // private BeamPerspective perspective;
 
   public BeamSpoonPlugin() throws XulException {
-    this.perspective = new BeamPerspective();
+    // this.perspective = new BeamPerspective();
   }
 
   @Override
@@ -60,9 +60,15 @@ public class BeamSpoonPlugin implements SpoonPluginInterface, SpoonLifecycleList
     return this;
   }
 
+  @Override public SpoonPerspective getPerspective() {
+    return null;
+  }
+
+/*
   @Override
   public SpoonPerspective getPerspective() {
     return perspective;
   }
+*/
 
 }
