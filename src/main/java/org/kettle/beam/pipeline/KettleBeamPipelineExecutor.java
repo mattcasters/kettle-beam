@@ -551,7 +551,7 @@ public class KettleBeamPipelineExecutor {
       try {
         CheckpointingMode mode = CheckpointingMode.valueOf( modeString);
         if ( mode != null ) {
-          options.setCheckpointingMode( mode );
+          options.setCheckpointingMode( modeString );
         }
       } catch(Exception e) {
         throw new IOException( "Unable to parse flink check pointing mode '"+modeString+"'", e );
@@ -673,12 +673,12 @@ public class KettleBeamPipelineExecutor {
     // Flink mode for data exchange of batch pipelines. Reference {@link org.apache.flink.api.common.ExecutionMode}.
     // Set this to BATCH_FORCED if pipelines get blocked, see https://issues.apache.org/jira/browse/FLINK-10672")
     if (StringUtils.isNotEmpty( config.getFlinkExecutionModeForBatch() )) {
-      String str = space.environmentSubstitute( config.getFlinkExecutionModeForBatch() );
-      ExecutionMode value = ExecutionMode.valueOf( str );
+      String modeString = space.environmentSubstitute( config.getFlinkExecutionModeForBatch() );
+      ExecutionMode mode = ExecutionMode.valueOf( modeString );
       try {
-        options.setExecutionModeForBatch( value );
+        options.setExecutionModeForBatch( modeString );
       } catch(Exception e) {
-        throw new IOException( "Unable to parse flink execution mode for batch '"+str+"'", e );
+        throw new IOException( "Unable to parse flink execution mode for batch '"+modeString+"'", e );
       }
     }
   }
