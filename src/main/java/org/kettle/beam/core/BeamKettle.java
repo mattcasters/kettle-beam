@@ -38,7 +38,7 @@ public class BeamKettle {
 
       XMLHandlerCache.getInstance();
 
-      LOG.info( "Registering " + stepPluginClasses.size() + " extra step plugins, and " + xpPluginClasses.size() + " XP plugins" );
+      // LOG.info( "Registering " + stepPluginClasses.size() + " extra step plugins, and " + xpPluginClasses.size() + " XP plugins" );
 
       // Register extra classes from the plugins...
       // If they're already in the classpath, this should be fast.
@@ -57,7 +57,7 @@ public class BeamKettle {
 
             // The plugin class is already in the classpath so we simply call Class.forName() on it.
             //
-            LOG.info( "Registering step plugin class: " + stepPluginClass );
+            // LOG.info( "Registering step plugin class: " + stepPluginClass );
             stepPluginType.handlePluginAnnotation( stepPluginClass, annotation, new ArrayList<String>(), true, null );
           } else {
             LOG.debug( "Plugin " + stepPluginClassName + " is already registered" );
@@ -81,7 +81,7 @@ public class BeamKettle {
 
             // The plugin class is already in the classpath so we simply call Class.forName() on it.
             //
-            LOG.info( "Registering step plugin class: " + xpPluginClass );
+            // LOG.info( "Registering step plugin class: " + xpPluginClass );
             xpPluginType.handlePluginAnnotation( xpPluginClass, annotation, new ArrayList<String>(), true, null );
           } else {
             LOG.debug( "Plugin " + xpPluginClassName + " is already registered" );

@@ -2,14 +2,19 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <groupId>kettle-beam</groupId>
+  <artifactId>kettle-beam</artifactId>
+  <name>Kettle Beam</name>
+  <description>Kettle runtime plugins for Apache Beam</description>
+  <version>1.0.1-SNAPSHOT</version>
+
   <parent>
     <groupId>org.pentaho</groupId>
     <artifactId>pentaho-ce-jar-parent-pom</artifactId>
     <version>8.2.0.7-719</version>
   </parent>
-  <artifactId>kettle-beam</artifactId>
-  <name>${project.artifactId}</name>
-  <description>Kettle runtime plugins for Apache Beam</description>
+
   <licenses>
     <license>
       <name>Apache License, version 2.0</name>
@@ -22,8 +27,8 @@
     <pentaho-kettle.version>8.2.0.0-342</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
-    <apache-beam-version>2.16.0</apache-beam-version>
-    <kettle-beam-version>1.0.0-SNAPSHOT</kettle-beam-version>
+    <apache-beam-version>2.18.0</apache-beam-version>
+    <kettle-beam-version>1.0.1-SNAPSHOT</kettle-beam-version>
     <spark-version>2.4.3</spark-version>
   </properties>
 
@@ -78,7 +83,7 @@
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-runners-flink_2.11</artifactId>
-      <version>${apache-beam-version}</version>
+      <version>2.16.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
@@ -258,7 +263,7 @@
       <dependency>
         <groupId>org.apache.beam</groupId>
         <artifactId>beam-runners-flink_2.11</artifactId>
-        <version>${apache-beam-version}</version>
+        <version>2.16.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
@@ -349,7 +354,4 @@
     </dependencies>
   </dependencyManagement>
 
-
-  <groupId>kettle-beam</groupId>
-  <version>1.0.0-SNAPSHOT</version>
 </project>
