@@ -617,16 +617,13 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
           // Pass the rows in the rowBuffer to the input RowSet
           //
           if ( !inputStep ) {
-            if ( stepname.equals( "(:Beers)" ) ) {
-
-              if ( maxInputBufferSize < rowBuffer.size() ) {
-                Metrics.counter( "maxInputSize", stepname ).inc( rowBuffer.size() - maxInputBufferSize );
-                maxInputBufferSize = rowBuffer.size();
-              }
-              if ( minInputBufferSize > rowBuffer.size() ) {
-                Metrics.counter( "minInputSize", stepname ).dec( minInputBufferSize - minInputBufferSize );
-                minInputBufferSize = rowBuffer.size();
-              }
+            if ( maxInputBufferSize < rowBuffer.size() ) {
+              Metrics.counter( "maxInputSize", stepname ).inc( rowBuffer.size() - maxInputBufferSize );
+              maxInputBufferSize = rowBuffer.size();
+            }
+            if ( minInputBufferSize > rowBuffer.size() ) {
+              Metrics.counter( "minInputSize", stepname ).dec( minInputBufferSize - minInputBufferSize );
+              minInputBufferSize = rowBuffer.size();
             }
 
             for ( KettleRow inputRow : rowBuffer ) {
