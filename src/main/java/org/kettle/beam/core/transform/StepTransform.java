@@ -249,20 +249,20 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
      * @param startBundleContext
      */
     @StartBundle
-    public void startBundle(StartBundleContext startBundleContext) {
+    public void startBundle( StartBundleContext startBundleContext ) {
       rowBuffer = new ArrayList<>();
-      if (startBundleCounter==null) {
+      if ( startBundleCounter == null ) {
         startBundleCounter = Metrics.counter( "startBundle", stepname );
       }
       startBundleCounter.inc();
-      if ("ScriptValueMod".equals(stepPluginId) && trans!=null) {
-        initialize=true;
+      if ( "ScriptValueMod".equals( stepPluginId ) && trans != null ) {
+        initialize = true;
       }
     }
 
     @Teardown
     public void tearDown() {
-      if (timer!=null) {
+      if ( timer != null ) {
         timer.cancel();
       }
     }
@@ -272,7 +272,7 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
 
       try {
 
-        if (initialize) {
+        if ( initialize ) {
           initialize = false;
 
           // Initialize Kettle and load extra plugins as well
@@ -531,29 +531,29 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
           // When the first row ends up in the buffer we start the timer.
           // If the rows are flushed out we reset back to -1;
           //
-          bufferStartTime = new AtomicLong(-1L);
+          bufferStartTime = new AtomicLong( -1L );
           flushing = new AtomicBoolean( false );
 
           // Install a timer to check every second if the buffer is stale and needs to be flushed...
           //
-          if (flushIntervalSeconds>0) {
+          if ( flushIntervalSeconds > 0 ) {
             TimerTask timerTask = new TimerTask() {
               @Override public void run() {
                 // Check on the state of the buffer, flush if needed...
                 //
-                if (!flushing.get() && !rowBuffer.isEmpty() && bufferStartTime.get()>0) {
+                if ( !flushing.get() && !rowBuffer.isEmpty() && bufferStartTime.get() > 0 ) {
                   long difference = System.currentTimeMillis() - bufferStartTime.get();
-                  if (difference>flushIntervalSeconds*1000) {
+                  if ( difference > flushIntervalSeconds * 1000 ) {
                     try {
                       emptyRowBuffer( new StepProcessContext( context ) );
-                    } catch(Exception e) {
-                      throw new RuntimeException( "Unable to flush row buffer when it got stale after "+difference+" ms", e );
+                    } catch ( Exception e ) {
+                      throw new RuntimeException( "Unable to flush row buffer when it got stale after " + difference + " ms", e );
                     }
                   }
                 }
               }
             };
-            timer = new Timer("Flush timer of step "+stepname);
+            timer = new Timer( "Flush timer of step " + stepname );
             timer.schedule( timerTask, 1000, 1000 );
           }
         }
@@ -566,16 +566,16 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
 
         // Take care of the age of the buffer...
         //
-        if (flushIntervalSeconds>0 && rowBuffer.isEmpty()) {
+        if ( flushIntervalSeconds > 0 && rowBuffer.isEmpty() ) {
           bufferStartTime.set( System.currentTimeMillis() );
         }
 
         // Add the row to the buffer.
         //
-        rowBuffer.add(inputRow);
+        rowBuffer.add( inputRow );
         batchWindow = window;
 
-        if (rowBuffer.size()>=batchSize) {
+        if ( rowBuffer.size() >= batchSize ) {
           emptyRowBuffer( new StepProcessContext( context ) );
         }
       } catch ( Exception e ) {
@@ -586,72 +586,89 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
     }
 
     @FinishBundle
-    public void finishBundle(FinishBundleContext context) {
+    public void finishBundle( FinishBundleContext context ) {
       try {
         if ( rowBuffer.size() > 0 ) {
           emptyRowBuffer( new StepFinishBundleContext( context, batchWindow ) );
         }
-      } catch(Exception e) {
+      } catch ( Exception e ) {
         numErrors.inc();
         LOG.info( "Step finishing bundle error :" + e.getMessage() );
         throw new RuntimeException( "Error finishing bundle of StepFn", e );
       }
-
     }
+
+    private transient int maxInputBufferSize = 0;
+    private transient int minInputBufferSize = Integer.MAX_VALUE;
 
     private synchronized void emptyRowBuffer( TupleOutputContext<KettleRow> context ) throws KettleException {
 
-      if (!flushing.get()) {
-        flushing.set( true );
+      if ( !flushing.get() ) {
+        try {
+          flushing.set( true );
 
-        // Empty all the row buffers for another iteration
-        //
-        resultRows.clear();
-        for ( int t = 0; t < targetSteps.size(); t++ ) {
-          targetResultRowsList.get( t ).clear();
-        }
-
-        // Pass the rows in the rowBuffer to the input RowSet
-        //
-        if ( !inputStep ) {
-          for ( KettleRow inputRow : rowBuffer ) {
-            rowProducer.putRow( inputRowMeta, inputRow.getRow() );
-          }
-        }
-
-        // Execute all steps in the transformation
-        //
-        executor.oneIteration();
-
-        // Evaluate the results...
-        //
-
-        // Pass all rows in the output to the process context
-        //
-        // System.out.println("Rows read in main output of step '"+stepname+"' : "+resultRows.size());
-        for ( Object[] resultRow : resultRows ) {
-
-          // Pass the row to the process context
+          // Empty all the row buffers for another iteration
           //
-          context.output( mainTupleTag, new KettleRow( resultRow ) );
-          writtenCounter.inc();
-        }
-
-        // Pass whatever ended up on the target nodes
-        //
-        for ( int t = 0; t < targetResultRowsList.size(); t++ ) {
-          List<Object[]> targetRowsList = targetResultRowsList.get( t );
-          TupleTag<KettleRow> tupleTag = tupleTagList.get( t );
-
-          for ( Object[] targetRow : targetRowsList ) {
-            context.output( tupleTag, new KettleRow( targetRow ) );
+          resultRows.clear();
+          for ( int t = 0; t < targetSteps.size(); t++ ) {
+            targetResultRowsList.get( t ).clear();
           }
-        }
 
-        flushBufferCounter.inc();
-        rowBuffer.clear();
-        bufferStartTime.set(-1L);
-        flushing.set(false);
+          // Pass the rows in the rowBuffer to the input RowSet
+          //
+          if ( !inputStep ) {
+            if ( stepname.equals( "(:Beers)" ) ) {
+
+              if ( maxInputBufferSize < rowBuffer.size() ) {
+                Metrics.counter( "maxInputSize", stepname ).inc( rowBuffer.size() - maxInputBufferSize );
+                maxInputBufferSize = rowBuffer.size();
+              }
+              if ( minInputBufferSize > rowBuffer.size() ) {
+                Metrics.counter( "minInputSize", stepname ).dec( minInputBufferSize - minInputBufferSize );
+                minInputBufferSize = rowBuffer.size();
+              }
+            }
+
+            for ( KettleRow inputRow : rowBuffer ) {
+              rowProducer.putRow( inputRowMeta, inputRow.getRow() );
+            }
+          }
+
+          // Execute all steps in the transformation
+          //
+          executor.oneIteration();
+
+          // Evaluate the results...
+          //
+
+          // Pass all rows in the output to the process context
+          //
+          // System.out.println("Rows read in main output of step '"+stepname+"' : "+resultRows.size());
+          for ( Object[] resultRow : resultRows ) {
+
+            // Pass the row to the process context
+            //
+            context.output( mainTupleTag, new KettleRow( resultRow ) );
+            writtenCounter.inc();
+          }
+
+          // Pass whatever ended up on the target nodes
+          //
+          for ( int t = 0; t < targetResultRowsList.size(); t++ ) {
+            List<Object[]> targetRowsList = targetResultRowsList.get( t );
+            TupleTag<KettleRow> tupleTag = tupleTagList.get( t );
+
+            for ( Object[] targetRow : targetRowsList ) {
+              context.output( tupleTag, new KettleRow( targetRow ) );
+            }
+          }
+
+          flushBufferCounter.inc();
+          rowBuffer.clear();
+          bufferStartTime.set( -1L );
+        } finally {
+          flushing.set( false );
+        }
       }
     }
 
@@ -684,10 +701,10 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
   }
 
   private interface TupleOutputContext<T> {
-    void output( TupleTag<T> tupleTag, T output ) ;
+    void output( TupleTag<T> tupleTag, T output );
   }
 
-  private class StepProcessContext implements  TupleOutputContext<KettleRow> {
+  private class StepProcessContext implements TupleOutputContext<KettleRow> {
 
     private DoFn.ProcessContext context;
 
