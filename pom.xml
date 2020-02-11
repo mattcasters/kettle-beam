@@ -7,7 +7,7 @@
   <artifactId>kettle-beam</artifactId>
   <name>Kettle Beam</name>
   <description>Kettle runtime plugins for Apache Beam</description>
-  <version>1.0.2</version>
+  <version>1.0.3</version>
 
   <parent>
     <groupId>org.pentaho</groupId>
@@ -27,9 +27,10 @@
     <pentaho-kettle.version>8.2.0.0-342</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <junit.version>4.4</junit.version>
-    <apache-beam-version>2.18.0</apache-beam-version>
+    <apache-beam-version>2.19.0</apache-beam-version>
     <kettle-beam-version>1.0.1-SNAPSHOT</kettle-beam-version>
-    <spark-version>2.4.3</spark-version>
+    <spark-version>2.4.4</spark-version>
+    <flink-version>1.9.1</flink-version>
   </properties>
 
   <repositories>
@@ -82,8 +83,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
-      <artifactId>beam-runners-flink_2.11</artifactId>
-      <version>2.16.0</version>
+      <artifactId>beam-runners-flink-1.9</artifactId>
+      <version>${apache-beam-version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.beam</groupId>
@@ -270,8 +271,8 @@
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>
-        <artifactId>beam-runners-flink_2.11</artifactId>
-        <version>2.16.0</version>
+        <artifactId>beam-runners-flink-1.9</artifactId>
+        <version>${apache-beam-version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.beam</groupId>

@@ -186,21 +186,49 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
   // This gets called every 10 seconds or so
   //
   private void metricsUpdated( PipelineResult pipelineResult, BeamTrans trans ) {
-
-    System.out.println( "PIPELINE STATE: " + pipelineResult.getState().name() );
-
+    LogChannelInterface log = trans.getLogChannel();
+    log.logBasic( "PIPELINE STATE: " + pipelineResult.getState().name() );
+    boolean cancelPipeline = false;
     switch ( pipelineResult.getState() ) {
       case DONE:
         trans.setRunning( false );
         trans.setFinished( true );
         trans.setInitializing( false );
-        System.out.println( "Transformation finished.");
+        log.logBasic( "Transformation finished.");
         break;
       case STOPPED:
+      case CANCELLED:
         trans.setStopped( true );
+        cancelPipeline = true;
+        break;
+      case FAILED:
+        trans.setStopped( true );
+        trans.setFinished( true );
+        trans.setInitializing( false );
+        log.logBasic( "Transformation failed.");
+        cancelPipeline = true;
+        break;
+      case UNKNOWN:
+        break;
+      case UPDATED:
+      case RUNNING:
+        trans.setRunning( true );
+        trans.setInitializing( false );
+        trans.setStopped( false );
         break;
       default:
         break;
+    }
+
+    if (cancelPipeline) {
+      try {
+        PipelineResult.State cancel = pipelineResult.cancel();
+
+
+        log.logBasic( "Pipeline cancelled" );
+      } catch(Exception e) {
+        log.logError( "Cancellation of pipeline failed", e );
+      }
     }
 
     MetricResults metricResults = pipelineResult.metrics();
@@ -216,7 +244,7 @@ public class RunBeamTransExecutionPoint implements ExtensionPointInterface {
       if ( first && trans.isInitializing() ) {
         first = false;
         trans.setInitializing( false );
-        System.out.println( "INIT IS DONE!!" );
+        log.logBasic( "Initialisation is done!" );
         // Mark start on all steps...
         //
         for ( StepMetaDataCombi combi : trans.getSteps() ) {

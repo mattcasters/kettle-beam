@@ -11,7 +11,6 @@ import org.apache.beam.runners.spark.SparkPipelineOptions;
 import org.apache.beam.runners.spark.SparkRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
-import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.metrics.MetricQueryResults;
 import org.apache.beam.sdk.metrics.MetricResult;
@@ -23,7 +22,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.streaming.api.CheckpointingMode;
-import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.metastore.BeamJobConfig;
@@ -99,22 +97,7 @@ public class KettleBeamPipelineExecutor {
     if (runnerType==null) {
       throw new KettleException( "Runner type '"+jobConfig.getRunnerTypeName()+"' is not recognized");
     }
-    switch ( runnerType ) {
-      case Direct:
-      case Flink:
-      case DataFlow:
-        return executePipeline();
-
-      case Spark:
-        if ( server ) {
-          return executePipeline();
-        } else {
-          return executeSpark();
-        }
-
-      default:
-        throw new KettleException( "Execution on runner '" + runnerType.name() + "' is not supported yet, sorry." );
-    }
+    return executePipeline();
   }
 
   private PipelineResult executeSpark() throws KettleException {
@@ -242,7 +225,7 @@ public class KettleBeamPipelineExecutor {
 
       // This next command can block on certain runners...
       //
-      PipelineResult pipelineResult = pipeline.run();
+      PipelineResult pipelineResult = asyncExecutePipeline(pipeline);
 
       Timer timer = new Timer();
       TimerTask timerTask = new TimerTask() {
@@ -286,6 +269,22 @@ public class KettleBeamPipelineExecutor {
       Thread.currentThread().setContextClassLoader( oldContextClassLoader );
     }
 
+  }
+
+  private PipelineResult asyncExecutePipeline( Pipeline pipeline ) throws KettleException {
+
+    RunnerType runnerType = RunnerType.getRunnerTypeByName( transMeta.environmentSubstitute( jobConfig.getRunnerTypeName() ) );
+    if (runnerType==null) {
+      throw new KettleException( "Runner type '"+jobConfig.getRunnerTypeName()+"' is not recognized");
+    }
+    switch ( runnerType ) {
+      case Direct: return DirectRunner.fromOptions( pipeline.getOptions() ).run( pipeline );
+      case Flink: return FlinkRunner.fromOptions(pipeline.getOptions()).run( pipeline );
+      case DataFlow: return DataflowRunner.fromOptions( pipeline.getOptions() ).run( pipeline );
+      case Spark: return SparkRunner.fromOptions( pipeline.getOptions() ).run( pipeline );
+      default:
+        throw new KettleException( "Execution on runner '" + runnerType.name() + "' is not supported yet, sorry." );
+    }
   }
 
 
@@ -611,10 +610,10 @@ public class KettleBeamPipelineExecutor {
     */
 
     // Enable/disable Beam metrics in Flink Runner")
-    if (StringUtils.isNotEmpty( config.getFlinkEnableMetrics() )) {
-      String str = space.environmentSubstitute( config.getFlinkEnableMetrics() );
+    if (StringUtils.isNotEmpty( config.getFlinkDisableMetrics() )) {
+      String str = space.environmentSubstitute( config.getFlinkDisableMetrics() );
       boolean value = "Y".equalsIgnoreCase( str ) || "TRUE".equalsIgnoreCase( str );
-      options.setEnableMetrics( value );
+      options.setDisableMetrics( !value );
     }
 
     // Enables or disables externalized checkpoints. Works in conjunction with CheckpointingInterval")

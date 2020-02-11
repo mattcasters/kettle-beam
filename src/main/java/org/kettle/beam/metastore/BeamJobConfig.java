@@ -166,7 +166,7 @@ public class BeamJobConfig {
   private String flinkStateBackend;
 
   @MetaStoreAttribute
-  private String flinkEnableMetrics;
+  private String flinkDisableMetrics;
 
   @MetaStoreAttribute
   private String flinkExternalizedCheckpointsEnabled;
@@ -938,15 +938,15 @@ public class BeamJobConfig {
    *
    * @return value of flinkEnableMetrics
    */
-  public String getFlinkEnableMetrics() {
-    return flinkEnableMetrics;
+  public String getFlinkDisableMetrics() {
+    return flinkDisableMetrics;
   }
 
   /**
-   * @param flinkEnableMetrics The flinkEnableMetrics to set
+   * @param flinkDisableMetrics The flinkEnableMetrics to set
    */
-  public void setFlinkEnableMetrics( String flinkEnableMetrics ) {
-    this.flinkEnableMetrics = flinkEnableMetrics;
+  public void setFlinkDisableMetrics( String flinkDisableMetrics ) {
+    this.flinkDisableMetrics = flinkDisableMetrics;
   }
 
   /**

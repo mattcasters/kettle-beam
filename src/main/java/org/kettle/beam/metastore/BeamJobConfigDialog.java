@@ -26,7 +26,6 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
-import org.kettle.beam.pipeline.TransMetaPipelineConverter;
 import org.kettle.beam.pipeline.fatjar.FatJarBuilder;
 import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.Const;
@@ -46,11 +45,7 @@ import org.pentaho.di.ui.core.widget.TableView;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class BeamJobConfigDialog {
 
@@ -140,7 +135,7 @@ public class BeamJobConfigDialog {
   private TextVar wFlinkExecutionRetryDelay;
   private TextVar wFlinkObjectReuse;
   private TextVar wFlinkStateBackend;
-  private TextVar wFlinkEnableMetrics;
+  private TextVar wFlinkDisbaleMetrics;
   private TextVar wFlinkExternalizedCheckpointsEnabled;
   private TextVar wFlinkRetainExternalizedCheckpointsOnCancellation;
   private TextVar wFlinkMaxBundleSize;
@@ -261,7 +256,7 @@ public class BeamJobConfigDialog {
     wFlinkExecutionRetryDelay.addSelectionListener( selAdapter );
     wFlinkObjectReuse.addSelectionListener( selAdapter );
     wFlinkStateBackend.addSelectionListener( selAdapter );
-    wFlinkEnableMetrics.addSelectionListener( selAdapter );
+    wFlinkDisbaleMetrics.addSelectionListener( selAdapter );
     wFlinkExternalizedCheckpointsEnabled.addSelectionListener( selAdapter );
     wFlinkRetainExternalizedCheckpointsOnCancellation.addSelectionListener( selAdapter );
     wFlinkMaxBundleSize.addSelectionListener( selAdapter );
@@ -1454,22 +1449,22 @@ public class BeamJobConfigDialog {
     wlFlinkStateBackend.setEnabled( false );
     wFlinkStateBackend.setEnabled( false );
 
-    Label wlFlinkEnableMetrics = new Label( wFlinkComp, SWT.RIGHT );
-    props.setLook( wlFlinkEnableMetrics );
-    wlFlinkEnableMetrics.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkEnableMetrics.Label" ) );
-    FormData fdlFlinkEnableMetrics = new FormData();
-    fdlFlinkEnableMetrics.top = new FormAttachment( lastControl, margin );
-    fdlFlinkEnableMetrics.left = new FormAttachment( 0, -margin ); // First one in the left top corner
-    fdlFlinkEnableMetrics.right = new FormAttachment( middle, -margin );
-    wlFlinkEnableMetrics.setLayoutData( fdlFlinkEnableMetrics );
-    wFlinkEnableMetrics = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    props.setLook( wFlinkEnableMetrics );
-    FormData fdFlinkEnableMetrics = new FormData();
-    fdFlinkEnableMetrics.top = new FormAttachment( wlFlinkEnableMetrics, 0, SWT.CENTER );
-    fdFlinkEnableMetrics.left = new FormAttachment( middle, 0 ); // To the right of the label
-    fdFlinkEnableMetrics.right = new FormAttachment( 95, 0 );
-    wFlinkEnableMetrics.setLayoutData( fdFlinkEnableMetrics );
-    lastControl = wFlinkEnableMetrics;
+    Label wlFlinkDisbaleMetrics = new Label( wFlinkComp, SWT.RIGHT );
+    props.setLook( wlFlinkDisbaleMetrics );
+    wlFlinkDisbaleMetrics.setText( BaseMessages.getString( PKG, "BeamJobConfigDialog.FlinkDisbaleMetrics.Label" ) );
+    FormData fdlFlinkDisbaleMetrics = new FormData();
+    fdlFlinkDisbaleMetrics.top = new FormAttachment( lastControl, margin );
+    fdlFlinkDisbaleMetrics.left = new FormAttachment( 0, -margin ); // First one in the left top corner
+    fdlFlinkDisbaleMetrics.right = new FormAttachment( middle, -margin );
+    wlFlinkDisbaleMetrics.setLayoutData( fdlFlinkDisbaleMetrics );
+    wFlinkDisbaleMetrics = new TextVar( space, wFlinkComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    props.setLook( wFlinkDisbaleMetrics );
+    FormData fdFlinkDisbaleMetrics = new FormData();
+    fdFlinkDisbaleMetrics.top = new FormAttachment( wlFlinkDisbaleMetrics, 0, SWT.CENTER );
+    fdFlinkDisbaleMetrics.left = new FormAttachment( middle, 0 ); // To the right of the label
+    fdFlinkDisbaleMetrics.right = new FormAttachment( 95, 0 );
+    wFlinkDisbaleMetrics.setLayoutData( fdFlinkDisbaleMetrics );
+    lastControl = wFlinkDisbaleMetrics;
 
     Label wlFlinkExternalizedCheckpointsEnabled = new Label( wFlinkComp, SWT.RIGHT );
     props.setLook( wlFlinkExternalizedCheckpointsEnabled );
@@ -1720,7 +1715,7 @@ public class BeamJobConfigDialog {
     wFlinkExecutionRetryDelay.setText( Const.NVL( config.getFlinkExecutionRetryDelay(), "" ) );
     wFlinkObjectReuse.setText( Const.NVL( config.getFlinkObjectReuse(), "" ) );
     wFlinkStateBackend.setText( Const.NVL( config.getFlinkStateBackend(), "" ) );
-    wFlinkEnableMetrics.setText( Const.NVL( config.getFlinkEnableMetrics(), "" ) );
+    wFlinkDisbaleMetrics.setText( Const.NVL( config.getFlinkDisableMetrics(), "" ) );
     wFlinkExternalizedCheckpointsEnabled.setText( Const.NVL( config.getFlinkExternalizedCheckpointsEnabled(), "" ) );
     wFlinkRetainExternalizedCheckpointsOnCancellation.setText( Const.NVL( config.getFlinkRetainExternalizedCheckpointsOnCancellation(), "" ) );
     wFlinkMaxBundleSize.setText( Const.NVL( config.getFlinkMaxBundleSize(), "" ) );
@@ -1837,7 +1832,7 @@ public class BeamJobConfigDialog {
     cfg.setFlinkExecutionRetryDelay( wFlinkExecutionRetryDelay.getText() );
     cfg.setFlinkObjectReuse( wFlinkObjectReuse.getText() );
     cfg.setFlinkStateBackend( wFlinkStateBackend.getText() );
-    cfg.setFlinkEnableMetrics( wFlinkEnableMetrics.getText() );
+    cfg.setFlinkDisableMetrics( wFlinkDisbaleMetrics.getText() );
     cfg.setFlinkExternalizedCheckpointsEnabled( wFlinkExternalizedCheckpointsEnabled.getText() );
     cfg.setFlinkRetainExternalizedCheckpointsOnCancellation( wFlinkRetainExternalizedCheckpointsOnCancellation.getText() );
     cfg.setFlinkMaxBundleSize( wFlinkMaxBundleSize.getText() );

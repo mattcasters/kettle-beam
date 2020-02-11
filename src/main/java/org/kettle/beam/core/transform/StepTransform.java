@@ -589,7 +589,20 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
     public void finishBundle( FinishBundleContext context ) {
       try {
         if ( rowBuffer.size() > 0 ) {
-          emptyRowBuffer( new StepFinishBundleContext( context, batchWindow ) );
+          long start = System.currentTimeMillis();
+          while (!emptyRowBuffer( new StepFinishBundleContext( context, batchWindow ) )) {
+            try {
+              Thread.sleep( 1 );
+            } catch(InterruptedException e) {
+              // Ignore
+            }
+            long now = System.currentTimeMillis();
+            double secondsPassed = (now-start)/1000;
+            if (secondsPassed>30) {
+              LOG.error( "Unable to empty row buffer while finishing bundle" );
+              throw new RuntimeException( "Error emptying bundle in step "+stepname );
+            }
+          }
         }
       } catch ( Exception e ) {
         numErrors.inc();
@@ -601,8 +614,8 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
     private transient int maxInputBufferSize = 0;
     private transient int minInputBufferSize = Integer.MAX_VALUE;
 
-    private synchronized void emptyRowBuffer( TupleOutputContext<KettleRow> context ) throws KettleException {
-
+    private synchronized boolean emptyRowBuffer( TupleOutputContext<KettleRow> context ) throws KettleException {
+      boolean emptied = false;
       if ( !flushing.get() ) {
         try {
           flushing.set( true );
@@ -663,10 +676,12 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
           flushBufferCounter.inc();
           rowBuffer.clear();
           bufferStartTime.set( -1L );
+          emptied = true;
         } finally {
           flushing.set( false );
         }
       }
+      return emptied;
     }
 
     private StepMeta createInjectorStep( TransMeta transMeta, String injectorStepName, RowMetaInterface injectorRowMeta, int x, int y ) {
