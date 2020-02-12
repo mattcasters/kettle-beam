@@ -3,7 +3,6 @@ package org.kettle.beam.core.transform;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
 import org.apache.beam.sdk.values.PCollection;
@@ -39,59 +38,26 @@ import org.pentaho.di.trans.step.StepMetaInterface;
 import org.pentaho.di.trans.steps.dummytrans.DummyTransMeta;
 import org.pentaho.di.trans.steps.injector.InjectorMeta;
 import org.pentaho.metastore.api.IMetaStore;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
-public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectionTuple> {
+public class StepBatchTransform extends StepTransform {
 
-  protected List<VariableValue> variableValues;
-  protected String metastoreJson;
-  protected List<String> stepPluginClasses;
-  protected List<String> xpPluginClasses;
-  protected int batchSize;
-  protected String stepname;
-  protected String stepPluginId;
-  protected String inputRowMetaJson;
-  protected boolean inputStep;
-  protected String stepMetaInterfaceXml;
-  protected List<String> targetSteps;
-  protected List<String> infoSteps;
-  protected List<String> infoRowMetaJsons;
-  protected int flushIntervalMs;
-
-  // Used in the private StepFn class below
-  //
-  protected List<PCollectionView<List<KettleRow>>> infoCollectionViews;
-
-  // Log and count errors.
-  protected static final Logger LOG = LoggerFactory.getLogger( StepTransform.class );
-  protected static final Counter numErrors = Metrics.counter( "main", "StepErrors" );
-
-  public StepTransform() {
-    variableValues = new ArrayList<>();
+  public StepBatchTransform() {
+    super();
   }
 
-  public StepTransform( List<VariableValue> variableValues, String metastoreJson, List<String> stepPluginClasses, List<String> xpPluginClasses,
-                        int batchSize, int flushIntervalMs, String stepname, String stepPluginId, String stepMetaInterfaceXml, String inputRowMetaJson, boolean inputStep,
-                        List<String> targetSteps, List<String> infoSteps, List<String> infoRowMetaJsons, List<PCollectionView<List<KettleRow>>> infoCollectionViews ) {
-    this.variableValues = variableValues;
-    this.metastoreJson = metastoreJson;
-    this.stepPluginClasses = stepPluginClasses;
-    this.xpPluginClasses = xpPluginClasses;
-    this.batchSize = batchSize;
-    this.flushIntervalMs = flushIntervalMs;
-    this.stepname = stepname;
-    this.stepPluginId = stepPluginId;
-    this.stepMetaInterfaceXml = stepMetaInterfaceXml;
-    this.inputRowMetaJson = inputRowMetaJson;
-    this.inputStep = inputStep;
-    this.targetSteps = targetSteps;
-    this.infoSteps = infoSteps;
-    this.infoRowMetaJsons = infoRowMetaJsons;
-    this.infoCollectionViews = infoCollectionViews;
+  public StepBatchTransform( List<VariableValue> variableValues, String metastoreJson, List<String> stepPluginClasses, List<String> xpPluginClasses,
+                             int batchSize, int flushIntervalMs, String stepname, String stepPluginId, String stepMetaInterfaceXml, String inputRowMetaJson, boolean inputStep,
+                             List<String> targetSteps, List<String> infoSteps, List<String> infoRowMetaJsons, List<PCollectionView<List<KettleRow>>> infoCollectionViews ) {
+    super(variableValues, metastoreJson, stepPluginClasses, xpPluginClasses, batchSize, flushIntervalMs, stepname, stepPluginId,
+      stepMetaInterfaceXml, inputRowMetaJson, inputStep, targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews);
   }
 
   @Override public PCollectionTuple expand( PCollection<KettleRow> input ) {
@@ -123,13 +89,13 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
 
       // Create a new step function, initializes the step
       //
-      StepFn stepFn = new StepFn( variableValues, metastoreJson, stepPluginClasses, xpPluginClasses,
+      StepBatchFn stepBatchFn = new StepBatchFn( variableValues, metastoreJson, stepPluginClasses, xpPluginClasses,
         stepname, stepPluginId, stepMetaInterfaceXml, inputRowMetaJson, inputStep,
         targetSteps, infoSteps, infoRowMetaJsons );
 
       // The actual step functionality
       //
-      ParDo.SingleOutput<KettleRow, KettleRow> parDoStepFn = ParDo.of( stepFn );
+      ParDo.SingleOutput<KettleRow, KettleRow> parDoStepFn = ParDo.of( stepBatchFn );
 
       // Add optional side inputs...
       //
@@ -158,9 +124,9 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
 
   }
 
-  private class StepFn extends DoFn<KettleRow, KettleRow> {
+  private class StepBatchFn extends DoFn<KettleRow, KettleRow> {
 
-    private static final long serialVersionUID = 95700000000000001L;
+    private static final long serialVersionUID = 95700000000000002L;
 
     public static final String INJECTOR_STEP_NAME = "_INJECTOR_";
 
@@ -203,19 +169,26 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
     private transient Counter initCounter;
     private transient Counter readCounter;
     private transient Counter writtenCounter;
+    private transient Counter flushBufferCounter;
 
     private transient SingleThreadedTransExecutor executor;
 
-    public StepFn() {
+    private transient Queue<KettleRow> rowBuffer;
+    private transient BoundedWindow batchWindow;
+
+    private transient AtomicLong lastTimerCheck;
+    private transient Timer timer;
+
+    public StepBatchFn() {
     }
 
 
     // I created a private class because instances of this one need access to infoCollectionViews
     //
 
-    public StepFn( List<VariableValue> variableValues, String metastoreJson, List<String> stepPluginClasses, List<String> xpPluginClasses, String stepname, String stepPluginId,
-                   String stepMetaInterfaceXml, String inputRowMetaJson, boolean inputStep,
-                   List<String> targetSteps, List<String> infoSteps, List<String> infoRowMetaJsons ) {
+    public StepBatchFn( List<VariableValue> variableValues, String metastoreJson, List<String> stepPluginClasses, List<String> xpPluginClasses, String stepname, String stepPluginId,
+                        String stepMetaInterfaceXml, String inputRowMetaJson, boolean inputStep,
+                        List<String> targetSteps, List<String> infoSteps, List<String> infoRowMetaJsons ) {
       this();
       this.variableValues = variableValues;
       this.metastoreJson = metastoreJson;
@@ -247,18 +220,27 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
 
     @Setup
     public void setup() {
-      // Nothing
+      try {
+        rowBuffer = new ConcurrentLinkedQueue();
+      } catch ( Exception e ) {
+        numErrors.inc();
+        LOG.info( "Step '" + stepname + "' : setup error :" + e.getMessage() );
+        throw new RuntimeException( "Unable to set up step " + stepname, e );
+      }
     }
 
     @Teardown
     public void tearDown() {
-      // Nothing
+      if ( timer != null ) {
+        timer.cancel();
+      }
     }
 
     @ProcessElement
     public void processElement( ProcessContext context, BoundedWindow window ) {
 
       try {
+
         if ( initialize ) {
           initialize = false;
 
@@ -275,6 +257,11 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
           //
           transMeta = new TransMeta();
           transMeta.setMetaStore( metaStore );
+
+          // When the first row ends up in the buffer we start the timer.
+          // If the rows are flushed out we reset back to -1;
+          //
+          lastTimerCheck = new AtomicLong( -1L );
 
           // Give steps variables from above
           //
@@ -458,6 +445,7 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
           initCounter = Metrics.counter( "init", stepname );
           readCounter = Metrics.counter( "read", stepname );
           writtenCounter = Metrics.counter( "written", stepname );
+          flushBufferCounter = Metrics.counter( "flushBuffer", stepname );
 
           initCounter.inc();
 
@@ -493,6 +481,30 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
             //
             combi.step.processRow( combi.meta, combi.data );
           }
+
+          // Install a timer to check every second if the buffer is stale and needs to be flushed...
+          //
+          if ( flushIntervalMs > 0 ) {
+            TimerTask timerTask = new TimerTask() {
+              @Override public void run() {
+                // Check on the state of the buffer, flush if needed...
+                //
+                synchronized ( rowBuffer ) {
+                  long difference = System.currentTimeMillis() - lastTimerCheck.get();
+                  if ( lastTimerCheck.get()<=0 || difference > flushIntervalMs ) {
+                    try {
+                      emptyRowBuffer( new StepProcessContext( context ) );
+                    } catch ( Exception e ) {
+                      throw new RuntimeException( "Unable to flush row buffer when it got stale after " + difference + " ms", e );
+                    }
+                    lastTimerCheck.set( System.currentTimeMillis() );
+                  }
+                }
+              }
+            };
+            timer = new Timer( "Flush timer of step " + stepname );
+            timer.schedule( timerTask, 100, 100 );
+          }
         }
 
         // Get one row from the context main input and make a copy so we can change it.
@@ -501,18 +513,40 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
         KettleRow inputRow = KettleBeamUtil.copyKettleRow( originalInputRow, inputRowMeta );
         readCounter.inc();
 
-        emptyRowBuffer( new StepProcessContext( context ), inputRow );
+        // Take care of the age of the buffer...
+        //
+        if ( flushIntervalMs > 0 && rowBuffer.isEmpty() ) {
+          lastTimerCheck.set( System.currentTimeMillis() );
+        }
+
+        // Add the row to the buffer.
+        //
+        synchronized ( rowBuffer ) {
+          rowBuffer.add( inputRow );
+          batchWindow = window;
+
+          synchronized ( rowBuffer ) {
+            if ( rowBuffer.size() >= batchSize ) {
+              emptyRowBuffer( new StepProcessContext( context ) );
+            }
+          }
+        }
       } catch ( Exception e ) {
         numErrors.inc();
         LOG.info( "Step execution error :" + e.getMessage() );
-        throw new RuntimeException( "Error executing StepFn", e );
+        throw new RuntimeException( "Error executing StepBatchFn", e );
       }
     }
 
     @FinishBundle
     public void finishBundle( FinishBundleContext context ) {
       try {
-        // Nothing to do here
+        synchronized ( rowBuffer ) {
+          if ( !rowBuffer.isEmpty() ) {
+            // System.out.println( "Finishing bundle with " + rowBuffer.size() + " rows in the buffer" );
+            emptyRowBuffer( new StepFinishBundleContext( context, batchWindow ) );
+          }
+        }
       } catch ( Exception e ) {
         numErrors.inc();
         LOG.info( "Step finishing bundle error :" + e.getMessage() );
@@ -527,49 +561,91 @@ public class StepTransform extends PTransform<PCollection<KettleRow>, PCollectio
      * Attempt to empty the row buffer
      *
      * @param context
-     * @param inputRow
      * @throws KettleException
      */
-    private synchronized void emptyRowBuffer( TupleOutputContext<KettleRow> context, KettleRow inputRow ) throws KettleException {
-      // Empty all the row buffers for another iteration
-      //
-      resultRows.clear();
-      for ( int t = 0; t < targetSteps.size(); t++ ) {
-        targetResultRowsList.get( t ).clear();
-      }
+    private synchronized void emptyRowBuffer( TupleOutputContext<KettleRow> context ) throws KettleException {
+      synchronized ( rowBuffer ) {
 
-      // Pass the rows in the rowBuffer to the input RowSet
-      //
-      if ( !inputStep ) {
-        rowProducer.putRow( inputRowMeta, inputRow.getRow() );
-      }
+        List<KettleRow> buffer = new ArrayList<>();
 
-      // Execute all steps in the transformation
-      //
-      executor.oneIteration();
-
-      // Evaluate the results...
-      //
-
-      // Pass all rows in the output to the process context
-      //
-      for ( Object[] resultRow : resultRows ) {
-
-        // Pass the row to the process context
+        // Copy the data to avoid race conditions
         //
-        context.output( mainTupleTag, new KettleRow( resultRow ) );
-        writtenCounter.inc();
-      }
-
-      // Pass whatever ended up on the target nodes
-      //
-      for ( int t = 0; t < targetResultRowsList.size(); t++ ) {
-        List<Object[]> targetRowsList = targetResultRowsList.get( t );
-        TupleTag<KettleRow> tupleTag = tupleTagList.get( t );
-
-        for ( Object[] targetRow : targetRowsList ) {
-          context.output( tupleTag, new KettleRow( targetRow ) );
+        int size = rowBuffer.size();
+        for ( int i = 0; i < size; i++ ) {
+          KettleRow kettleRow = rowBuffer.poll();
+          buffer.add( kettleRow );
         }
+
+        // Only do something if we have work to do
+        //
+        if ( buffer.isEmpty() ) {
+          return;
+        }
+
+        if ( !rowBuffer.isEmpty() ) {
+          System.err.println( "Async action detected on rowBuffer" );
+        }
+
+        // Empty all the row buffers for another iteration
+        //
+        resultRows.clear();
+        for ( int t = 0; t < targetSteps.size(); t++ ) {
+          targetResultRowsList.get( t ).clear();
+        }
+
+        // Pass the rows in the rowBuffer to the input RowSet
+        //
+        if ( !inputStep ) {
+          int bufferSize = buffer.size();
+          if ( maxInputBufferSize < bufferSize ) {
+            Metrics.counter( "maxInputSize", stepname ).inc( bufferSize - maxInputBufferSize );
+            maxInputBufferSize = bufferSize;
+          }
+          if ( minInputBufferSize > bufferSize ) {
+            if ( minInputBufferSize == Integer.MAX_VALUE ) {
+              Metrics.counter( "minInputSize", stepname ).inc( bufferSize );
+            } else {
+              Metrics.counter( "minInputSize", stepname ).dec( bufferSize - minInputBufferSize );
+            }
+            minInputBufferSize = bufferSize;
+          }
+
+          for ( KettleRow inputRow : buffer ) {
+            rowProducer.putRow( inputRowMeta, inputRow.getRow() );
+          }
+        }
+
+        // Execute all steps in the transformation
+        //
+        executor.oneIteration();
+
+        // Evaluate the results...
+        //
+
+        // Pass all rows in the output to the process context
+        //
+        for ( Object[] resultRow : resultRows ) {
+
+          // Pass the row to the process context
+          //
+          context.output( mainTupleTag, new KettleRow( resultRow ) );
+          writtenCounter.inc();
+        }
+
+        // Pass whatever ended up on the target nodes
+        //
+        for ( int t = 0; t < targetResultRowsList.size(); t++ ) {
+          List<Object[]> targetRowsList = targetResultRowsList.get( t );
+          TupleTag<KettleRow> tupleTag = tupleTagList.get( t );
+
+          for ( Object[] targetRow : targetRowsList ) {
+            context.output( tupleTag, new KettleRow( targetRow ) );
+          }
+        }
+
+        flushBufferCounter.inc();
+        buffer.clear(); // gc
+        lastTimerCheck.set( System.currentTimeMillis() ); // No need to check sooner
       }
     }
 

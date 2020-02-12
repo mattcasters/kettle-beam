@@ -38,6 +38,10 @@ public class BeamConst {
 
   public static final String STRING_KETTLE_BEAM = "Kettle Beam";
 
+  public static final String STRING_STEP_FLAG_BATCH = "Batch";
+  public static final String STRING_STEP_FLAG_SINGLE_THREADED = "SingleThreaded";
+
+
   private static List<String[]> gcpWorkerCodeDescriptions = Arrays.asList(
     new String[] { "n1-standard-1", "Standard machine type with 1 vCPU and 3.75 GB of memory." },
     new String[] { "n1-standard-2", "Standard machine type with 2 vCPUs and 7.5 GB of memory." },

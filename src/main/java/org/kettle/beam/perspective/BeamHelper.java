@@ -73,6 +73,7 @@ import org.pentaho.di.core.variables.VariableSpace;
 import org.pentaho.di.core.variables.Variables;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.ui.core.dialog.EnterSelectionDialog;
 import org.pentaho.di.ui.core.dialog.ErrorDialog;
 import org.pentaho.di.ui.spoon.ISpoonMenuController;
@@ -554,6 +555,35 @@ public class BeamHelper extends AbstractXulEventHandler implements ISpoonMenuCon
       new ErrorDialog( shell, "Error", "Error exporting metastore json", e );
     }
 
+  }
+
+  private void setCurrentStepBeamFlag(String key, String value) {
+    TransGraph transGraph = spoon.getActiveTransGraph();
+    if (transGraph==null) {
+      return;
+    }
+    StepMeta stepMeta = transGraph.getCurrentStep();
+    if (stepMeta==null) {
+      return;
+    }
+    stepMeta.setAttribute(BeamConst.STRING_KETTLE_BEAM, key, value);
+    transGraph.redraw();
+  }
+
+  public void setBatching() {
+    setCurrentStepBeamFlag(BeamConst.STRING_STEP_FLAG_BATCH, "true");
+  }
+
+  public void clearBatching() {
+    setCurrentStepBeamFlag(BeamConst.STRING_STEP_FLAG_BATCH, "false");
+  }
+
+  public void setSingleThreaded() {
+    setCurrentStepBeamFlag(BeamConst.STRING_STEP_FLAG_SINGLE_THREADED, "true");
+  }
+
+  public void clearSingleThreaded() {
+    setCurrentStepBeamFlag(BeamConst.STRING_STEP_FLAG_SINGLE_THREADED, "false");
   }
 
 }

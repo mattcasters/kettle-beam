@@ -7,21 +7,28 @@ import org.apache.beam.sdk.coders.VoidCoder;
 import org.apache.beam.sdk.transforms.Create;
 import org.apache.beam.sdk.transforms.Flatten;
 import org.apache.beam.sdk.transforms.GroupByKey;
+import org.apache.beam.sdk.transforms.Keys;
+import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.Partition;
 import org.apache.beam.sdk.transforms.Values;
 import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.transforms.WithKeys;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionList;
 import org.apache.beam.sdk.values.PCollectionTuple;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.TupleTag;
 import org.kettle.beam.core.KettleRow;
 import org.kettle.beam.core.fn.StringToKettleRowFn;
+import org.kettle.beam.core.partition.SinglePartitionFn;
 import org.kettle.beam.core.shared.VariableValue;
+import org.kettle.beam.core.transform.StepBatchTransform;
 import org.kettle.beam.core.transform.StepTransform;
 import org.kettle.beam.core.util.JsonRowMeta;
 import org.kettle.beam.core.util.KettleBeamUtil;
 import org.kettle.beam.metastore.BeamJobConfig;
+import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.logging.LogChannelInterface;
@@ -56,6 +63,7 @@ public class BeamGenericStepHandler extends BeamBaseStepHandler implements BeamS
     //
     boolean inputStep = input == null;
     boolean reduceParallelism = checkStepCopiesForReducedParallelism( stepMeta );
+    reduceParallelism=reduceParallelism || needsSingleThreading( stepMeta );
 
     String stepMetaInterfaceXml = XMLHandler.openTag( StepMeta.XML_TAG ) + stepMeta.getStepMetaInterface().getXML() + XMLHandler.closeTag( StepMeta.XML_TAG );
 
@@ -96,20 +104,27 @@ public class BeamGenericStepHandler extends BeamBaseStepHandler implements BeamS
     // This is what the BeamJobConfig option "Streaming Kettle Steps Flush Interval" is for...
     // Without a valid value we default to -1 to disable flushing.
     //
-    int flushIntervalSeconds = Const.toInt(beamJobConfig.getStreamingKettleStepsFlushInterval(), -1);
+    int flushIntervalMs = Const.toInt(beamJobConfig.getStreamingKettleStepsFlushInterval(), -1);
 
     // Send all the information on their way to the right nodes
     //
-    StepTransform stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses, transMeta.getSizeRowset(), flushIntervalSeconds,
-      stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), inputStep,
-      targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
+    PTransform<PCollection<KettleRow>, PCollectionTuple> stepTransform;
+    if (needsBatching(stepMeta)) {
+      stepTransform = new StepBatchTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses, transMeta.getSizeRowset(), flushIntervalMs,
+        stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), inputStep,
+        targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
+    } else {
+      stepTransform = new StepTransform( variableValues, metaStoreJson, stepPluginClasses, xpPluginClasses, transMeta.getSizeRowset(), flushIntervalMs,
+        stepMeta.getName(), stepMeta.getStepID(), stepMetaInterfaceXml, JsonRowMeta.toJson( rowMeta ), inputStep,
+        targetSteps, infoSteps, infoRowMetaJsons, infoCollectionViews );
+    }
 
     if ( input == null ) {
       // Start from a dummy row and group over it.
       // Trick Beam into only running a single thread of the step that comes next.
       //
       input = pipeline
-        .apply( Create.of( Arrays.asList( "kettle-dummy-input-value" ) ) ).setCoder( StringUtf8Coder.of() )
+        .apply( Create.of( Arrays.asList( "kettle-single-value" ) ) ).setCoder( StringUtf8Coder.of() )
         .apply( WithKeys.of( (Void) null ) )
         .apply( GroupByKey.create() )
         .apply( Values.create() )
@@ -121,15 +136,28 @@ public class BeamGenericStepHandler extends BeamBaseStepHandler implements BeamS
       String tupleId = KettleBeamUtil.createMainInputTupleId( stepMeta.getName() );
       stepCollectionMap.put( tupleId, input );
     } else if ( reduceParallelism ) {
+      PCollection.IsBounded isBounded = input.isBounded();
+      if (isBounded== PCollection.IsBounded.BOUNDED) {
+        // group across all fields to get down to a single thread...
+        //
+        input = input.apply( WithKeys.of( (Void) null ) )
+          .setCoder( KvCoder.of( VoidCoder.of(), input.getCoder() ) )
+          .apply( GroupByKey.create() )
+          .apply( Values.create() )
+          .apply( Flatten.iterables() )
+        ;
+      } else {
 
-      // group across all fields to get down to a single thread...
-      //
-      input = input.apply( WithKeys.of( (Void) null ) )
-        .setCoder( KvCoder.of( VoidCoder.of(), input.getCoder() ) )
-        .apply( GroupByKey.create() )
-        .apply( Values.create() )
-        .apply( Flatten.iterables() )
-      ;
+        // Streaming: try partitioning over a single partition
+        // NOTE: doesn't seem to work <sigh/>
+        /*
+        input = input
+          .apply( Partition.of( 1, new SinglePartitionFn() ) )
+          .apply( Flatten.pCollections() )
+        ;
+         */
+        throw new KettleException( "Unable to reduce parallel in an unbounded (streaming) pipeline in step : "+stepMeta.getName() );
+      }
     }
 
     // Apply the step transform to the previous io step PCollection(s)
@@ -156,6 +184,16 @@ public class BeamGenericStepHandler extends BeamBaseStepHandler implements BeamS
     }
 
     log.logBasic( "Handled step (STEP) : " + stepMeta.getName() + ", gets data from " + previousSteps.size() + " previous step(s), targets=" + targetSteps.size() + ", infos=" + infoSteps.size() );
+  }
+
+  public static boolean needsBatching( StepMeta stepMeta ) {
+    String value = stepMeta.getAttribute( BeamConst.STRING_KETTLE_BEAM, BeamConst.STRING_STEP_FLAG_BATCH );
+    return value!=null && "true".equalsIgnoreCase( value );
+  }
+
+  public static boolean needsSingleThreading( StepMeta stepMeta ) {
+    String value = stepMeta.getAttribute( BeamConst.STRING_KETTLE_BEAM, BeamConst.STRING_STEP_FLAG_SINGLE_THREADED );
+    return value!=null && "true".equalsIgnoreCase( value );
   }
 
   private boolean checkStepCopiesForReducedParallelism( StepMeta stepMeta ) {

@@ -77,7 +77,7 @@ public class BeamConsumeMeta extends BaseStepMeta implements StepMetaInterface {
     usingLogAppendTime = false;
     usingCreateTime = false;
     restrictedToCommitted = false;
-    allowingCommitOnConsumedOffset = false;
+    allowingCommitOnConsumedOffset = true;
     configOptions = new ArrayList<>();
   }
 

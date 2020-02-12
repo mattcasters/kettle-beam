@@ -28,7 +28,7 @@ import org.pentaho.ui.xul.XulDomContainer;
 import org.pentaho.ui.xul.XulException;
 
 @SpoonPlugin( id = "BeamSpoonPlugin", image = "" )
-@SpoonPluginCategories( { "spoon" } )
+@SpoonPluginCategories( { "spoon", "trans-graph" } )
 public class BeamSpoonPlugin implements SpoonPluginInterface, SpoonLifecycleListener {
 
   private static final Class<?> PKG = BeamSpoonPlugin.class;
@@ -50,6 +50,10 @@ public class BeamSpoonPlugin implements SpoonPluginInterface, SpoonLifecycleList
     container.registerClassLoader( getClass().getClassLoader() );
     if ( category.equals( "spoon" ) ) {
       container.loadOverlay( "beam_spoon_overlays.xul", resourceBundle );
+      container.addEventHandler( BeamHelper.getInstance() );
+    }
+    if ( category.equals( "trans-graph" ) ) {
+      container.loadOverlay( "beam_transgraph_overlays.xul", resourceBundle );
       container.addEventHandler( BeamHelper.getInstance() );
     }
   }
