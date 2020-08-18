@@ -35,6 +35,8 @@ public class BeamConst {
   public static final String STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID = "BeamBQOutput";
   public static final String STRING_BEAM_KAFKA_CONSUME_PLUGIN_ID = "BeamKafkaConsume";
   public static final String STRING_BEAM_KAFKA_PRODUCE_PLUGIN_ID = "BeamKafkaProduce";
+  public static final String STRING_BEAM_FIRESTORE_INPUT_PLUGIN_ID = "BeamFirestoreInput";
+  public static final String STRING_BEAM_FIRESTORE_OUTPUT_PLUGIN_ID = "BeamFirestoreOutput";
 
   public static final String STRING_KETTLE_BEAM = "Kettle Beam";
 

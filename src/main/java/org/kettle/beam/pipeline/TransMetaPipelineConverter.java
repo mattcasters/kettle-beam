@@ -19,20 +19,7 @@ import org.kettle.beam.core.metastore.SerializableMetaStore;
 import org.kettle.beam.core.util.KettleBeamUtil;
 import org.kettle.beam.metastore.BeamJobConfig;
 import org.kettle.beam.metastore.RunnerType;
-import org.kettle.beam.pipeline.handler.BeamBigQueryInputStepHandler;
-import org.kettle.beam.pipeline.handler.BeamBigQueryOutputStepHandler;
-import org.kettle.beam.pipeline.handler.BeamGenericStepHandler;
-import org.kettle.beam.pipeline.handler.BeamGroupByStepHandler;
-import org.kettle.beam.pipeline.handler.BeamInputStepHandler;
-import org.kettle.beam.pipeline.handler.BeamKafkaInputStepHandler;
-import org.kettle.beam.pipeline.handler.BeamKafkaOutputStepHandler;
-import org.kettle.beam.pipeline.handler.BeamMergeJoinStepHandler;
-import org.kettle.beam.pipeline.handler.BeamOutputStepHandler;
-import org.kettle.beam.pipeline.handler.BeamPublisherStepHandler;
-import org.kettle.beam.pipeline.handler.BeamStepHandler;
-import org.kettle.beam.pipeline.handler.BeamSubscriberStepHandler;
-import org.kettle.beam.pipeline.handler.BeamTimestampStepHandler;
-import org.kettle.beam.pipeline.handler.BeamWindowStepHandler;
+import org.kettle.beam.pipeline.handler.*;
 import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.exception.KettleException;
@@ -130,6 +117,7 @@ public class TransMetaPipelineConverter {
     stepHandlers.put( BeamConst.STRING_BEAM_BIGQUERY_OUTPUT_PLUGIN_ID, new BeamBigQueryOutputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
     stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_CONSUME_PLUGIN_ID, new BeamKafkaInputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
     stepHandlers.put( BeamConst.STRING_BEAM_KAFKA_PRODUCE_PLUGIN_ID, new BeamKafkaOutputStepHandler( beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses ) );
+    stepHandlers.put( BeamConst.STRING_BEAM_FIRESTORE_OUTPUT_PLUGIN_ID, new BeamFirestoreOutputStepHandler(beamJobConfig, metaStore, transMeta, stepPluginClasses, xpPluginClasses));
     genericStepHandler = new BeamGenericStepHandler( beamJobConfig, metaStore, metaStoreJson, transMeta, stepPluginClasses, xpPluginClasses );
   }
 

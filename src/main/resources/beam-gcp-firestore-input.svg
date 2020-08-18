@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="128"
+   height="128"
+   viewBox="0 0 33.866666 33.866668"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="beam-gcp-firestore-input.svg">
+  <defs
+     id="defs2">
+    <linearGradient
+       id="linearGradient-1"
+       y2="1180.37"
+       x2="2255.2"
+       y1="1136.17"
+       x1="2255.2">
+      <stop
+         id="stop4489"
+         offset="0%"
+         stop-color="#4387FD" />
+      <stop
+         id="stop4491"
+         offset="100%"
+         stop-color="#4683EA" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient-1"
+       id="linearGradient4560"
+       x1="662884.06"
+       y1="333961.12"
+       x2="662884.06"
+       y2="346953.09"
+       gradientTransform="scale(1.0606412,0.94282589)"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient-1"
+       id="linearGradient4562"
+       x1="662884.06"
+       y1="333961.12"
+       x2="662884.06"
+       y2="346953.09"
+       gradientTransform="scale(1.0606412,0.94282589)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="2.8"
+     inkscape:cx="92.095221"
+     inkscape:cy="38.657195"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1601"
+     inkscape:window-height="846"
+     inkscape:window-x="73"
+     inkscape:window-y="11"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Camada 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-263.13332)">
+    <g
+       style="fill:none;fill-rule:evenodd;stroke:none;stroke-width:1"
+       id="Cloud_Firestore_Hex"
+       transform="matrix(0.08394791,0,0,0.08394791,3.9800813,267.44068)">
+      <g
+         id="g4506">
+        <g
+           style="fill:url(#linearGradient4562);fill-rule:nonzero"
+           id="Group-17-Copy-11">
+          <path
+             style="fill:url(#linearGradient4560)"
+             inkscape:connector-curvature="0"
+             d="M 67.920766,263.342 3.9862979,152.7278 c -5.0049945,-8.65772 -5.0049945,-19.32448 0,-27.9822 L 67.920766,14.1314 C 72.932448,5.4879184 82.177264,0.16767335 92.178255,0.1716 H 220.04719 c 10.00099,-0.003927 19.24581,5.3163184 24.25749,13.9598 l 63.93447,110.6142 c 5.00499,8.65772 5.00499,19.32448 0,27.9822 L 244.30468,263.342 c -5.01168,8.64348 -14.2565,13.96373 -24.25749,13.9598 H 92.178255 c -10.000991,0.004 -19.245807,-5.31632 -24.257489,-13.9598 z"
+             id="Shape" />
+        </g>
+        <path
+           style="opacity:0.07000002;fill:#000000;fill-rule:nonzero"
+           inkscape:connector-curvature="0"
+           d="M 293.52484,175.9898 209,99 107,106 v 23 l 12,10 11.5,8.5 -22.5,24.5 97.28716,103.9898 c 0,0 17.21284,1.5 26.71284,-2.4898 2.53957,-2.31873 7.65659,-3.97996 13,-12 5.34341,-8.02004 48.52484,-85.5102 48.52484,-85.5102 z"
+           id="path4498" />
+        <g
+           style="fill:#ffffff"
+           id="Group-11-Copy-4"
+           transform="translate(106,81)">
+          <polygon
+             id="Rectangle-15"
+             points="0.90273556,49.657895 0.90273556,20.485552 52.709637,0 103.86608,19.034572 103.86608,48.206914 52.709637,29.172343 " />
+          <polygon
+             id="polygon4501"
+             points="1.5531915,91.965428 1.5531915,62.793086 52.709637,43.758514 103.86608,62.793086 103.86608,91.965428 52.709637,72.930857 " />
+          <polygon
+             id="polygon4503"
+             points="52.709637,111 52.709637,85.4742 67.325764,84.672343 92.903987,95.611971 " />
+        </g>
+      </g>
+    </g>
+    <g
+       transform="matrix(0.76605496,0,0,0.76605496,3.3173991,263.69216)"
+       id="g12">
+      <polygon
+         style="fill:#3d6480"
+         id="polygon10"
+         points="30.5,31.5 35.8,36.8 32.6,36.8 32.6,38.7 39,38.7 39,32.3 37.1,32.3 37.1,35.4 31.9,30.2 " />
+    </g>
+  </g>
+</svg>
