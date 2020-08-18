@@ -12,6 +12,14 @@ public class BeamDefaults {
     PUBSUB_MESSAGE_TYPE_STRING,
     PUBSUB_MESSAGE_TYPE_MESSAGE,
   };
+  
+  
+  public static final String FIRESTORE_MESSAGE_TYPE_STRING = "String";
+  
+  // Tipos de Mensagens para o Firestore
+  public static final String[] FIRESTORE_MESSAGE_TYPES = new String[] {
+    FIRESTORE_MESSAGE_TYPE_STRING,
+  };
 
 
   public static final String WINDOW_TYPE_FIXED    = "Fixed";

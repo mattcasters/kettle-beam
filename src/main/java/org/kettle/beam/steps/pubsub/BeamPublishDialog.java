@@ -16,11 +16,13 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.kettle.beam.core.BeamDefaults;
 import org.pentaho.di.core.Const;
+import org.pentaho.di.core.plugins.PluginInterface;
 import org.pentaho.di.core.util.Utils;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.trans.TransMeta;
 import org.pentaho.di.trans.step.BaseStepMeta;
 import org.pentaho.di.trans.step.StepDialogInterface;
+import org.pentaho.di.trans.step.StepMeta;
 import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 
@@ -208,4 +210,14 @@ public class BeamPublishDialog extends BaseStepDialog implements StepDialogInter
 
     input.setChanged();
   }
+
+
+  @Override
+  protected Button createHelpButton(Shell shell, StepMeta stepMeta, PluginInterface plugin) {
+    Button helpButton = new Button( shell, SWT.PUSH );
+    helpButton.setText("Ajuda");
+    helpButton.addListener( SWT.Selection, (e) -> {helpButton.setText("Clicado");} );
+    return helpButton;
+  }
+
 }

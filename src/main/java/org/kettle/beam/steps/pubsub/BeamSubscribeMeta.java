@@ -2,6 +2,7 @@ package org.kettle.beam.steps.pubsub;
 
 import org.apache.commons.lang.StringUtils;
 import org.kettle.beam.core.BeamDefaults;
+import org.kettle.beam.util.BeamConst;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.exception.KettleException;
@@ -28,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Step(
-  id = "BeamSubscribe",
+  id = BeamConst.STRING_BEAM_SUBSCRIBE_PLUGIN_ID,
   name = "Beam GCP Pub/Sub : Subscribe",
   description = "Subscribe to data from a Pub/Sub topic",
   image = "beam-gcp-pubsub-subscribe.svg",
@@ -58,7 +59,16 @@ public class BeamSubscribeMeta extends BaseStepMeta implements StepMetaInterface
   }
 
   @Override public StepInterface getStep( StepMeta stepMeta, StepDataInterface stepDataInterface, int copyNr, TransMeta transMeta, Trans trans ) {
-    return new BeamSubscribe( stepMeta, stepDataInterface, copyNr, transMeta, trans );
+    StepInterface step = null;
+
+    if(BeamConst.STRING_BEAM_PUBLISH_PLUGIN_ID.equalsIgnoreCase(stepMeta.getStepID())){
+      step = new BeamPublish( stepMeta, stepDataInterface, copyNr, transMeta, trans );
+
+    }else if(BeamConst.STRING_BEAM_SUBSCRIBE_PLUGIN_ID.equalsIgnoreCase(stepMeta.getStepID())){
+      step = new BeamSubscribe( stepMeta, stepDataInterface, copyNr, transMeta, trans );
+
+    }
+    return step;
   }
 
   @Override public StepDataInterface getStepData() {
