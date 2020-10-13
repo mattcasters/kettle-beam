@@ -26,7 +26,7 @@
   <properties>
     <pentaho-kettle.version>8.2.0.0-342</pentaho-kettle.version>
     <mockito-all.version>1.9.5</mockito-all.version>
-    <junit.version>4.4</junit.version>
+    <junit.version>4.13.1</junit.version>
     <apache-beam-version>2.19.0</apache-beam-version>
     <kettle-beam-version>1.0.1-SNAPSHOT</kettle-beam-version>
     <spark-version>2.4.4</spark-version>
